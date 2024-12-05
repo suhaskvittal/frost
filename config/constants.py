@@ -9,9 +9,13 @@ from .files import CONSTANTS_FILE, AUTOGEN_HEADER
 ####################################################################
 
 def write(cfg):
+    core_cfg = cfg['CORE']
     dram_cfg = cfg['DRAM']
-    
-    # Write DRAM constants
+
+    num_threads = core_cfg['num_threads']
+    fetch_width = core_cfg['fetch_width']
+    rob_size = core_cfg['rob_size']
+
     ch, ra, bg, ba, row, col = dram_cfg['channels'], dram_cfg['ranks'], dram_cfg['bankgroups'],\
                                 dram_cfg['banks'], dram_cfg['rows'], dram_cfg['columns']
     BL = dram_cfg['BL']
@@ -41,7 +45,9 @@ constexpr size_t PAGESIZE = 4096;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-enum class DRAMPagePolicy {{ OPEN, CLOSE }};
+constexpr size_t NUM_THREADS = {num_threads};
+constexpr size_t CORE_FETCH_WIDTH = {fetch_width};
+constexpr size_t CORE_ROB_SIZE = {rob_size};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -59,7 +65,7 @@ constexpr size_t DRAM_RQ_SIZE = {rq_size};
 constexpr size_t DRAM_WQ_SIZE = {wq_size};
 constexpr size_t DRAM_CMDQ_SIZE = {cmdq_size};
 
-constexpr DRAMPagePolicy DRAM_PAGE_POLICY = DRAMPagePolicy::{page_policy};
+#define DRAM_PAGE_POLICY DRAMPagePolicy::{page_policy}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

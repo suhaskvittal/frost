@@ -6,6 +6,26 @@
 ####################################################################
 ####################################################################
 
+def update_cfg_with_optionals(cfg, optionals: list[tuple[str,str]]):
+    for (key, value) in optionals:
+        if key not in cfg:
+            cfg[key] = value
+
+####################################################################
+####################################################################
+
+def validate_core_section(cfg) -> bool:
+    optionals = [
+        ('num_threads', 1),
+        ('fetch_width', 4),
+        ('rob_size', 256)
+    ]
+    update_cfg_with_optionals(cfg, optionals)
+    return True
+
+####################################################################
+####################################################################
+
 def validate_cache_section(cfg) -> bool:
     required = [
         'ways',
@@ -28,9 +48,7 @@ def validate_cache_section(cfg) -> bool:
         ('mode', ''),
         ('replacement_policy', 'LRU')
     ]
-    for (key, value) in optionals:
-        if key not in cfg:
-            cfg[key] = value
+    update_cfg_with_optionals(cfg, optionals)
     return True
 
 ####################################################################
@@ -55,9 +73,7 @@ def validate_dram_section(cfg) -> bool:
         ('page_policy', 'OPEN'),
         ('address_mapping', 'MOP4')
     ]
-    for (key,value) in optionals:
-        if key not in cfg:
-            cfg[key] = value
+    update_cfg_with_optionals(cfg, optionals)
     return True
 
 ####################################################################

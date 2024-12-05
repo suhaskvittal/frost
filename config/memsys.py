@@ -3,7 +3,7 @@
     date:   4 December 2024
 '''
 
-from .files import MEMSYS_H_FILE, AUTOGEN_HEADER
+from .files import MEMSYS_FILE, AUTOGEN_HEADER
 
 ####################################################################
 ####################################################################
@@ -39,7 +39,7 @@ struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheRep
 ####################################################################
 
 def write(cfg):
-    wr = open(MEMSYS_H_FILE, 'w')
+    wr = open(MEMSYS_FILE, 'w')
     wr.write(
 f'''{AUTOGEN_HEADER}
 
@@ -48,6 +48,8 @@ f'''{AUTOGEN_HEADER}
 
 #include "cache/control.h"
 #include "dram.h"
+
+#include <memory>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -65,8 +67,6 @@ f'''{AUTOGEN_HEADER}
             if cfg[caches[i-1]]['mode'] == 'INVALIDATE_ON_HIT':
                 cfg[c]['mode'] = 'NEXT_IS_INVALIDATE_ON_HIT'
         wr.write(declare_cache_type(cfg[c], typename, next_typename))
-    # Now declare global variables.
-    cache_varnames = ['LLC', 'L2C', 'L1DC', 'L1IC']
     wr.write(
 '''
 ////////////////////////////////////////////////////////////////////////////
@@ -74,15 +74,6 @@ f'''{AUTOGEN_HEADER}
 
 template <class CACHE_TYPE>
 using cache_ptr = std::unique_ptr<CACHE_TYPE>;
-using dram_ptr = std::unique_ptr<DRAM>;
-
-''')
-    for (i, varname) in enumerate(cache_varnames):
-        typename = cache_typenames[i]
-        wr.write(f'extern cache_ptr<{typename}> GL_{varname};\n')
-    wr.write(
-'''
-extern dram_ptr GL_DRAM;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -6,6 +6,8 @@
 #include "cache/control.h"
 #include "dram.h"
 
+#include <memory>
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -70,14 +72,6 @@ struct L1ICache : public CacheControl<L1ICache, Cache<64,16,CacheReplPolicy::LRU
 
 template <class CACHE_TYPE>
 using cache_ptr = std::unique_ptr<CACHE_TYPE>;
-using dram_ptr = std::unique_ptr<DRAM>;
-
-extern cache_ptr<LLCache> GL_LLC;
-extern cache_ptr<L2Cache> GL_L2C;
-extern cache_ptr<L1DCache> GL_L1DC;
-extern cache_ptr<L1ICache> GL_L1IC;
-
-extern dram_ptr GL_DRAM;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

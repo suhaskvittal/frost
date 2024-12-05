@@ -4,7 +4,7 @@
 '''
 
 from config.validate import *
-from config import constants, memsys_h, memsys_cxx
+from config import constants, memsys
 
 import configparser
 
@@ -16,13 +16,13 @@ cfg.read('example.ini')
 
 caches = ['L1i', 'L1d', 'L2', 'LLC']
 
+validate_core_section(cfg['CORE'])
 for c in caches:
     validate_cache_section(cfg[c])
 validate_dram_section(cfg['DRAM'])
 
 constants.write(cfg)
-memsys_h.write(cfg)
-memsys_cxx.write()
+memsys.write(cfg)
 
 ####################################################################
 ####################################################################
