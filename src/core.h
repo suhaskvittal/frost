@@ -6,7 +6,7 @@
 #ifndef CORE_h
 #define CORE_h
 
-#include "memsys_decl.h"
+#include "memsys.h"
 
 #include "core/instruction.h"
 #include "trace/reader.h"
@@ -41,9 +41,9 @@ public:
 
     const uint8_t coreid_;
 private:
-    using l1i_ptr = cache_ptr<L1ICache>;
-    using l1d_ptr = cache_ptr<L1DCache>;
-    using l2_ptr = cache_ptr<L2Cache>;
+    using l1i_ptr = std::unique_ptr<L1ICache>;
+    using l1d_ptr = std::unique_ptr<L1DCache>;
+    using l2_ptr = std::unique_ptr<L2Cache>;
 
     using tracereader_t = std::unique_ptr<TraceReader>;
     

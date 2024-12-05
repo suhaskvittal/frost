@@ -33,7 +33,7 @@ Core::tick()
 ////////////////////////////////////////////////////////////////////////////
  
 template <class CACHE> inline void
-print_cache_stats_for_core(Core* c, const cache_ptr<CACHE>& cache, std::ostream& out, std::string_view header)
+print_cache_stats_for_core(Core* c, const std::unique_ptr<CACHE>& cache, std::ostream& out, std::string_view header)
 {
     uint8_t id = c->coreid_;
     uint64_t inst = c->finished_inst_num_;

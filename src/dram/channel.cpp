@@ -115,67 +115,6 @@ DRAMChannel::tick()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline void
-list(std::ostream& out, std::string_view name, uint64_t ck, double tCK)
-{
-    double time_ns = ck * tCK;
-    out << std::setw(12) << std::left << name
-        << std::setw(12) << std::left << std::setprecision(3) << time_ns << "ns"
-        << std::setw(12) << std::left << ck << " cycles\n";
-}
-
-void
-DRAMChannel::list_dram_timings(std::ostream& out)
-{
-    const std::string_view BAR = "------------------------------------------------------------------------";
-
-    double tCK = 1.0/freq_ghz_;
-
-    out << BAR << "\n"
-        << "DRAM frequency = " << freq_ghz_ << "GHz, tCK = " << std::setprecision(5) << tCK << "\n"
-        << BAR << "\n"
-        << std::setw(12) << std::left << "DRAM TIMING"
-        << std::setw(12) << std::left << "ns"
-        << std::setw(12) << std::left << "nCK\n"
-    list(out, "CL", CL, tCK);
-    list(out, "CWL", CWL, tCK);
-    list(out, "tRCD", tRCD, tCK);
-    list(out, "tRP", tRP, tCK);
-    list(out, "tRAS", tRAS, tCK);
-    list(out, "tRTP", tRTP, tCK);
-    list(out, "tWR", tWR, tCK);
-
-    out << "\n";
-
-    list(out, "tCCD_S", tCCD_S, tCK);
-    list(out, "tCCD_S_WR", tCCD_S_WR, tCK);
-    list(out, "tCCD_S_WTR", tCCD_S_WTR, tCK);
-    list(out, "tCCD_S_RTW", tCCD_S_RTW, tCK);
-
-    out << "\n";
-
-    list(out, "tCCD_L", tCCD_L, tCK);
-    list(out, "tCCD_L_WR", tCCD_L_WR, tCK);
-    list(out, "tCCD_L_WTR", tCCD_L_WTR, tCK);
-    list(out, "tCCD_L_RTW", tCCD_L_RTW, tCK);
-
-    out << "\n";
-
-    list(out, "tRRD_S", tRRD_S, tCK);
-    list(out, "tRRD_L", tRRD_L, tCK);
-    list(out, "tFAW", tFAW, tCK);
-
-    out << "\n";
-
-    list(out, "tRFC", tRFC, tCK);
-    list(out, "tREFI", tREFI, tCK);
-
-    out << BAR << "\n";
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 void
 DRAMChannel::schedule_next_cmd()
 {

@@ -4,7 +4,7 @@
 '''
 
 from config.validate import *
-from config import constants, memsys, globs
+from config import constants, memsys, globs, sim, dram_timing
 
 import configparser
 
@@ -24,6 +24,8 @@ validate_dram_section(cfg['DRAM'])
 constants.write(cfg)
 memsys.write(cfg)
 globs.write(cfg)
+sim.write(cfg)
+dram_timing.write(cfg)
 
 ####################################################################
 ####################################################################
