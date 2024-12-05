@@ -111,7 +111,7 @@ print_config(std::ostream& out)
     list_cache_params(out, "L1I$", 64, 16, 64, "LRU", 8, 2, 64, 0, 32);
     list_cache_params(out, "L1D$", 64, 16, 64, "LRU", 8, 2, 64, 64, 32);
     list_cache_params(out, "L2$", 1024, 8, 2048, "LRU", 16, 1, 32, 32, 16);
-    list_cache_params(out, "LLC", 2048, 16, 2048, "SRRIP", 32, 4, 64, 64, 32);
+    list_cache_params(out, "LLC", 8192, 16, 8192, "SRRIP", 32, 4, 64, 64, 32);
 
     out << "\n" << BAR << "\n\n"
         << "DRAM frequency = " << 2.4 << "GHz, tCK = " << 0.41667 << "\n\n";

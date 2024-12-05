@@ -57,14 +57,16 @@ f'''{AUTOGEN_HEADER}
     caches = ['LLC', 'L2', 'L1d', 'L1i']
     # First write cache classes
     cache_typenames = ['LLCache', 'L2Cache', 'L1DCache', 'L1ICache']
+    next_idx = [-1, 0, 1, 1]
     # Do in reverse order so `next_typename` is declared.
     for (i, c) in enumerate(caches):
         typename = cache_typenames[i]
-        if c == 'LLC':
+        ii = next_idx[i]
+        if ii == -1:
             next_typename = 'DRAM'
         else:
-            next_typename = cache_typenames[i-1]
-            if cfg[caches[i-1]]['mode'] == 'INVALIDATE_ON_HIT':
+            next_typename = cache_typenames[ii]
+            if cfg[caches[ii]]['mode'] == 'INVALIDATE_ON_HIT':
                 cfg[c]['mode'] = 'NEXT_IS_INVALIDATE_ON_HIT'
         wr.write(declare_cache_type(cfg[c], typename, next_typename))
     wr.write(

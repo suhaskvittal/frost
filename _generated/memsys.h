@@ -11,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-struct LLCache : public CacheControl<LLCache, Cache<2048,16,CacheReplPolicy::SRRIP>, DRAM>
+struct LLCache : public CacheControl<LLCache, Cache<8192,16,CacheReplPolicy::SRRIP>, DRAM>
 {
     constexpr static size_t RQ_SIZE = 64;
     constexpr static size_t WQ_SIZE = 64;
@@ -53,7 +53,7 @@ struct L1DCache : public CacheControl<L1DCache, Cache<64,16,CacheReplPolicy::LRU
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = false;
 };
 
-struct L1ICache : public CacheControl<L1ICache, Cache<64,16,CacheReplPolicy::LRU>, L1DCache>
+struct L1ICache : public CacheControl<L1ICache, Cache<64,16,CacheReplPolicy::LRU>, L2Cache>
 {
     constexpr static size_t RQ_SIZE = 64;
     constexpr static size_t WQ_SIZE = 0;
