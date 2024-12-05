@@ -5,13 +5,20 @@
 
 #include "dram.h"
 
+#include "globals.h"
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAM::DRAM(double cpu_ghz, double freq_ghz, std::string dram_type)
+uint64_t GL_DRAM_CYCLE = 0;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+DRAM::DRAM(double cpu_freq_ghz, double freq_ghz, std::string dram_type)
     :io_(this),
     freq_ghz_(freq_ghz),
-    clock_scale_(cpu_ghz/freq_ghz - 1.0)
+    clock_scale_(cpu_freq_ghz/freq_ghz - 1.0)
 {
     for (size_t i = 0; i < DRAM_CHANNELS; i++)
         channels_[i] = channel_ptr(new DRAMChannel(freq_ghz, dram_type));
@@ -33,10 +40,12 @@ DRAM::tick()
             ch->tick();
     }
 
-    if (leap_ >= 1.0)
+    if (leap_ >= 1.0) {
         leap -= 1.0;
-    else 
+    } else {
+        ++GL_DRAM_CYCLE;
         leap += clock_scale_;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
