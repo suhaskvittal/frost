@@ -6,7 +6,7 @@
 #ifndef DRAM_CHANNEL_h
 #define DRAM_CHANNEL_h
 
-#include "_generated/constants.h"
+#include "constants.h"
 
 #include "dram/address.h"
 #include "io_bus.h"

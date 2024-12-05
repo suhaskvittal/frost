@@ -143,7 +143,7 @@ DRAMChannel::issue_next_cmd()
         update_timing(ready_cmd);
         if (is_read(ready_cmd.type)) {
             // Mark as outgoing.
-            io_->outgoing_queue_.push_back(ready_cmd.trans);
+            io_->outgoing_queue_.emplace(ready_cmd.trans, GL_CYCLE);
         }
     }
 }
