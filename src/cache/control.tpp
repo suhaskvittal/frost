@@ -33,30 +33,9 @@ __TEMPLATE_CLASS__::tick()
     if (mshr_it != mshr_.end()) {
         mshr_it->second.is_fired = next_->io_->add_incoming(mshr_it->second.trans);
     }
-    // Now try to issue some access
-    if (mshr_.size() == IMPL::NUM_MSHR)
-        return;
-    trans_t tt = io_->get_next_incoming();
-    if (!tt.has_value())
-        return;
-    Transaction& t = tt.value();
-    if (trans_is_read(t.type)) {
-        // Probe the cache
-        if (cache_->probe(t.address))
-            handle_hit(t);
-        else
-            handle_miss(t);
-    } else {
-        // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
-        // specified (i.e. for the L1D$, then on a write miss, install
-        // an MSHR entry).
-        if constexpr (IMPL::WRITE_ALLOCATE) {
-            if (!cache_->mark_dirty(t.address))
-                handle_miss(t, true);
-        } else {
-            cache_->mark_dirty(t.address);
-        }
-    }
+    // Now perform cache accesses.
+    for (size_t i = 0; i < IMPL::NUM_RW_PORTS; i++)
+        next_access();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -96,6 +75,38 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
         mshr_.erase(it);
     }
     ++s_fills_;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::next_access()
+{
+    // Now try to issue some access
+    if (mshr_.size() == IMPL::NUM_MSHR)
+        return;
+    trans_t tt = io_->get_next_incoming();
+    if (!tt.has_value())
+        return;
+    Transaction& t = tt.value();
+    if (trans_is_read(t.type)) {
+        // Probe the cache
+        if (cache_->probe(t.address))
+            handle_hit(t);
+        else
+            handle_miss(t);
+    } else {
+        // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
+        // specified (i.e. for the L1D$, then on a write miss, install
+        // an MSHR entry).
+        if constexpr (IMPL::WRITE_ALLOCATE) {
+            if (!cache_->mark_dirty(t.address))
+                handle_miss(t, true);
+        } else {
+            cache_->mark_dirty(t.address);
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

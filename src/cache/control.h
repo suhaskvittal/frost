@@ -37,6 +37,7 @@ struct MSHREntry
  *      (2) `WRITE_ALLOCATE` (whether or not to handle write misses)
  *      (3) `INVALIDATE_ON_HIT`
  *      (4) `NEXT_IS_INVALIDATE_ON_HIT`
+ *      (5) `NUM_RW_PORTS`
  *  Each setting determines how `CacheControl` operates `CACHE`
  *  and `NEXT_CONTROL`.
  * */
@@ -66,6 +67,7 @@ public:
 
     void mark_load_as_done(uint64_t address);
 private:
+    void next_access(void);
     void handle_hit(const Transaction&);
     void handle_miss(const Transaction&, bool write_miss=false);
 };

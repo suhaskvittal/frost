@@ -25,13 +25,15 @@ struct Transaction
     uint16_t        robid;
     TransactionType type;
 
-    uint64_t        address;
+    uint64_t address;
+    bool     address_is_ip;
 
-    Transaction(uint8_t cid, uint16_t rid, TransactionType t, uint64_t addr)
+    Transaction(uint8_t cid, uint16_t rid, TransactionType t, uint64_t addr, bool addr_is_ip=false)
         :coreid(cid),
         robid(rid),
         type(t),
-        address(addr)
+        address(addr),
+        address_is_ip(addr_is_ip)
     {}
 };
 
