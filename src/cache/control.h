@@ -28,8 +28,8 @@ struct MSHREntry
     uint64_t cycle_fired;
 
     MSHREntry(const Transaction& t, bool is_write=false)
-        :trans(t),
-        is_for_write_allocate(is_write),
+        :is_for_write_allocate(is_write),
+        trans(t),
         cycle_fired(GL_CYCLE)
     {}
 };

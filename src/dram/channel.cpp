@@ -44,8 +44,8 @@ inline void update_SL(std::array<uint64_t,2>& t, uint64_t diff, uint64_t same)
 ////////////////////////////////////////////////////////////////////////////
 
 DRAMChannel::DRAMChannel(double freq_ghz)
-    :freq_ghz_(freq_ghz),
-    io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
+    :io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
+    freq_ghz_(freq_ghz),
     next_ref_cycle_(tREFI)
 {}
 
