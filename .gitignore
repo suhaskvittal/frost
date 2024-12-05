@@ -1,0 +1,11 @@
+Release
+Release/*
+Debug
+Debug/*
+builds/
+builds/*
+
+_generated/*
+config/__pycache__
+config/__pycache__/*
+
