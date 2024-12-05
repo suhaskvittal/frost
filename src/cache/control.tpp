@@ -65,12 +65,12 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
         if constexpr (IMPL::WRITE_ALLOCATE) {
             if (e.is_for_write_allocate) {
                 cache_->mark_dirty(e.address);
-                ++s_write_alloc_;
+                ++s_write_alloc_[e.trans.coreid];
             }
         }
 
-        s_tot_penalty_ += GL_CYCLE - e.cycle_fired;
-        ++s_num_penalty_;
+        s_tot_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
+        ++s_num_penalty_[e.trans.coreid];
 
         mshr_.erase(it);
     }
@@ -92,6 +92,7 @@ __TEMPLATE_CLASS__::next_access()
     Transaction& t = tt.value();
     if (trans_is_read(t.type)) {
         // Probe the cache
+        ++s_accesses_[t.coreid];
         if (cache_->probe(t.address))
             handle_hit(t);
         else
@@ -101,6 +102,7 @@ __TEMPLATE_CLASS__::next_access()
         // specified (i.e. for the L1D$, then on a write miss, install
         // an MSHR entry).
         if constexpr (IMPL::WRITE_ALLOCATE) {
+            ++s_accesses_[t.coreid];
             if (!cache_->mark_dirty(t.address))
                 handle_miss(t, true);
         } else {
@@ -119,13 +121,15 @@ __TEMPLATE_CLASS__::handle_hit(const Transaction& t)
     io_->outgoing_queue_.emplace(t, GL_CYCLE + IMPL::CACHE_LATENCY);
     if constexpr (IMPL::INVALIDATE_ON_HIT) {
         cache_->invalidate(t.address);
-        ++s_invalidate_;
+        ++s_invalidates_[t.address];
     }
 }
 
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
 {
+    ++s_misses_[t.coreid];
+
     MSHREntry e(t, write_miss);
     e.is_fired = (mshr_.count(t.address) > 0) || next_->io_->add_incoming(t);
     mshr_.insert({t.address, t});

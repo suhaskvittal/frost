@@ -4,6 +4,7 @@
  * */
 
 #include "core.h"
+#include "util/stats.h"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -26,6 +27,57 @@ Core::tick()
         ifmem(i);
         iftr(i);
     }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class CACHE> void
+print_cache_stats_for_core(Core* c, const cache_ptr<CACHE>& cache, std::ostream& out, std::string_view header)
+{
+    uint8_t id = c->coreid_;
+    uint64_t inst = c->finished_inst_num_;
+    
+    uint64_t accesses = cache->s_accesses_.at(id),
+             misses = cache->s_misses_.at(id),
+             invalidates = cache->s_invalidates_.at(id),
+             write_alloc = cache->s_write_alloc_.at(id);
+
+    double apki = mean(accesses, inst) * 1000.0,
+           mpki = mean(misses, inst) * 1000.0;
+    double miss_penalty = mean(cache->s_tot_penalty_.at(id), cache->s_num_penalty_.at(id));
+
+    print_stat(out, header, "ACCESSES", accesses);
+    print_stat(out, header, "MISSES", misses);
+    if (invalidates > 0)
+        print_stat(out, header, "INVALIDATES", invalidates);
+    if (write_alloc > 0)
+        print_stat(out, header, "WRITE_ALLOCATES", write_alloc);
+    print_stat(out, header, "APKI", apki);
+    print_stat(out, header, "MPKI", mpki);
+}
+
+void
+Core::checkpoint_stats()
+{
+    double ipc = mean(finished_inst_num_, GL_CYCLE);
+
+    std::string header = "CORE_" + std::to_string(static_cast<int>(coreid));
+
+    print_stat(stats_stream_, header, "INST", finished_inst_num_);
+    print_stat(stats_stream_, header, "CYCLES", GL_CYCLE);
+    print_stat(stats_stream_, header, "IPC", ipc);
+
+    print_cache_stats_for_core(this, L1I_, stats_stream_, header + "_L1I$");
+    print_cache_stats_for_core(this, L1D_, stats_stream_, header + "_L1D$");
+    print_cache_stats_for_core(this, L2_, stats_stream_, header + "_L2$");
+    print_cache_stats_for_core(this, GL_LLC, stats_stream_, header + "_LLC");
+}
+
+void
+Core::print_stats(std::ostream& out)
+{
+    out << stats_stream_.str();
 }
 
 ////////////////////////////////////////////////////////////////////////////

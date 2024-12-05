@@ -44,9 +44,6 @@ struct CacheEntry
 template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 class Cache 
 {
-public:
-    uint64_t s_accesses_ =0;
-    uint64_t s_misses_   =0;
 private:
     using entry_t      = CacheEntry
     using cset_t       = std::array<entry_type, WAYS>;

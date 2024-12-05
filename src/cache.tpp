@@ -14,8 +14,6 @@
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS_::probe(uint64_t addr)
 {
-    ++s_accesses_;
-    
     cset_t& s = get_set(addr);
     auto it = std::find_if(s.begin(), s.end(),
                     [] (entry_t& e)
@@ -23,7 +21,6 @@ __TEMPLATE_CLASS_::probe(uint64_t addr)
                         return e.valid && e.address == addr;
                     });
     if (it == s.end()) {
-        ++s_misses_;
         return false;
     } else {
         update(*it);

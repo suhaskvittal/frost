@@ -6,7 +6,9 @@
 #ifndef CACHE_CONTROL_h
 #define CACHE_CONTROL_h
 
+#include "constants.h"
 #include "cache.h"
+#include "util/stats.h"
 
 #include <memory>
 #include <unordered_map>
@@ -49,14 +51,17 @@ public:
     using cache_ptr = std::unique_ptr<CACHE>;
     using next_ptr = std::unique_ptr<NEXT_CONTROL>;
 
+    using stat_t = VecStat<uint64_t, NUM_THREADS>;
+
     cache_ptr  cache_;
     io_ptr     io_;
     
-    uint64_t s_tot_penalty_ =0;
-    uint64_t s_num_penalty_ =0;
-    uint64_t s_invalidate_ =0;
-    uint64_t s_write_alloc_ =0;
-    uint64_t s_fills_ =0;
+    stat_t s_accesses_{};
+    stat_t s_misses_{};
+    stat_t s_tot_penalty_{};
+    stat_t s_num_penalty_{};
+    stat_t s_invalidates_{};
+    stat_t s_write_alloc_{};
 private:
     using mshr_t = std::unordered_multimap<uint64_t, MSHREntry>;
 

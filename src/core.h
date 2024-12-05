@@ -13,6 +13,7 @@
 
 #include <array>
 #include <memory>
+#include <iostream>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -38,7 +39,7 @@ public:
     uint64_t finished_inst_num_ =0;
     bool done_ =false;
 
-    uint64_t s_llc_misses_ =0;
+    const uint8_t coreid_;
 private:
     using l1i_ptr = cache_ptr<L1ICache>;
     using l1d_ptr = cache_ptr<L1DCache>;
@@ -71,10 +72,19 @@ private:
      * */
     std::string   trace_file_;
     tracereader_t trace_reader_;
+    /*
+     * For stats, we don't want to collect any results once `checkpoint_stats` is
+     * called. `stats_stream_` holds a checkpoint of the stats at the call time and
+     * is dumped in `print_stats`.
+     * */
+    std::stringstream stats_stream_;
 public:
-    Core(std::string trace_file);
+    Core(uint8_t coreid, std::string trace_file);
 
     void tick(void);
+
+    void checkpoint_stats(void);
+    void print_stats(std::ostream&);
 private:
     void iftr(size_t fwid);
     void ifmem(size_t fwid);
@@ -91,14 +101,12 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-using drain_callback_t = std::function<void(const Transaction&)>;
 /*
  * Generic function handles drains from `c`. This is provided as a template function
  * due to the common pattern used below.
  * */
-template <class CACHE_TYPE>
-void drain_cache_outgoing_queue(cache_ptr<CACHE_TYPE>& c, drain_callback_t handle_drain)
+template <class CACHE_TYPE, class DRAIN_CALLBACK>
+void drain_cache_outgoing_queue(cache_ptr<CACHE_TYPE>& c, DRAIN_CALLBACK handle_drain)
 {
     // Need to make sure queue is drained at the appropriate time (hence the second check).
     auto& out_queue = c->io_->outgoing_queue_;
