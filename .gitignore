@@ -8,4 +8,6 @@ builds/*
 _generated/*
 config/__pycache__
 config/__pycache__/*
+TRACES/
+TRACES/*
 
