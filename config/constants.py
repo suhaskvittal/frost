@@ -3,12 +3,12 @@
     date:   4 December 2024
 '''
 
-from .files import CONSTANTS_FILE, AUTOGEN_HEADER
+from .files import GEN_DIR, AUTOGEN_HEADER
 
 ####################################################################
 ####################################################################
 
-def write(cfg):
+def write(cfg, build):
     core_cfg = cfg['CORE']
     dram_cfg = cfg['DRAM']
 
@@ -29,12 +29,14 @@ def write(cfg):
     else:
         am_txt = f'#define DRAM_AM_{am}'
     # Finally, write to file. 
-    with open(CONSTANTS_FILE, 'w') as wr:
+    with open(f'{GEN_DIR}/{build}/constants.h', 'w') as wr:
         wr.write(
 f'''{AUTOGEN_HEADER}
 
 #ifndef CONSTANTS_h
 #define CONSTANTS_h
+
+#include <cstddef>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

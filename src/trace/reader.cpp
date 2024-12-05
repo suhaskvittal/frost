@@ -3,9 +3,10 @@
  *  date:   26 November 2024
  * */
 
-#include "trace_reader.h"
+#include "trace/reader.h"
 
 #include <cstring>
+#include <iostream>
 #include <limits>
 
 ////////////////////////////////////////////////////////////
@@ -52,7 +53,7 @@ TraceReader::read()
     memset(&blk_, 0, sizeof(blk_));
     if (type_ == TraceType::XZ) xz_read();
     else                        gz_read();
-    return TraceData(blk);
+    return TraceData(blk_);
 }
 
 ////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@
  *  date:   4 December 2024
  * */
 
+#include "globals.h"
 #include "dram_timing.h"
 
 #include "dram/channel.h"
@@ -45,7 +46,7 @@ inline void update_SL(std::array<uint64_t,2>& t, uint64_t diff, uint64_t same)
 DRAMChannel::DRAMChannel(double freq_ghz)
     :freq_ghz_(freq_ghz),
     io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
-    last_ref_cycle_(tREFI)
+    next_ref_cycle_(tREFI)
 {}
 
 ////////////////////////////////////////////////////////////////////////////
@@ -58,7 +59,7 @@ DRAMChannel::tick()
     while (!faw_.empty() && faw_.front() <= GL_DRAM_CYCLE + tFAW)
         faw_.pop_front();
 
-    if (GL_DRAM_CYCLE >= last_ref_cycle_) {
+    if (GL_DRAM_CYCLE >= next_ref_cycle_) {
         // Handle refresh
         bool all_ready = true;
         for (auto& b : banks_) {
@@ -93,12 +94,12 @@ DRAMChannel::tick()
 void
 DRAMChannel::schedule_next_cmd()
 {
-    IOBus::trans_t tt = io_->get_next_incoming(
-                                [this] (const Transaction& t)
-                                {
-                                    return this->get_bank(t.address).cmd_queue_.size() < DRAM_CMDQ_SIZE;
-                                });
-    if (tt.has.value()) {
+    auto tt = io_->get_next_incoming(
+                    [this] (const Transaction& t)
+                    {
+                        return this->get_bank(t.address).cmd_queue_.size() < DRAM_CMDQ_SIZE;
+                    });
+    if (tt.has_value()) {
         Transaction& t = tt.value();
         auto& b = get_bank(t.address);
         b.cmd_queue_.emplace_back(t, trans_is_read(t.type) ? READ_CMD : WRITE_CMD);
@@ -136,17 +137,17 @@ DRAMChannel::cmd_is_issuable(const DRAMCommand& cmd)
     // Check bank level constraints.
     if ((is_read(c) || is_write(c)) && GL_DRAM_CYCLE < b.cas_ok_cycle_)
         return false;
-    else if (c == DRAMCommandType::PRECHARGE && GL_DRAM_CYCLE < b.pre_ok_cycle)
+    else if (c == DRAMCommandType::PRECHARGE && GL_DRAM_CYCLE < b.pre_ok_cycle_)
         return false;
-    else if (c == DRAMCommandType::ACTIVATE && GL_DRAM_CYCLE < b.act_ok_cycle)
+    else if (c == DRAMCommandType::ACTIVATE && GL_DRAM_CYCLE < b.act_ok_cycle_)
         return false;
     // Now check channel level constraints.
-    size_t ii = static_cast<size_t>(dram_bankgroup(c.trans.address) == last_bankgroup_);
-    if (is_read(c) && GL_DRAM_CYCLE < rd_ok_cycle[ii])
+    size_t ii = static_cast<size_t>(dram_bankgroup(cmd.trans.address) == last_bankgroup_);
+    if (is_read(c) && GL_DRAM_CYCLE < rd_ok_cycle_[ii])
         return false;
-    if (is_write(c) && GL_DRAM_CYCLE < wr_ok_cycle[ii])
+    if (is_write(c) && GL_DRAM_CYCLE < wr_ok_cycle_[ii])
         return false;
-    if (c == DRAMCommandType::ACTIVATE && (GL_DRAM_CYCLE < act_ok_cycle[ii] || faw_.size() == 4))
+    if (c == DRAMCommandType::ACTIVATE && (GL_DRAM_CYCLE < act_ok_cycle_[ii] || faw_.size() == 4))
         return false;
     // Otherwise, the command meets all criteria.
     return true;
@@ -158,33 +159,33 @@ DRAMChannel::cmd_is_issuable(const DRAMCommand& cmd)
 void
 DRAMChannel::update_timing(const DRAMCommand& cmd)
 {
-    const auto& b = get_bank(cmd.trans.address);
+    auto& b = get_bank(cmd.trans.address);
     DRAMCommandType c = cmd.type;
     // Bank level updates
     switch (c) {
     case DRAMCommandType::READ:
-        update(b.pre_ok_cycle, tRTP);
+        update(b.pre_ok_cycle_, tRTP);
         ++b.num_cas_to_open_row_;
         break;
     case DRAMCommandType::READ_PRECHARGE:
-        update(b.act_ok_cycle, BL/2 + tRTP + tRP);
+        update(b.act_ok_cycle_, BL/2 + tRTP + tRP);
         b.open_row_.reset();
         break;
     case DRAMCommandType::WRITE:
-        update(b.pre_ok_cycle, CWL + BL/2 + tWR);
+        update(b.pre_ok_cycle_, CWL + BL/2 + tWR);
         ++b.num_cas_to_open_row_;
         break;
     case DRAMCommandType::WRITE_PRECHARGE:
-        update(b.act_ok_cycle, CWL + BL/2 + tWR + tRP);
+        update(b.act_ok_cycle_, CWL + BL/2 + tWR + tRP);
         b.open_row_.reset();
         break;
     case DRAMCommandType::ACTIVATE:
-        update(b.cas_ok_cycle, tRCD);
-        update(b.pre_ok_cycle, tRP);
+        update(b.cas_ok_cycle_, tRCD);
+        update(b.pre_ok_cycle_, tRP);
         b.open_row_ = dram_row(cmd.trans.address);
         break;
     case DRAMCommandType::PRECHARGE:
-        update(b.act_ok_cycle, tRP);
+        update(b.act_ok_cycle_, tRP);
         b.open_row_.reset();
         break;
     }
@@ -192,22 +193,22 @@ DRAMChannel::update_timing(const DRAMCommand& cmd)
     switch (c) {
     case DRAMCommandType::READ:
     case DRAMCommandType::READ_PRECHARGE:
-        update_SL(rd_ok_cycle, tCCD_S, tCCD_L);
-        update_SL(wr_ok_cycle, tCCD_S_RTW, tCCD_L_RTW);
+        update_SL(rd_ok_cycle_, tCCD_S, tCCD_L);
+        update_SL(wr_ok_cycle_, tCCD_S_RTW, tCCD_L_RTW);
         break;
     case DRAMCommandType::WRITE:
     case DRAMCommandType::WRITE_PRECHARGE:
-        update_SL(rd_ok_cycle, tCCD_S_WTR, tCCD_L_WTR);
-        update_SL(wr_ok_cycle, tCCD_S_WR, tCCD_L_WR);
+        update_SL(rd_ok_cycle_, tCCD_S_WTR, tCCD_L_WTR);
+        update_SL(wr_ok_cycle_, tCCD_S_WR, tCCD_L_WR);
         break;
     case DRAMCommandType::ACTIVATE:
-        update_SL(act_ok_cycle, tRRD_S, tRRD_L);
+        update_SL(act_ok_cycle_, tRRD_S, tRRD_L);
         faw_.push_back(GL_DRAM_CYCLE);
         break;
     default:
         break;
     }
-    last_bankgroup_used_ = dram_bankgroup(cmd.trans.address);
+    last_bankgroup_ = dram_bankgroup(cmd.trans.address);
 }
 
 ////////////////////////////////////////////////////////////////////////////

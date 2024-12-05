@@ -3,14 +3,14 @@
     date:   4 December 2024
 '''
 
-from .files import MEMSYS_FILE, AUTOGEN_HEADER
+from .files import GEN_DIR, AUTOGEN_HEADER
 
 ####################################################################
 ####################################################################
 
 def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
     sets, ways, repl = cfg['sets'], cfg['ways'], cfg['replacement_policy']
-    num_mshr, num_rw_ports = cfg['num_mshr'], cfg['num_rw_ports']
+    num_mshr, num_rw_ports, latency = cfg['num_mshr'], cfg['num_rw_ports'], cfg['latency']
     rq_size, wq_size, pq_size = cfg['read_queue_size'], cfg['write_queue_size'], cfg['prefetch_queue_size']
     
     write_allocate = 'true' if (cfg['mode'] == 'WRITE_ALLOCATE') else 'false'
@@ -27,10 +27,15 @@ struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheRep
 
     constexpr static size_t NUM_MSHR = {num_mshr};
     constexpr static size_t NUM_RW_PORTS = {num_rw_ports};
+    constexpr static size_t CACHE_LATENCY = {latency};
 
     constexpr static bool WRITE_ALLOCATE = {write_allocate};
     constexpr static bool INVALIDATE_ON_HIT = {invalidate_on_hit};
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = {next_is_invalidate_on_hit};
+
+    {typename}(CacheControl::next_ptr& n)
+        :CacheControl(n)
+    {{}}
 }};
 '''
     return cache_decl
@@ -38,8 +43,8 @@ struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheRep
 ####################################################################
 ####################################################################
 
-def write(cfg):
-    wr = open(MEMSYS_FILE, 'w')
+def write(cfg, build):
+    wr = open(f'{GEN_DIR}/{build}/memsys.h', 'w')
     wr.write(
 f'''{AUTOGEN_HEADER}
 

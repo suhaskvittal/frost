@@ -4,6 +4,7 @@
  * */
 
 #include <algorithm>
+#include <iostream>
 
 #define __TEMPLATE_HEADER__ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 #define __TEMPLATE_CLASS__  Cache<SETS,WAYS,POL>
@@ -12,11 +13,11 @@
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS_::probe(uint64_t addr)
+__TEMPLATE_CLASS__::probe(uint64_t addr)
 {
     cset_t& s = get_set(addr);
     auto it = std::find_if(s.begin(), s.end(),
-                    [] (entry_t& e)
+                    [addr] (entry_t& e)
                     {
                         return e.valid && e.address == addr;
                     });
@@ -36,7 +37,7 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
 {
     cset_t& s = get_set(addr);
     auto it = std::find_if(s.begin(), s.end(),
-                    [] (entry_t& e)
+                    [addr] (entry_t& e)
                     {
                         return e.valid && e.address == addr;
                     });
@@ -51,13 +52,13 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ fill_result_t
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
 __TEMPLATE_CLASS__::fill(uint64_t addr)
 {
     return fill(entry_t(addr));
 }
 
-__TEMPLATE_CLASS__ fill_result_t
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
 __TEMPLATE_CLASS__::fill(entry_t&& e)
 {
     fill_result_t out;
@@ -84,7 +85,7 @@ __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 {
     cset_t& s = get_set(addr);
     auto it = std::find_if(s.begin(), s.end(),
-                    [] (entry_t& e)
+                    [addr] (entry_t& e)
                     {
                         return e.address == addr;
                     });
@@ -94,7 +95,7 @@ __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ __TEMPLATE_CLASS__::cset_t::iterator
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::cset_t::iterator
 __TEMPLATE_CLASS__::find_victim(cset_t& s)
 {
     if constexpr (POL == CacheReplPolicy::LRU) {

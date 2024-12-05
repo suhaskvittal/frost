@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "memsys.h"
 #include "globals.h"
+#include "sim.h"
 
 #include "core.h"
 #include "dram.h"
@@ -22,6 +23,10 @@ os_ptr       GL_OS;
 llc_ptr      GL_LLC;
 dram_ptr     GL_DRAM;
 
+std::string OPT_TRACE_FILE;
+uint64_t OPT_INST_SIM;
+uint64_t OPT_INST_WARMUP;
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -36,27 +41,28 @@ int main(int argc, char* argv[])
                 {"w", "Number of warmup instructions", "10000000"},
                 {"s", "Number of instructions to simulate", "10000000"}
             });
-    uint64_t num_inst_sim,
-             num_inst_warmup;
-    std::vector<std::string> traces{1};
+    ARGS("trace", OPT_TRACE_FILE);
+    ARGS("w", OPT_INST_WARMUP);
+    ARGS("s", OPT_INST_SIM);
 
-    ARGS("trace", traces[0]);
-    ARGS("w", num_inst_warmup);
-    ARGS("s", num_inst_sim);
-
-    sim_init(traces);
+    sim_init();
+    print_config(std::cout);
 
     size_t curr_core_idx = 0;
     bool all_done;
     do {
+        print_progress(std::cout);
+
         GL_DRAM->tick();
         GL_LLC->tick();
+
+        drain_llc_outgoing_queue();
 
         size_t ii = curr_core_idx;
         for (size_t i = 0; i < NUM_THREADS; i++) {
             auto& c = GL_CORES[ii];
             c->tick();
-            if (!c->done_ && c->finished_inst_num_ > num_inst_sim) {
+            if (!c->done_ && c->finished_inst_num_ >= OPT_INST_SIM) {
                 c->checkpoint_stats();
                 c->done_ = true;
             }
@@ -64,7 +70,7 @@ int main(int argc, char* argv[])
         }
         numeric_traits<NUM_THREADS>::increment_and_mod(curr_core_idx);
 
-        all_done = std::all_of(GL_CORES.begin(), GL_CORES.end()
+        all_done = std::all_of(GL_CORES.begin(), GL_CORES.end(),
                         [] (const core_ptr& c)
                         {
                             return c->done_;

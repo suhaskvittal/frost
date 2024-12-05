@@ -9,6 +9,7 @@
 
 #include "core.h"
 #include "dram.h"
+#include "os.h"
 
 #include <sstream>
 
@@ -18,7 +19,7 @@
 void
 sim_init(void)
 {
-    for (size_t i = 0; i < NUM_THREADS: i++)
+    for (size_t i = 0; i < NUM_THREADS; i++)
         GL_CORES[i] = core_ptr(new Core(i, OPT_TRACE_FILE));
     GL_DRAM = dram_ptr(new DRAM(4.0, 2.4));
     GL_LLC = llc_ptr(new LLCache(GL_DRAM));
@@ -44,18 +45,20 @@ list_cache_params(
     std::string_view repl,
     size_t num_mshr,
     size_t num_ports,
+    size_t latency,
     size_t rq,
     size_t wq,
     size_t pq)
 {
     std::string qstr = std::to_string(rq) + ":" + std::to_string(wq) + ":" + std::to_string(pq);
     out << std::setw(12) << std::left << name
-        << std::setw(6) << std::left << (size_kb == 0 ? "N/A" : size_kb)
-        << std::setw(6) << std::left << sets
-        << std::setw(6) << std::left << ways
-        << std::setw(6) << std::left << repl
-        << std::setw(6) << std::left << num_mshr
-        << std::setw(6) << std::left << num_ports
+        << std::setw(12) << std::left << (size_kb == 0 ? "N/A" : std::to_string(size_kb))
+        << std::setw(8) << std::left << sets
+        << std::setw(8) << std::left << ways
+        << std::setw(8) << std::left << repl
+        << std::setw(8) << std::left << num_mshr
+        << std::setw(8) << std::left << num_ports
+        << std::setw(12) << std::left << latency
         << std::setw(12) << std::left << qstr
         << "\n";
 }
@@ -76,7 +79,7 @@ list_dram_sl(std::ostream& out, std::string_view stat, uint64_t ckS, uint64_t ck
     double time_ns_S = ckS * 0.4166666666666667,
            time_ns_L = ckL * 0.4166666666666667;
     std::stringstream ss;
-    ss << std::setprecision(1) << tS << ":" << std::setprecision(1) << tL;
+    ss << std::setprecision(1) << time_ns_S << ":" << std::setprecision(1) << time_ns_L;
     std::string nss = ss.str();
     std::string cks = std::to_string(ckS) + ":" + std::to_string(ckL);
 
@@ -100,21 +103,22 @@ print_config(std::ostream& out)
     // List cache parameters.
     out << "\n" << BAR << "\n\n"
         << std::setw(12) << std::left << "CACHE"
-        << std::setw(6) << std::left << "SIZE (kB)"
-        << std::setw(6) << std::left << "SETS"
-        << std::setw(6) << std::left << "WAYS"
-        << std::setw(6) << std::left << "REPL"
-        << std::setw(6) << std::left << "MSHR"
-        << std::setw(6) << std::left << "PORTS"
+        << std::setw(12) << std::left << "SIZE (kB)"
+        << std::setw(8) << std::left << "SETS"
+        << std::setw(8) << std::left << "WAYS"
+        << std::setw(8) << std::left << "REPL"
+        << std::setw(8) << std::left << "MSHR"
+        << std::setw(8) << std::left << "PORTS"
+        << std::setw(12) << std::left << "LATENCY"
         << std::setw(12) << std::left << "RQ:WQ:PQ"
         << "\n" << BAR << "\n";
-    list_cache_params(out, "L1I$", 64, 16, 64, "LRU", 8, 2, 64, 0, 32);
-    list_cache_params(out, "L1D$", 64, 16, 64, "LRU", 8, 2, 64, 64, 32);
-    list_cache_params(out, "L2$", 1024, 8, 2048, "LRU", 16, 1, 32, 32, 16);
-    list_cache_params(out, "LLC", 8192, 16, 8192, "SRRIP", 32, 4, 64, 64, 32);
+    list_cache_params(out, "L1I$", 64, 16, 64, "LRU", 8, 2, 4, 64, 0, 32);
+    list_cache_params(out, "L1D$", 64, 16, 64, "LRU", 8, 2, 4, 64, 64, 32);
+    list_cache_params(out, "L2$", 1024, 8, 2048, "LRU", 16, 1, 10, 32, 32, 16);
+    list_cache_params(out, "LLC", 8192, 16, 8192, "LRU", 32, 4, 20, 64, 64, 32);
 
     out << "\n" << BAR << "\n\n"
-        << "DRAM frequency = " << 2.4 << "GHz, tCK = " << 0.41667 << "\n\n";
+        << "DRAM frequency = " << 2.4 << "GHz, tCK = " << 0.41667 << "\n\n"
         << std::setw(12) << std::left << "DRAM TIMING"
         << std::setw(12) << std::left << "ns"
         << std::setw(12) << std::left << "nCK"
@@ -148,7 +152,7 @@ print_progress(std::ostream& out)
     if (GL_CYCLE % 50'000'000 == 0) {
         out << "\nCYCLE = " << std::setw(4) << std::left << fmt_bignum(GL_CYCLE)
             << "[ INST:";
-        for (size_t i = 0; i < NUM_THREADS: i++)
+        for (size_t i = 0; i < NUM_THREADS; i++)
             out << std::setw(7) << std::right << fmt_bignum(GL_CORES[i]->finished_inst_num_);
         out << " ]\n\tprogress: ";
     }
@@ -163,14 +167,14 @@ std::string
 fmt_bignum(uint64_t x)
 {
     std::string suffix;
-    if (num < 1'000'000'000) {
-        num /= 1'000'000;
+    if (x < 1'000'000'000) {
+        x /= 1'000'000;
         suffix = "M";
     } else {
-        num /= 1'000'000'000;
+        x /= 1'000'000'000;
         suffix = "B";
     }
-    return std::to_string(num) + suffix;
+    return std::to_string(x) + suffix;
 }
 
 ////////////////////////////////////////////////////////////////////////////

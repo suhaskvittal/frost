@@ -3,9 +3,10 @@
  *  date:   4 December 2024
  * */
 
-#include "dram.h"
-
 #include "globals.h"
+
+#include "dram.h"
+#include "util/stats.h"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -16,7 +17,7 @@ uint64_t GL_DRAM_CYCLE = 0;
 ////////////////////////////////////////////////////////////////////////////
 
 DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
-    :io_(this),
+    :io_(new DRAM::IO(this)),
     freq_ghz_(freq_ghz),
     clock_scale_(cpu_freq_ghz/freq_ghz - 1.0)
 {
@@ -41,10 +42,10 @@ DRAM::tick()
     }
 
     if (leap_ >= 1.0) {
-        leap -= 1.0;
+        leap_ -= 1.0;
     } else {
         ++GL_DRAM_CYCLE;
-        leap += clock_scale_;
+        leap_ += clock_scale_;
     }
 }
 
@@ -52,9 +53,9 @@ DRAM::tick()
 ////////////////////////////////////////////////////////////////////////////
 
 #define CREATE_VEC_STAT(stat)\
-    VecStat<uint64_t,DRAM_CHANNELS> vec_stat;\
+    VecStat<uint64_t,DRAM_CHANNELS> vec_##stat;\
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
-        vec_stat[i] = channels_[i]->s_stat_;\
+        vec_##stat[i] = channels_[i]->s_##stat##_;\
     }\
 
 void

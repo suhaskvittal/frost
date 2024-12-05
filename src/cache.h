@@ -6,6 +6,8 @@
 #ifndef CACHE_h
 #define CACHE_h
 
+#include "globals.h"
+
 #include "util/numerics.h"
 
 #include <array>
@@ -31,6 +33,7 @@ struct CacheEntry
      * */
     uint64_t timestamp;
 
+    CacheEntry(void) =default;
     CacheEntry(uint64_t addr)
         :valid(true),
         address(addr),
@@ -45,14 +48,16 @@ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 class Cache 
 {
 private:
-    using entry_t      = CacheEntry
-    using cset_t       = std::array<entry_type, WAYS>;
-    using cset_array_t = std::array<cset_type, SETS>;
+    using entry_t      = CacheEntry;
+    using cset_t       = std::array<entry_t, WAYS>;
+    using cset_array_t = std::array<cset_t, SETS>;
     
-    set_array_t csets_;
+    cset_array_t csets_;
     std::mt19937_64 rng_{0};
 public:
     using fill_result_t = std::optional<CacheEntry>;
+
+    Cache(void) =default;
 
     bool probe(uint64_t);
     bool mark_dirty(uint64_t);
@@ -62,7 +67,7 @@ public:
 
     void invalidate(uint64_t);
 private:
-    cset_t::iterator find_victim(cset_t&);
+    typename cset_t::iterator find_victim(cset_t&);
 
     inline size_t get_index(uint64_t x)
     {
@@ -79,6 +84,11 @@ private:
         e.timestamp = GL_CYCLE;
     }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#include "cache.tpp"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

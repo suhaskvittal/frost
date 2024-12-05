@@ -56,9 +56,16 @@ struct DRAMCommand
     DRAMCommandType type;
     bool is_row_buffer_hit =true;
 
-    DRAMCommand(void) {}
-    DRAMCommand(Transaction&& t, DRAMCommandType t)
-        :trans(std::move(t)),
+    DRAMCommand(void)
+        :DRAMCommand(0, DRAMCommandType::READ)
+    {}
+
+    DRAMCommand(uint64_t addr, DRAMCommandType t)
+        :DRAMCommand(Transaction(0, nullptr, TransactionType::READ, addr), t)
+    {}
+
+    DRAMCommand(Transaction trans, DRAMCommandType t)
+        :trans(trans),
         type(t)
     {}
 };
@@ -123,7 +130,7 @@ private:
     /*
      * Refresh management.
      * */
-    uint64_t last_ref_cycle_;
+    uint64_t next_ref_cycle_;
     uint64_t ref_done_cycle_ =0;
 public:
     DRAMChannel(double freq_ghz);
@@ -152,11 +159,6 @@ private:
     inline DRAMBank& get_bank(uint64_t addr)
     {
         return banks_.at(get_bank_idx(addr));
-    }
-
-    inline uint64_t ckcast(double t_ns)
-    {
-        return static_cast<uint64_t>(std::ceil(t_ns * freq_ghz_));
     }
 };
 

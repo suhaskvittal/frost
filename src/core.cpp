@@ -4,6 +4,7 @@
  * */
 
 #include "core.h"
+#include "os.h"
 #include "util/stats.h"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -20,7 +21,12 @@ inline uint64_t LINEADDR(uint64_t byteaddr)
 Core::Core(uint8_t coreid, std::string trace_file)
     :coreid_(coreid),
     trace_reader_(trace_file)
-{}
+{
+    // Initialize caches.
+    L2_ = l2_ptr(new L2Cache(GL_LLC));
+    L1I_ = l1i_ptr(new L1ICache(L2_));
+    L1D_ = l1d_ptr(new L1DCache(L2_));
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -71,7 +77,7 @@ Core::checkpoint_stats()
 {
     double ipc = mean(finished_inst_num_, GL_CYCLE);
 
-    std::string header = "CORE_" + std::to_string(static_cast<int>(coreid));
+    std::string header = "CORE_" + std::to_string(static_cast<int>(coreid_));
 
     print_stat(stats_stream_, header, "INST", finished_inst_num_);
     print_stat(stats_stream_, header, "CYCLES", GL_CYCLE);
@@ -142,7 +148,7 @@ Core::disp(size_t fwid)
     if (!la.valid)
         return;
     // Install the instruction into the ROB
-    if (!la.inst->data_avail || rob.size() == CORE_ROB_SIZE) {
+    if (!la.inst->inst_data_avail || rob_.size() == CORE_ROB_SIZE) {
         la.stalled = true;
         return;
     }
@@ -168,7 +174,7 @@ ready_for_dcache(const iptr_t& inst)
 }
 
 inline bool
-need_translation(const iptr& inst)
+needs_translation(const iptr_t& inst)
 {
     return inst->is_mem_inst()
             && (inst->p_ld_lineaddr.size() < inst->loads.size() 
@@ -186,7 +192,7 @@ Core::operate_rob()
         rob_.pop_front();
     }
     // Nothing to be done if the rob is empty
-    if (rob_.empty()
+    if (rob_.empty())
         return;
     // Check if any ROB entries can access the L1D$ or
     // need address translation.
@@ -268,7 +274,7 @@ drain_llc_outgoing_queue()
     drain_cache_outgoing_queue(GL_LLC,
             [] (const Transaction& t)
             {
-                auto core = GL_CORES[t.coreid];
+                auto& core = GL_CORES[t.coreid];
                 core->L2_->mark_load_as_done(t.address);
             });
 }

@@ -1,0 +1,3 @@
+/nethome/svittal8/research/c/frost/Release/CMakeFiles/sim.dir
+/nethome/svittal8/research/c/frost/Release/CMakeFiles/edit_cache.dir
+/nethome/svittal8/research/c/frost/Release/CMakeFiles/rebuild_cache.dir

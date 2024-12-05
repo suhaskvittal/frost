@@ -104,14 +104,14 @@ private:
  * due to the common pattern used below.
  * */
 template <class CACHE_TYPE, class DRAIN_CALLBACK>
-void drain_cache_outgoing_queue(cache_ptr<CACHE_TYPE>& c, DRAIN_CALLBACK handle_drain)
+void drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>& c, DRAIN_CALLBACK handle_drain)
 {
     // Need to make sure queue is drained at the appropriate time (hence the second check).
     auto& out_queue = c->io_->outgoing_queue_;
-    while (!out_queue.empty()
-            && GL_CYCLE >= std::get<1>(out_queue.top().cycle_done))
-    {
-        Transaction& t = std::get<0>(out_queue.top());
+    while (!out_queue.empty()) {
+        auto& [t, cycle_done] = out_queue.top();
+        if (GL_CYCLE < cycle_done)
+            return;
         handle_drain(t);
         out_queue.pop();
     }

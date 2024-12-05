@@ -8,11 +8,16 @@
 
 #include "trace/data.h"
 
+#include <vector>
+#include <unordered_set>
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 struct Instruction
 {
+    using vmemop_list_t = std::vector<uint64_t>;
+    using pmemop_set_t = std::unordered_set<uint64_t>;
     /*
      * These are set upon instantiation.
      * */
@@ -20,8 +25,8 @@ struct Instruction
     bool       branch_taken;
     BranchType branch_type;
 
-    std::vector<uint64_t> loads;
-    std::vector<uint64_t> stores;
+    vmemop_list_t loads;
+    vmemop_list_t stores;
     /*
      * Additional metadata that can be used for
      * managing interactions with i-caches and d-caches.
@@ -30,8 +35,8 @@ struct Instruction
     uint64_t pip;
     bool inst_data_avail =false;
 
-    std::unordered_set<uint64_t> p_ld_lineaddr;
-    std::unordered_set<uint64_t> p_st_lineaddr;
+    pmemop_set_t p_ld_lineaddr;
+    pmemop_set_t p_st_lineaddr;
     bool awaiting_loads =false;
 
     uint64_t cycle_fetched = std::numeric_limits<uint64_t>::max();

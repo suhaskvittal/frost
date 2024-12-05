@@ -7,7 +7,10 @@
 #define CACHE_CONTROL_h
 
 #include "constants.h"
+
 #include "cache.h"
+#include "io_bus.h"
+#include "transaction.h"
 #include "util/stats.h"
 
 #include <memory>
@@ -40,6 +43,7 @@ struct MSHREntry
  *      (3) `INVALIDATE_ON_HIT`
  *      (4) `NEXT_IS_INVALIDATE_ON_HIT`
  *      (5) `NUM_RW_PORTS`
+ *      (6) `CACHE_LATENCY`
  *  Each setting determines how `CacheControl` operates `CACHE`
  *  and `NEXT_CONTROL`.
  * */
@@ -47,7 +51,7 @@ template <class IMPL, class CACHE, class NEXT_CONTROL>
 class CacheControl
 {
 public:
-    using io_ptr = std::shared_ptr<IOBus>;
+    using io_ptr = std::unique_ptr<IOBus>;
     using cache_ptr = std::unique_ptr<CACHE>;
     using next_ptr = std::unique_ptr<NEXT_CONTROL>;
 
@@ -70,6 +74,7 @@ private:
 public:
     CacheControl(next_ptr&);
 
+    void tick(void);
     void mark_load_as_done(uint64_t address);
 private:
     void next_access(void);
@@ -80,5 +85,6 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+#include "control.tpp"
 
 #endif  // CACHE_CONTROL_h

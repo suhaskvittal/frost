@@ -27,7 +27,7 @@ public:
 
         inline bool add_incoming(Transaction t)
         {
-            size_t ch = dram_get_channel(t.address);
+            size_t ch = dram_channel(t.address);
             return dram->channels_[ch]->io_->add_incoming(t);
         }
 
@@ -49,11 +49,11 @@ private:
 
     const double clock_scale_;
 public:
-    DRAM(double cpu_freq_ghz, double freq_ghz)
+    DRAM(double cpu_freq_ghz, double freq_ghz);
 
     void tick(void);
     void print_stats(std::ostream&);
-}
+};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

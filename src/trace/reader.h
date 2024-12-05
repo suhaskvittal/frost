@@ -1,12 +1,11 @@
-/*
- *  author: Suhas Vittal
+/* author: Suhas Vittal
  *  date:   26 November 2024
  * */
 
 #ifndef TRACE_READER_h
 #define TRACE_READER_h
 
-#include "trace_data.h"
+#include "trace/data.h"
 
 #include <cstdio>
 #include <string>

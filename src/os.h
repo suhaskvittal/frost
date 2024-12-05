@@ -39,6 +39,8 @@ private:
      * */
     std::mt19937_64 rng{0};
 public:
+    OS(void) =default;
+
     uint64_t translate_byteaddr(uint64_t);
     uint64_t translate_lineaddr(uint64_t);
 private:

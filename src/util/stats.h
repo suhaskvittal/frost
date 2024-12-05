@@ -10,6 +10,7 @@
 #include <array>
 #include <iostream>
 #include <iomanip>
+#include <numeric>
 #include <string_view>
 #include <type_traits>
 
@@ -33,7 +34,7 @@ template <class T, size_t N> inline VecStat<double, N>
 mean(const VecStat<T,N>& arr, T tot)
 {
     VecStat<double, N> out;
-    std::transform(arr.begin(), arr.end(), out.begin(), [] (T x) { return mean(x, tot); });
+    std::transform(arr.begin(), arr.end(), out.begin(), [tot] (T x) { return mean(x, tot); });
     return out;
 }
 

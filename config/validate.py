@@ -33,7 +33,8 @@ def validate_cache_section(cfg) -> bool:
         'num_rw_ports',
         'read_queue_size',
         'write_queue_size',
-        'prefetch_queue_size'
+        'prefetch_queue_size',
+        'latency'
     ]
     if not all(x in cfg for x in required):
         return False

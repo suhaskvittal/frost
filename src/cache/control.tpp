@@ -4,7 +4,7 @@
  * */
 
 #define __TEMPLATE_HEADER__ template <class IMPL, class CACHE, class NEXT_CONTROL>
-#define __TEMPLATE_CLASS__ CacheControl<IMPL, Cache, NEXT_CONTROL>
+#define __TEMPLATE_CLASS__ CacheControl<IMPL, CACHE, NEXT_CONTROL>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -58,13 +58,13 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
     }
     // Now handle MSHR
     auto it = mshr_.end();
-    while ((it == mshr_.find(address)) != mshr_.end()) {
+    while ((it=mshr_.find(address)) != mshr_.end()) {
         MSHREntry& e = it->second;
-        io_->outgoing_queue.emplace(e.trans, IMPL::CACHE_LATENCY);
+        io_->outgoing_queue_.emplace(e.trans, IMPL::CACHE_LATENCY);
 
         if constexpr (IMPL::WRITE_ALLOCATE) {
             if (e.is_for_write_allocate) {
-                cache_->mark_dirty(e.address);
+                cache_->mark_dirty(e.trans.address);
                 ++s_write_alloc_[e.trans.coreid];
             }
         }
@@ -74,7 +74,6 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 
         mshr_.erase(it);
     }
-    ++s_fills_;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -86,7 +85,7 @@ __TEMPLATE_CLASS__::next_access()
     // Now try to issue some access
     if (mshr_.size() == IMPL::NUM_MSHR)
         return;
-    trans_t tt = io_->get_next_incoming();
+    auto tt = io_->get_next_incoming();
     if (!tt.has_value())
         return;
     Transaction& t = tt.value();

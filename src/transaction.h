@@ -11,13 +11,15 @@
 
 enum class TransactionType { READ, WRITE, PREFETCH, TRANSLATION };
 
-inline bool trans_is_read(TransactionType& t)
+inline bool trans_is_read(TransactionType t)
 {
     return t != TransactionType::WRITE;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+struct Instruction;
 /*
  * This struct should have all information for routing cache/memory requests
  * through the memory hierarchy.

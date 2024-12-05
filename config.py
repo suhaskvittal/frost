@@ -7,12 +7,20 @@ from config.validate import *
 from config import constants, memsys, globs, sim, dram_timing
 
 import configparser
+import os
+
+from sys import argv
 
 ####################################################################
 ####################################################################
+
+build_id = argv[1]
+config_file = argv[2]
+
+os.system(fr'rm -rf _generated/{build_id}; mkdir -p _generated/{build_id}')
 
 cfg = configparser.ConfigParser()
-cfg.read('example.ini')
+cfg.read(config_file)
 
 caches = ['L1i', 'L1d', 'L2', 'LLC']
 
@@ -25,11 +33,11 @@ for c in caches:
     validate_cache_section(cfg[c])
 validate_dram_section(cfg['DRAM'])
 
-constants.write(cfg)
-memsys.write(cfg)
-globs.write(cfg)
-sim.write(cfg)
-dram_timing.write(cfg)
+constants.write(cfg, build_id)
+memsys.write(cfg, build_id)
+globs.write(cfg, build_id)
+sim.write(cfg, build_id)
+dram_timing.write(cfg, build_id)
 
 ####################################################################
 ####################################################################

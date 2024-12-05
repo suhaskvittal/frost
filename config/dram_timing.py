@@ -3,14 +3,14 @@
     date:   5 December 2024
 '''
 
-from .files import DRAM_TIMING_FILE, AUTOGEN_HEADER
+from .files import GEN_DIR, AUTOGEN_HEADER
 
 import math
 
 ####################################################################
 ####################################################################
 
-def write(cfg):
+def write(cfg, build):
     BL = int(cfg['DRAM']['BL'])
     dram_freq = float(cfg['DRAM']['frequency_ghz'])
     dram_type = cfg['DRAM']['dram_type']
@@ -46,12 +46,14 @@ def write(cfg):
         print(f'Unsupported dram type: {dram_type}')
         exit(1)
 
-    with open(DRAM_TIMING_FILE, 'w') as wr:
+    with open(f'{GEN_DIR}/{build}/dram_timing.h', 'w') as wr:
         wr.write(
 f'''{AUTOGEN_HEADER}
 
 #ifndef DRAM_TIMING_h
 #define DRAM_TIMING_h
+
+#include <cstdint>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

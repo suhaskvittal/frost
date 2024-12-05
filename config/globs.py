@@ -3,13 +3,13 @@
     date:   4 December 2024
 '''
 
-from .files import GLOBALS_FILE, AUTOGEN_HEADER
+from .files import GEN_DIR, AUTOGEN_HEADER
 
 ####################################################################
 ####################################################################
 
-def write(cfg):
-    with open(GLOBALS_FILE, 'w') as wr:
+def write(cfg, build):
+    with open(f'{GEN_DIR}/{build}/globals.h', 'w') as wr:
         wr.write(
 f'''{AUTOGEN_HEADER}
 
@@ -20,6 +20,7 @@ f'''{AUTOGEN_HEADER}
 
 #include <array>
 #include <cstdint>
+#include <memory>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

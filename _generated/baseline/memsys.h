@@ -11,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-struct LLCache : public CacheControl<LLCache, Cache<8192,16,CacheReplPolicy::SRRIP>, DRAM>
+struct LLCache : public CacheControl<LLCache, Cache<8192,16,CacheReplPolicy::LRU>, DRAM>
 {
     constexpr static size_t RQ_SIZE = 64;
     constexpr static size_t WQ_SIZE = 64;
@@ -19,10 +19,15 @@ struct LLCache : public CacheControl<LLCache, Cache<8192,16,CacheReplPolicy::SRR
 
     constexpr static size_t NUM_MSHR = 32;
     constexpr static size_t NUM_RW_PORTS = 4;
+    constexpr static size_t CACHE_LATENCY = 20;
 
     constexpr static bool WRITE_ALLOCATE = false;
     constexpr static bool INVALIDATE_ON_HIT = true;
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = false;
+
+    LLCache(CacheControl::next_ptr& n)
+        :CacheControl(n)
+    {}
 };
 
 struct L2Cache : public CacheControl<L2Cache, Cache<2048,8,CacheReplPolicy::LRU>, LLCache>
@@ -33,10 +38,15 @@ struct L2Cache : public CacheControl<L2Cache, Cache<2048,8,CacheReplPolicy::LRU>
 
     constexpr static size_t NUM_MSHR = 16;
     constexpr static size_t NUM_RW_PORTS = 1;
+    constexpr static size_t CACHE_LATENCY = 10;
 
     constexpr static bool WRITE_ALLOCATE = false;
     constexpr static bool INVALIDATE_ON_HIT = false;
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = true;
+
+    L2Cache(CacheControl::next_ptr& n)
+        :CacheControl(n)
+    {}
 };
 
 struct L1DCache : public CacheControl<L1DCache, Cache<64,16,CacheReplPolicy::LRU>, L2Cache>
@@ -47,10 +57,15 @@ struct L1DCache : public CacheControl<L1DCache, Cache<64,16,CacheReplPolicy::LRU
 
     constexpr static size_t NUM_MSHR = 8;
     constexpr static size_t NUM_RW_PORTS = 2;
+    constexpr static size_t CACHE_LATENCY = 4;
 
     constexpr static bool WRITE_ALLOCATE = true;
     constexpr static bool INVALIDATE_ON_HIT = false;
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = false;
+
+    L1DCache(CacheControl::next_ptr& n)
+        :CacheControl(n)
+    {}
 };
 
 struct L1ICache : public CacheControl<L1ICache, Cache<64,16,CacheReplPolicy::LRU>, L2Cache>
@@ -61,10 +76,15 @@ struct L1ICache : public CacheControl<L1ICache, Cache<64,16,CacheReplPolicy::LRU
 
     constexpr static size_t NUM_MSHR = 8;
     constexpr static size_t NUM_RW_PORTS = 2;
+    constexpr static size_t CACHE_LATENCY = 4;
 
     constexpr static bool WRITE_ALLOCATE = false;
     constexpr static bool INVALIDATE_ON_HIT = false;
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = false;
+
+    L1ICache(CacheControl::next_ptr& n)
+        :CacheControl(n)
+    {}
 };
 
 

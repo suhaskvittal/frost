@@ -3,7 +3,7 @@
  *  date:   5 December 2024
  * */
 
-#include "utils/argparse.h"
+#include "util/argparse.h"
 
 #include <iomanip>
 #include <sstream>
@@ -24,7 +24,7 @@ ArgParseResult::ArgParseResult(
     ss << "usage:";
     for (std::string_view s : required)
         ss << " <" << s << ">";
-    ss << " [ options ]\n";
+    ss << " [ options ]\n"
        << "------------------------------------------------- Available Options -------------------------------------------------\n";
     for (const auto& [ flag, desc, default_value ] : optional) {
         std::string descs = "\"" + std::string(desc) + "\"";
@@ -44,7 +44,7 @@ ArgParseResult::ArgParseResult(
         ++ii;
     }
     // Setup defaults
-    for (const auto& [flag, desc, default_value])
+    for (const auto& [flag, desc, default_value] : optional)
         parse_data[flag] = default_value;
     // Parse optional arguments
     while (ii <= argc) {
