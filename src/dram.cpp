@@ -15,13 +15,13 @@ uint64_t GL_DRAM_CYCLE = 0;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAM::DRAM(double cpu_freq_ghz, double freq_ghz, std::string dram_type)
+DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
     :io_(this),
     freq_ghz_(freq_ghz),
     clock_scale_(cpu_freq_ghz/freq_ghz - 1.0)
 {
     for (size_t i = 0; i < DRAM_CHANNELS; i++)
-        channels_[i] = channel_ptr(new DRAMChannel(freq_ghz, dram_type));
+        channels_[i] = channel_ptr(new DRAMChannel(freq_ghz));
 }
 
 ////////////////////////////////////////////////////////////////////////////

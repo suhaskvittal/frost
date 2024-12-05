@@ -49,7 +49,7 @@ private:
 
     const double clock_scale_;
 public:
-    DRAM(double cpu_freq_ghz, double freq_ghz, std::string dram_type)
+    DRAM(double cpu_freq_ghz, double freq_ghz)
 
     void tick(void);
     void print_stats(std::ostream&);

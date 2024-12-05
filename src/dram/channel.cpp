@@ -3,6 +3,8 @@
  *  date:   4 December 2024
  * */
 
+#include "dram_timing.h"
+
 #include "dram/channel.h"
 #include "util/numerics.h"
 
@@ -40,38 +42,11 @@ inline void update_SL(std::array<uint64_t,2>& t, uint64_t diff, uint64_t same)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAMChannel::DRAMChannel(double freq_ghz, std::string dram_type)
+DRAMChannel::DRAMChannel(double freq_ghz)
     :freq_ghz_(freq_ghz),
-    io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0))
-{
-    // Fill in timings based on `dram_type`.
-    if (dram_type == "4800") {
-        CL = ckcast(16.0);
-        CWL = CL - 2;
-        tRCD = ckcast(16.0);
-        tRP = ckcast(16.0);
-        tRAS = ckcast(32.0);
-        tRTP = std::max(12, ckcast(7.5));
-        tWR = ckcast(30);
-
-        tCCD_S = 8;
-        tCCD_S_WR = 8;
-        tCCD_S_WTR = CWL + BL/2 + std::max(4, ckcast(2.5));
-        tCCD_S_RTW = tCCD_S_WTR;
-
-        tCCD_L = std::max(8, ckcast(5.0));
-        tCCD_L_WR = std::max(32, ckcast(20.0));
-        tCCD_L_WTR = CWL + BL/2 + std::max(16, ckcast(10.0));
-        tCCD_L_RTW = tCCD_L_WTR;
-
-        tRRD_S = 8;
-        tRRD_L = std::max(8, ckcast(5.0));
-        tFAW = std::max(32, ckcast(13.333));
-        tRFC = ckcast(410.0);
-        tREFI = ckcast(32e3 / 8192);
-    }
-    last_ref_cycle_ = tREFI;
-}
+    io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
+    last_ref_cycle_(tREFI)
+{}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

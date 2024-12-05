@@ -107,24 +107,7 @@ private:
     using bank_array_t = std::array<DRAMBank, TOT_BANKS>;
     using constraint_t = std::array<uint64_t, 2>;
     using faw_t = std::deque<uint64_t>;
-    /*
-     * DRAM timing parameters:
-     * */
-    uint64_t CL,
-             CWL,
-             tRCD,
-             tRP,
-             tRAS,
-             tRTP,
-             tWR,
-             tCCD_S, tCCD_S_WR, tCCD_S_WTR, tCCD_S_RTW,
-             tCCD_L, tCCD_L_WR, tCCD_L_WTR, tCCD_L_RTW,
-             tRRD_S,
-             tRRD_L,
-             tFAW,
-             tRFC,
-             tREFI;
-    
+
     bank_array_t banks_; 
     size_t next_bank_with_cmd_ =0;
     /*
@@ -143,7 +126,7 @@ private:
     uint64_t last_ref_cycle_;
     uint64_t ref_done_cycle_ =0;
 public:
-    DRAMChannel(double freq_ghz, std::string dram_type);
+    DRAMChannel(double freq_ghz);
     
     void tick(void);
 private:
