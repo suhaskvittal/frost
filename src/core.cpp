@@ -20,9 +20,7 @@ void
 Core::tick()
 {
     operate_caches();
-    // operate ROB.
-    
-    // operate frontend stages.
+    operate_rob();
     for (size_t i = 0; i < CORE_FETCH_WIDTH; i++) {
         disp(i);
         ifmem(i);
@@ -59,10 +57,10 @@ Core::ifmem(size_t fwid)
          & la_next = la_ifmem_disp_[fwid];
     if (!la.valid || la_next.stalled)
         return;
-    Transaction t(coreid_, 0, TransactionType::READ, LINEADDR(la.inst->pip), true);
+    Transaction t(coreid_, nullptr, TransactionType::READ, LINEADDR(la.inst->pip), true);
     // Cannot proceed if the ip has not been translated or if
     // we cannot submit `t`.
-    if (!la.inst->ip_translated || !L1I_->add_incoming(t)) {
+    if (!la.inst->ip_translated || !L1I_->io_->add_incoming(t)) {
         la.stalled = true;
         return;
     }
@@ -83,30 +81,75 @@ Core::disp(size_t fwid)
     if (!la.valid)
         return;
     // Install the instruction into the ROB
-    if (!la.inst->data_avail || rob_size_ == CORE_ROB_SIZE) {
+    if (!la.inst->data_avail || rob.size() == CORE_ROB_SIZE) {
         la.stalled = true;
         return;
     }
     la.inst->cycle_issued = GL_CYCLE;
-    rob_[rob_size_++] = std::move(la.inst);
+    // Check if `la.inst` is a memory instruction. If not, then mark its completion
+    // cycle as the next cycle.
+    if (!la.inst->is_mem_inst())
+        la.inst->cycle_done = GL_CYCLE+1;
+    rob_.push_back(std::move(la.inst));
     la.valid = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+inline bool
+ready_for_dcache(const iptr_t& inst)
+{
+    return inst->is_mem_inst()
+            && inst->p_ld_lineaddr.size() == inst->loads.size()
+            && inst->p_st_lineaddr.size() == inst->stores.size()
+            && !inst->awaiting_loads;
+}
+
+inline bool
+need_translation(const iptr& inst)
+{
+    return inst->is_mem_inst()
+            && (inst->p_ld_lineaddr.size() < inst->loads.size() 
+                    || inst->p_st_lineaddr.size() < inst->stores.size())
+            && !inst->awaiting_loads;
+}
+
 void
 Core::operate_rob()
 {
     // First, check if we can complete any ROB entries.
     for (size_t i = 0; i < CORE_FETCH_WIDTH; i++) {
-        if (rob_size_ == 0 || GL_CYCLE < rob_[rob_head_]->cycle_done)
+        if (rob_.empty() == 0 || GL_CYCLE < rob_.front()->cycle_done)
             break;
-        rob_[rob_head_] = nullptr;  // Clear rob entry
-        numeric_traits<CORE_ROB_SIZE>::increment_and_mod(rob_head_);
-        --rob_size_;
+        rob_.pop_front();
     }
-    // Check if any ROB entries can perform L1D$ accesses.
+    // Nothing to be done if the rob is empty
+    if (rob_.empty()
+        return;
+    // Check if any ROB entries can access the L1D$ or
+    // need address translation.
+    for (iptr_t& inst : rob_) {
+        if (ready_for_dcache(inst)) {
+            for (uint64_t addr : inst->p_ld_lineaddr) {
+                Transaction t(coreid_, inst.get(), TransactionType::READ, addr);
+                L1D_->io_->add_incoming(t);
+            }
+
+            for (uint64_t addr : inst->p_st_lineaddr) {
+                Transaction t(coreid_, inst.get(), TransactionType::WRITE, addr);
+                L1D_->io_->add_incoming(t);
+            }
+            inst->awaiting_loads = true;
+        }
+
+        if (needs_translation(inst)) {
+            for (uint64_t addr : inst->loads)
+                inst->p_ld_lineaddr.insert(GL_OS->translate_lineaddr(LINEADDR(addr)));
+            for (uint64_t addr : inst->stores)
+                inst->p_st_lineaddr.insert(GL_OS->translate_lineaddr(LINEADDR(addr)));
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -144,7 +187,10 @@ Core::operate_caches()
     drain_cache_outgoing_queue(L1D_,
             [] (const Transaction& t)
             {
-                this->rob_[t.robid]->cycle_done = GL_CYCLE;
+                if (trans_is_read(t.type))
+                    t.inst->p_ld_lineaddr.erase(t.address);
+                else
+                    t.inst->p_st_lineaddr.erase(t.address);
             });
     // Tick each of the caches.
     L2_->tick();

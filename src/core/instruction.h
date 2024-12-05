@@ -23,18 +23,16 @@ struct Instruction
     std::vector<uint64_t> loads;
     std::vector<uint64_t> stores;
     /*
-     * Additional metadata that can be used:
-     *  (1) `ip_translated`, `pip`, and `inst_data_avail` are all for management
-     *      iTLB and L1i$ interactions.
-     *  (2) `p_ld_addr` and `p_st_addr` are physical addresses used for the L1D$.
-     *  (3) `cycle_xxx` is metadata for stats.
+     * Additional metadata that can be used for
+     * managing interactions with i-caches and d-caches.
      * */
     bool ip_translated =false;
     uint64_t pip;
     bool inst_data_avail =false;
 
-    std::vector<uint64_t> p_ld_addr;
-    std::vector<uint64_t> p_st_addr;
+    std::unordered_set<uint64_t> p_ld_lineaddr;
+    std::unordered_set<uint64_t> p_st_lineaddr;
+    bool awaiting_loads =false;
 
     uint64_t cycle_fetched = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_issued = std::numeric_limits<uint64_t>::max();
@@ -48,7 +46,7 @@ struct Instruction
         stores(d.dst_mem)
     {}
 
-    inline bool is_mem_inst(void)
+    inline bool is_mem_inst(void) const
     {
         return !loads.empty() || !stores.empty();
     }

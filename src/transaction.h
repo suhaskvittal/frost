@@ -18,19 +18,26 @@ inline bool trans_is_read(TransactionType& t)
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
+/*
+ * This struct should have all information for routing cache/memory requests
+ * through the memory hierarchy.
+ *
+ * Note we store `Instruction` as a raw pointer even though we store `Instruction`
+ * with a `unique_ptr` in `Core`. This is because we know that the ptr in `Core`
+ * will go out of scope once it is retired.
+ * */
 struct Transaction
 {
     uint8_t         coreid;
-    uint16_t        robid;
+    Instruction*    inst;
     TransactionType type;
 
     uint64_t address;
     bool     address_is_ip;
 
-    Transaction(uint8_t cid, uint16_t rid, TransactionType t, uint64_t addr, bool addr_is_ip=false)
+    Transaction(uint8_t cid, Instruction* inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
         :coreid(cid),
-        robid(rid),
+        inst(inst),
         type(t),
         address(addr),
         address_is_ip(addr_is_ip)

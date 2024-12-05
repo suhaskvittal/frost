@@ -47,7 +47,7 @@ private:
     using tracereader_t = std::unique_ptr<TraceReader>;
     
     using latch_t = std::array<Latch, CORE_FETCH_WIDTH>;
-    using rob_t = std::array<iptr_t, CORE_ROB_SIZE>;
+    using rob_t = std::deque<iptr_t>;
     /*
      * Caches: we will tie them together in the constructor.
      * */
@@ -64,12 +64,8 @@ private:
      * */
     latch_t la_iftr_ifmem_;
     latch_t la_ifmem_disp_;
-    /*
-     * ROB: implement this as a fixed-width queue with a head and size variable.
-     * */
+
     rob_t rob_;
-    size_t rob_head_ =0;
-    size_t rob_size_ =0;
     /*
      * Trace management:
      * */
@@ -105,12 +101,13 @@ template <class CACHE_TYPE>
 void drain_cache_outgoing_queue(cache_ptr<CACHE_TYPE>& c, drain_callback_t handle_drain)
 {
     // Need to make sure queue is drained at the appropriate time (hence the second check).
-    while (!c->outgoing_queue_.empty()
-            && GL_CYCLE >= std::get<1>(c->outgoing_queue_.top().cycle_done))
+    auto& out_queue = c->io_->outgoing_queue_;
+    while (!out_queue.empty()
+            && GL_CYCLE >= std::get<1>(out_queue.top().cycle_done))
     {
-        Transaction& t = std::get<0>(c->outgoing_queue_.top());
+        Transaction& t = std::get<0>(out_queue.top());
         handle_drain(t);
-        c->outgoing_queue_.pop();
+        out_queue.pop();
     }
 }
 
