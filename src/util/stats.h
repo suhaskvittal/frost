@@ -37,6 +37,12 @@ mean(const VecStat<T,N>& arr, T tot)
     return out;
 }
 
+template <class T, size_t N> inline T
+vecsum(const VecStat<T,N>& arr)
+{
+    return std::accumulate(arr.begin(), arr.end(), static_cast<T>(0));
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -62,19 +68,24 @@ template <class T, size_t N>
 void print_vecstat(std::ostream& out,
         std::string_view header,
         std::string_view stat_name,
-        T stat)
+        const VecStat<T,N>& arr,
+        bool with_acc=true)
 {
     out << std::setw(HEADER_WIDTH) << std::left << header
         << std::setw(STAT_NAME_WIDTH) << std::left << stat_name
         << ":";
+    
     for (size_t i = 0; i < N; i++) {
         if constexpr (std::is_floating_point<T>::value)
             out << std::setprecision(5);
-        out << std::setw(STAT_WIDTH) << std::right << stat;
-        if (i < N-1)
+        out << std::setw(STAT_WIDTH) << std::right << arr.at(i);
+        if (with_acc || i < N-1)
             out << ",";
         else
             out << "\n";
+    }
+    if (with_acc) {
+        out << std::setw(STAT_WIDTH) << std::right << vecsum(arr) << "\n";
     }
 }
 

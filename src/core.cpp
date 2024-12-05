@@ -31,8 +31,8 @@ Core::tick()
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-template <class CACHE> void
+ 
+template <class CACHE> inline void
 print_cache_stats_for_core(Core* c, const cache_ptr<CACHE>& cache, std::ostream& out, std::string_view header)
 {
     uint8_t id = c->coreid_;
@@ -55,6 +55,7 @@ print_cache_stats_for_core(Core* c, const cache_ptr<CACHE>& cache, std::ostream&
         print_stat(out, header, "WRITE_ALLOCATES", write_alloc);
     print_stat(out, header, "APKI", apki);
     print_stat(out, header, "MPKI", mpki);
+    print_stat(out, header, "MISS_PENALTY", miss_penalty);
 }
 
 void

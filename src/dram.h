@@ -52,6 +52,7 @@ public:
     DRAM(double freq_ghz, std::string dram_type)
 
     void tick(void);
+    void print_stats(std::ostream&);
 }
 
 ////////////////////////////////////////////////////////////////////////////

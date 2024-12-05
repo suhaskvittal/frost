@@ -41,3 +41,37 @@ DRAM::tick()
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+#define CREATE_VEC_STAT(stat)\
+    VecStat<uint64_t,DRAM_CHANNELS> vec_stat;\
+    for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
+        vec_stat[i] = channels_[i]->s_stat_;\
+    }\
+
+void
+DRAM::print_stats(std::ostream& out)
+{
+    CREATE_VEC_STAT(reads)
+    CREATE_VEC_STAT(writes)
+    CREATE_VEC_STAT(precharges)
+    CREATE_VEC_STAT(activates)
+    CREATE_VEC_STAT(refreshes)
+    CREATE_VEC_STAT(pre_demand)
+    CREATE_VEC_STAT(row_buffer_hits)
+
+    VecStat<double, DRAM_CHANNELS> rbhr;
+    for (size_t i = 0; i < DRAM_CHANNELS; i++)
+        rbhr[i] = mean(vec_row_buffer_hits[i], vec_reads[i]+vec_writes[i]);
+
+    print_vecstat(out, "DRAM", "NUM_READS", vec_reads);
+    print_vecstat(out, "DRAM", "NUM_WRITES", vec_writes);
+    print_vecstat(out, "DRAM", "NUM_PRECHARGE", vec_precharges);
+    print_vecstat(out, "DRAM", "NUM_ACTIVATE", vec_activates);
+    print_vecstat(out, "DRAM", "NUM_REFRESH", vec_refreshes);
+    print_vecstat(out, "DRAM", "NUM_PREDEMAND", vec_pre_demand);
+    print_vecstat(out, "DRAM", "ROW_BUFFER_HITS", vec_row_buffer_hits);
+    print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////

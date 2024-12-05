@@ -273,8 +273,13 @@ DRAMChannel::frfcfs()
             if (cmd_is_issuable(ready_cmd)) {
                 // Success! return the command.
                 out = ready_cmd;
-                if (is_read(ready_cmd.type) || is_write(ready_cmd.type))
+                if (is_read(ready_cmd.type) || is_write(ready_cmd.type)) {
+                    if (cmd_it->is_row_buffer_hit)
+                        ++s_row_buffer_hits_;
                     b.cmd_queue_.erase(cmd_it);
+                } else {
+                    cmd_it->is_row_buffer_hit = false;
+                }
                 return out;
             }
         }

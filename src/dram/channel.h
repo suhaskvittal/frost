@@ -54,6 +54,7 @@ struct DRAMCommand
 {
     Transaction trans;
     DRAMCommandType type;
+    bool is_row_buffer_hit =true;
 
     DRAMCommand(void) {}
     DRAMCommand(Transaction&& t, DRAMCommandType t)
@@ -94,6 +95,8 @@ public:
     uint64_t s_activates_ =0;
     uint64_t s_refreshes_ =0;
     uint64_t s_pre_demand_ =0;
+
+    uint64_t s_row_buffer_hits_ =0;
 
     io_ptr io_;
 
