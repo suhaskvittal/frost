@@ -44,8 +44,6 @@ private:
     using l1i_ptr = std::unique_ptr<L1ICache>;
     using l1d_ptr = std::unique_ptr<L1DCache>;
     using l2_ptr = std::unique_ptr<L2Cache>;
-
-    using tracereader_t = std::unique_ptr<TraceReader>;
     
     using latch_t = std::array<Latch, CORE_FETCH_WIDTH>;
     using rob_t = std::deque<iptr_t>;
@@ -70,8 +68,8 @@ private:
     /*
      * Trace management:
      * */
-    std::string   trace_file_;
-    tracereader_t trace_reader_;
+    std::string trace_file_;
+    TraceReader trace_reader_;
     /*
      * For stats, we don't want to collect any results once `checkpoint_stats` is
      * called. `stats_stream_` holds a checkpoint of the stats at the call time and
