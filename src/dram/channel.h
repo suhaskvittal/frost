@@ -13,6 +13,7 @@
 
 #include <array>
 #include <deque>
+#include <iostream>
 #include <optional>
 
 ////////////////////////////////////////////////////////////////////////////
@@ -146,6 +147,7 @@ public:
     DRAMChannel(double freq_ghz, std::string dram_type);
     
     void tick(void);
+    void list_dram_timings(std::ostream&);
 private:
     using sel_cmd_t = std::optional<DRAMCommand>;
     /*

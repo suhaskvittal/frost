@@ -8,10 +8,10 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAM::DRAM(double freq_ghz, std::string dram_type)
+DRAM::DRAM(double cpu_ghz, double freq_ghz, std::string dram_type)
     :io_(this),
     freq_ghz_(freq_ghz),
-    clock_scale_(4.0/freq_ghz - 1.0)
+    clock_scale_(cpu_ghz/freq_ghz - 1.0)
 {
     for (size_t i = 0; i < DRAM_CHANNELS; i++)
         channels_[i] = channel_ptr(new DRAMChannel(freq_ghz, dram_type));
