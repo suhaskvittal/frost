@@ -8,7 +8,7 @@ from .files import GEN_DIR, AUTOGEN_HEADER
 ####################################################################
 ####################################################################
 
-BL = 80
+BL = 120
 BANK_TIMINGS = [
     'CL','CWL','tRCD','tRP','tRAS','tRTP','tWR'
 ]
@@ -43,7 +43,7 @@ def get_cache_params(cfg, caches: list[str]) -> str:
         wq = ccfg['write_queue_size']
         pq = ccfg['prefetch_queue_size']
 
-        calls[c] = f'{size_kb}, {ways}, {sets}, \"{repl}\", {num_mshr}, {num_rw}, {latency}, {rq}, {wq}, {pq}'
+        calls[c] = f'{size_kb}, {sets}, {ways}, \"{repl}\", {num_mshr}, {num_rw}, {latency}, {rq}, {wq}, {pq}'
     return calls
 
 ####################################################################
@@ -65,7 +65,7 @@ def write(cfg, build):
     # SL timings are a bit more complicated to implement
     sl_timing_calls = []
     for t in CHANNEL_SL_TIMINGS:
-        name, tS, tL = t % '_(S:L)', t % '_S', t % '_L'
+        name, tS, tL = t % '_S(L)', t % '_S', t % '_L'
         sl_timing_calls.append(f'list_dram_sl(out, \"{name}\", {tS}, {tL});')
     sl_timing_calls = '\n\t'.join(sl_timing_calls)
 
@@ -145,7 +145,7 @@ sim_init(void)
 template <class T> inline void
 list(std::ostream& out, std::string_view stat, T x)
 {{
-    out << std::setw(32) << std::left << std::setw(16) << std::right << x << "\n";
+    out << std::setw(32) << std::left << stat << std::setw(16) << std::left << x << "\n";
 }}
 
 void
@@ -180,7 +180,7 @@ void
 list_dram(std::ostream& out, std::string_view stat, uint64_t ck)
 {{
     double time_ns = ck * {tCK};
-    out << std::setw(12) << std::left << stat
+    out << std::setw(24) << std::left << stat
         << std::setw(12) << std::left << std::setprecision(3) << time_ns
         << std::setw(12) << std::left << ck
         << "\n";
@@ -192,13 +192,14 @@ list_dram_sl(std::ostream& out, std::string_view stat, uint64_t ckS, uint64_t ck
     double time_ns_S = ckS * {tCK},
            time_ns_L = ckL * {tCK};
     std::stringstream ss;
-    ss << std::setprecision(1) << time_ns_S << ":" << std::setprecision(1) << time_ns_L;
+    ss << std::setprecision(3) << time_ns_S << "(" << std::setprecision(3) << time_ns_L << ")";
     std::string nss = ss.str();
-    std::string cks = std::to_string(ckS) + ":" + std::to_string(ckL);
+    std::string cks = std::to_string(ckS) + "(" + std::to_string(ckL) + ")";
 
-    out << std::setw(12) << std::left << stat
+    out << std::setw(24) << std::left << stat
         << std::setw(12) << std::left << nss
-        << std::setw(12) << std::left << cks;
+        << std::setw(12) << std::left << cks
+        << "\n";
 }}
 
 void
@@ -206,7 +207,7 @@ print_config(std::ostream& out)
 {{
     const std::string_view BAR = "{BAR(BL)}";
 
-    out << "\n" << BAR << "\n\n";
+    out << "\n" << BAR << "\n";
     
     list(out, "TRACE", OPT_TRACE_FILE);
     list(out, "INST_SIM", fmt_bignum(OPT_INST_SIM));
@@ -214,7 +215,7 @@ print_config(std::ostream& out)
     list(out, "NUM_THREADS", NUM_THREADS);
 
     // List cache parameters.
-    out << "\n" << BAR << "\n\n"
+    out << BAR << "\n"
         << std::setw(12) << std::left << "CACHE"
         << std::setw(12) << std::left << "SIZE (kB)"
         << std::setw(8) << std::left << "SETS"
@@ -230,9 +231,9 @@ print_config(std::ostream& out)
     list_cache_params(out, "L2$", {cache_params['L2']});
     list_cache_params(out, "LLC", {cache_params['LLC']});
 
-    out << "\n" << BAR << "\n\n"
+    out << BAR << "\n"
         << "DRAM frequency = " << {dram_freq} << "GHz, tCK = " << {tCK:.5f} << "\n\n"
-        << std::setw(12) << std::left << "DRAM TIMING"
+        << std::setw(24) << std::left << "DRAM TIMING"
         << std::setw(12) << std::left << "ns"
         << std::setw(12) << std::left << "nCK"
         << "\n" << BAR << "\n";
@@ -241,7 +242,7 @@ print_config(std::ostream& out)
     {sl_timing_calls}
     out << "\n";
     {channel_timing_calls}
-    out << "\n" << BAR << "\n\n";
+    out << BAR << "\n\n";
 }}
 
 ////////////////////////////////////////////////////////////////////////////
