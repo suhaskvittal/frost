@@ -18,17 +18,18 @@ class DRAM
 {
 public:
     /*
-     * IO mimics `IOBus` but really only implements `add_incoming` and `outgoing_queue_`.
+     * IO mimics `IOBus` but really only implements `add_incoming`.
      * */
     struct IO
     {
-        IOBus::out_queue_t outgoing_queue_;
         DRAM* dram;
 
         inline bool add_incoming(Transaction t)
         {
             size_t ch = dram_channel(t.address);
-            return dram->channels_[ch]->io_->add_incoming(t);
+            dram->channels_[ch]->io_->outgoing_queue_.emplace(t, GL_CYCLE+100);
+//          return dram->channels_[ch]->io_->add_incoming(t);
+            return true;
         }
 
         IO(DRAM* d)

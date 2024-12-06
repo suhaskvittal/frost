@@ -4,6 +4,7 @@
  * */
 
 #include "globals.h"
+#include "memsys.h"
 
 #include "dram.h"
 #include "util/stats.h"
@@ -34,7 +35,10 @@ DRAM::tick()
     for (channel_ptr& ch : channels_) {
         auto& q = ch->io_->outgoing_queue_;
         while (!q.empty()) {
-            io_->outgoing_queue_.push(q.top());
+            const auto& [t, cycle_done] = q.top();
+            if (GL_CYCLE < cycle_done)
+                break;
+            GL_LLC->mark_load_as_done(t.address);
             q.pop();
         }
         if (leap_ < 1.0)

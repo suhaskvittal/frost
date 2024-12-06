@@ -92,13 +92,10 @@ __TEMPLATE_CLASS__::next_access()
     if (trans_is_read(t.type)) {
         // Probe the cache
         ++s_accesses_[t.coreid];
-        /*
         if (cache_->probe(t.address))
             handle_hit(t);
         else
             handle_miss(t);
-        */
-        handle_hit(t);
     } else {
         // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
         // specified (i.e. for the L1D$, then on a write miss, install
@@ -126,7 +123,7 @@ __TEMPLATE_CLASS__::handle_hit(const Transaction& t)
     io_->outgoing_queue_.emplace(t, GL_CYCLE + IMPL::CACHE_LATENCY);
     if constexpr (IMPL::INVALIDATE_ON_HIT) {
         cache_->invalidate(t.address);
-        ++s_invalidates_[t.address];
+        ++s_invalidates_[t.coreid];
     }
 }
 

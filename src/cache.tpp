@@ -15,6 +15,9 @@
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::probe(uint64_t addr)
 {
+    if constexpr (POL == CacheReplPolicy::PERFECT)
+        return true;
+
     cset_t& s = get_set(addr);
     auto it = std::find_if(s.begin(), s.end(),
                     [addr] (entry_t& e)
@@ -35,6 +38,9 @@ __TEMPLATE_CLASS__::probe(uint64_t addr)
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
 {
+    if constexpr (POL == CacheReplPolicy::PERFECT)
+        return true;
+
     cset_t& s = get_set(addr);
     auto it = std::find_if(s.begin(), s.end(),
                     [addr] (entry_t& e)

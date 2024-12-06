@@ -103,6 +103,24 @@ Core::print_stats(std::ostream& out)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+constexpr size_t COREID_TAG_OFFSET = 52;
+
+inline void
+tag_with_coreid(uint64_t& addr, uint8_t coreid)
+{
+    addr |= static_cast<uint64_t>(coreid) << COREID_TAG_OFFSET;
+}
+
+inline void
+tag_all_with_coreid(std::vector<uint64_t>& mem, uint8_t coreid)
+{
+    std::for_each(mem.begin(), mem.end(), 
+            [coreid] (uint64_t& addr)
+            {
+                tag_with_coreid(addr, coreid);
+            });
+}
+
 void
 Core::iftr(size_t fwid)
 {
@@ -110,6 +128,11 @@ Core::iftr(size_t fwid)
     if (la.stalled)
         return;
     iptr_t inst = iptr_t(new Instruction(trace_reader_.read())); 
+    // Tag the ip, load, and store addresses with the coreid.
+    tag_with_coreid(inst->ip, coreid_);
+    tag_all_with_coreid(inst->loads, coreid_);
+    tag_all_with_coreid(inst->stores, coreid_);
+
     inst->cycle_fetched = GL_CYCLE;
 
     inst->ready_for_icache_access = true;
@@ -252,7 +275,7 @@ Core::operate_rob()
         translate_and_delete(inst->v_st_lineaddr, inst->p_st_lineaddr);
         // If this is a store instruction and it has launched all its stores, finish now 
         if (inst->mem_inst_is_done() && inst->loads.empty())
-            inst->cycle_done = GL_CYCLE;
+            inst->cycle_done = GL_CYCLE+1;
     }
 }
 
@@ -273,7 +296,7 @@ Core::operate_caches()
             });
     // Handle L1I outgoing queue
     drain_cache_outgoing_queue(L1I_,
-            [this] (const Transaction& t)
+            [] (const Transaction& t)
             {
                 t.inst->inst_load_done = true;
             });
