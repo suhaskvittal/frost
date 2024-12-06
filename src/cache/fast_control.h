@@ -20,6 +20,7 @@ public:
      * */
     struct IO 
     {
+        FastCacheControl*  owner_;
         IOBus::out_queue_t outgoing_queue_;
 
         bool add_incoming(

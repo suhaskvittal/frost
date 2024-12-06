@@ -266,7 +266,7 @@ Core::disp(size_t fwid)
 {
     if (ftb_.empty())
         return;
-    if (!ftb_.front()->inst_load_done) {
+    if (!ftb_.front()->inst_load_done || rob_.size() == CORE_ROB_SIZE) {
         ++s_disp_stalls_;
         return;
     }
