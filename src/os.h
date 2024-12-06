@@ -20,7 +20,7 @@
 class OS
 {
 public:
-    constexpr static size_t NUM_PAGE_FRAMES = DRAM_SIZE_MB / PAGESIZE;
+    constexpr static size_t NUM_PAGE_FRAMES = (DRAM_SIZE_MB*1024*1024) / PAGESIZE;
 
     uint64_t s_page_faults_ =0;
 private:

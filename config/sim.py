@@ -213,6 +213,9 @@ print_config(std::ostream& out)
     list(out, "INST_SIM", fmt_bignum(OPT_INST_SIM));
     list(out, "INST_WARMUP", fmt_bignum(OPT_INST_WARMUP));
     list(out, "NUM_THREADS", NUM_THREADS);
+    list(out, "CORE_FETCH_WIDTH", CORE_FETCH_WIDTH);
+    list(out, "CORE_ROB_SIZE", CORE_ROB_SIZE);
+    list(out, "CORE_FTB_SIZE", CORE_FTB_SIZE);
 
     // List cache parameters.
     out << BAR << "\n"
@@ -251,7 +254,7 @@ print_config(std::ostream& out)
 void
 print_progress(std::ostream& out)
 {{
-    if (GL_CYCLE % 50'000'000 == 0) {{
+    if (GL_CYCLE % 5'000'000 == 0) {{
         out << "\nCYCLE = " << std::setw(4) << std::left << fmt_bignum(GL_CYCLE)
             << "[ INST:";
         for (size_t i = 0; i < NUM_THREADS; i++)

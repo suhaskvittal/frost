@@ -4,7 +4,7 @@ project(Frost VERSION 0.1)
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
         -Ofast
-        -flto=auto
+#       -flto=auto
         -funroll-loops
         -fno-strict-aliasing
         -Wno-deprecated

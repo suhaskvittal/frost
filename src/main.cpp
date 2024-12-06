@@ -51,7 +51,8 @@ int main(int argc, char* argv[])
     size_t curr_core_idx = 0;
     bool all_done;
     do {
-        print_progress(std::cout);
+        if (GL_CYCLE % 1'00'000 == 0)
+            print_progress(std::cout);
 
         GL_DRAM->tick();
         GL_LLC->tick();
@@ -78,6 +79,7 @@ int main(int argc, char* argv[])
         ++GL_CYCLE;
     } while (!all_done);
 
+    std::cout << "\n";
     for (size_t i = 0; i < NUM_THREADS; i++)
         GL_CORES[i]->print_stats(std::cout);
     GL_DRAM->print_stats(std::cout);

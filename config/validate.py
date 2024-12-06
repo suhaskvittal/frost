@@ -18,7 +18,8 @@ def validate_core_section(cfg) -> bool:
     optionals = [
         ('num_threads', 1),
         ('fetch_width', 4),
-        ('rob_size', 256)
+        ('rob_size', 256),
+        ('ftb_size', 64)
     ]
     update_cfg_with_optionals(cfg, optionals)
     return True

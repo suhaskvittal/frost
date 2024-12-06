@@ -28,17 +28,22 @@ struct Instruction
     vmemop_list_t loads;
     vmemop_list_t stores;
     /*
-     * Additional metadata that can be used for
-     * managing interactions with i-caches and d-caches.
+     * Additional metadata for iTLB and L1i interaction
      * */
-    bool ip_translated =false;
+    bool ready_for_icache_access =false;
+    bool inst_load_done =false;
     uint64_t pip;
-    bool inst_data_avail =false;
-
+    /*
+     * Additional metadata for dTLB and L1d interaction
+     * */
+    pmemop_set_t v_ld_lineaddr;
+    pmemop_set_t v_st_lineaddr;
     pmemop_set_t p_ld_lineaddr;
     pmemop_set_t p_st_lineaddr;
-    bool awaiting_loads =false;
-
+    uint64_t loads_in_progress =0;
+    /*
+     * Additional metadata for stats and ROB management
+     * */
     uint64_t cycle_fetched = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_issued = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_done = std::numeric_limits<uint64_t>::max();
@@ -54,6 +59,13 @@ struct Instruction
     inline bool is_mem_inst(void) const
     {
         return !loads.empty() || !stores.empty();
+    }
+
+    inline bool mem_inst_is_done(void) const
+    {
+        return v_ld_lineaddr.empty() && p_ld_lineaddr.empty()
+                && v_st_lineaddr.empty() && p_st_lineaddr.empty()
+                && loads_in_progress == 0;
     }
 };
 

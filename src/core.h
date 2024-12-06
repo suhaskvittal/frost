@@ -39,6 +39,9 @@ public:
     uint64_t finished_inst_num_ =0;
     bool done_ =false;
 
+    uint64_t s_ifmem_stalls_ =0;
+    uint64_t s_disp_stalls_ =0;
+
     const uint8_t coreid_;
 private:
     using l1i_ptr = std::unique_ptr<L1ICache>;
@@ -46,6 +49,7 @@ private:
     using l2_ptr = std::unique_ptr<L2Cache>;
     
     using latch_t = std::array<Latch, CORE_FETCH_WIDTH>;
+    using ftb_t = std::vector<iptr_t>;
     using rob_t = std::deque<iptr_t>;
     /*
      * Caches: we will tie them together in the constructor.
@@ -54,16 +58,19 @@ private:
     l1d_ptr L1D_;
     l2_ptr  L2_;
     /*
-     * Pipeline latches: we model a simple decoupled frontend with three stages:
+     * Pipeline latches: we model a simple decoupled frontend with two stages:
      *  IFtr: instruction fetch, translate ip
      *  IFmem: instruction fetch, access L1
-     *  DISP: dispatch, install instruction into ROB
+     *
+     * After IFmem, the instruction is placed into the fetch target buffer (`ftb_`).
+     * Once an instruction's load is finished, then it is removed from the FTB
+     * during the DISP stage and placed into the ROB.
+     *
      * From there, each instruction will be on its own. We only model delays due
      * to memory accesses.
      * */
     latch_t la_iftr_ifmem_;
-    latch_t la_ifmem_disp_;
-
+    ftb_t ftb_;
     rob_t rob_;
     /*
      * Trace management:

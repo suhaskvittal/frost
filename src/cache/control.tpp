@@ -92,14 +92,18 @@ __TEMPLATE_CLASS__::next_access()
     if (trans_is_read(t.type)) {
         // Probe the cache
         ++s_accesses_[t.coreid];
+        /*
         if (cache_->probe(t.address))
             handle_hit(t);
         else
             handle_miss(t);
+        */
+        handle_hit(t);
     } else {
         // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
         // specified (i.e. for the L1D$, then on a write miss, install
         // an MSHR entry).
+        /*
         if constexpr (IMPL::WRITE_ALLOCATE) {
             ++s_accesses_[t.coreid];
             if (!cache_->mark_dirty(t.address))
@@ -107,6 +111,8 @@ __TEMPLATE_CLASS__::next_access()
         } else {
             cache_->mark_dirty(t.address);
         }
+        */
+        cache_->mark_dirty(t.address);
     }
 }
 

@@ -15,6 +15,7 @@ def write(cfg, build):
     num_threads = core_cfg['num_threads']
     fetch_width = core_cfg['fetch_width']
     rob_size = core_cfg['rob_size']
+    ftb_size = core_cfg['ftb_size']
 
     ch, ra, bg, ba, row, col = dram_cfg['channels'], dram_cfg['ranks'], dram_cfg['bankgroups'],\
                                 dram_cfg['banks'], dram_cfg['rows'], dram_cfg['columns']
@@ -50,6 +51,7 @@ constexpr size_t PAGESIZE = 4096;
 constexpr size_t NUM_THREADS = {num_threads};
 constexpr size_t CORE_FETCH_WIDTH = {fetch_width};
 constexpr size_t CORE_ROB_SIZE = {rob_size};
+constexpr size_t CORE_FTB_SIZE = {ftb_size};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

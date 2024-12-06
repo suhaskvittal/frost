@@ -49,7 +49,7 @@ vecsum(const VecStat<T,N>& arr)
 
 constexpr size_t HEADER_WIDTH = 24;
 constexpr size_t STAT_NAME_WIDTH = 32;
-constexpr size_t STAT_WIDTH = 6;
+constexpr size_t STAT_WIDTH = 16;
 
 template <class T>
 void print_stat(std::ostream& out, 
