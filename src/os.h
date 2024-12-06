@@ -11,6 +11,7 @@
 
 #include <array>
 #include <cstdint>
+#include <iostream>
 #include <random>
 #include <unordered_map>
 
@@ -33,13 +34,15 @@ private:
     /*
      * `free_page_frames_` uses active-low as available.
      * */
-    free_bitvec_t free_page_frames_;
+    free_bitvec_t free_page_frames_{};
     /*
      * `rng` is for page frame allocation.
      * */
     std::mt19937_64 rng{0};
 public:
     OS(void) =default;
+
+    void print_stats(std::ostream&);
 
     uint64_t translate_byteaddr(uint64_t);
     uint64_t translate_lineaddr(uint64_t);

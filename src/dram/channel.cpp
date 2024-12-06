@@ -68,6 +68,7 @@ DRAMChannel::tick()
                 if (GL_DRAM_CYCLE >= b.pre_ok_cycle_) {
                     b.open_row_.reset();
                     update(b.act_ok_cycle_, tRP);
+                    ++s_precharges_;
                 }
             } else {
                 all_ready &= GL_DRAM_CYCLE >= b.act_ok_cycle_;
@@ -77,6 +78,7 @@ DRAMChannel::tick()
         if (all_ready) {
             next_ref_cycle_ = GL_DRAM_CYCLE + tREFI;
             ref_done_cycle_ = GL_DRAM_CYCLE + tRFC;
+            ++s_refreshes_;
         }
     } else {
         // Cannot proceed if we are blocked by REF.
@@ -121,7 +123,7 @@ DRAMChannel::issue_next_cmd()
         update_timing(ready_cmd);
         if (is_read(ready_cmd.type)) {
             // Mark as outgoing.
-            io_->outgoing_queue_.emplace(ready_cmd.trans, GL_CYCLE);
+            io_->outgoing_queue_.emplace(ready_cmd.trans, GL_CYCLE+CL);
         }
     }
 }
@@ -166,27 +168,35 @@ DRAMChannel::update_timing(const DRAMCommand& cmd)
     case DRAMCommandType::READ:
         update(b.pre_ok_cycle_, tRTP);
         ++b.num_cas_to_open_row_;
+        ++s_reads_;
         break;
     case DRAMCommandType::READ_PRECHARGE:
         update(b.act_ok_cycle_, BL/2 + tRTP + tRP);
         b.open_row_.reset();
+        ++s_reads_;
+        ++s_precharges_;
         break;
     case DRAMCommandType::WRITE:
         update(b.pre_ok_cycle_, CWL + BL/2 + tWR);
         ++b.num_cas_to_open_row_;
+        ++s_writes_;
         break;
     case DRAMCommandType::WRITE_PRECHARGE:
         update(b.act_ok_cycle_, CWL + BL/2 + tWR + tRP);
         b.open_row_.reset();
+        ++s_writes_;
+        ++s_precharges_;
         break;
     case DRAMCommandType::ACTIVATE:
         update(b.cas_ok_cycle_, tRCD);
         update(b.pre_ok_cycle_, tRP);
         b.open_row_ = dram_row(cmd.trans.address);
+        ++s_activates_;
         break;
     case DRAMCommandType::PRECHARGE:
         update(b.act_ok_cycle_, tRP);
         b.open_row_.reset();
+        ++s_precharges_;
         break;
     }
     // Now do channel-level updates
@@ -257,6 +267,8 @@ DRAMChannel::frfcfs()
                     b.cmd_queue_.erase(cmd_it);
                 } else {
                     cmd_it->is_row_buffer_hit = false;
+                    if (ready_cmd.type == DRAMCommandType::PRECHARGE)
+                        ++s_pre_demand_;
                 }
                 return out;
             }

@@ -26,9 +26,8 @@ IOBus::add_incoming(Transaction t)
 {
     // Check for forwarding.
     if (pending_writes_.count(t.address)) {
-        if (trans_is_read(t.type)) {
+        if (trans_is_read(t.type))
             outgoing_queue_.emplace(t, GL_CYCLE+1);
-        }
         return true;
     }
     // Add to requisite queue.

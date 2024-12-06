@@ -33,8 +33,8 @@ struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheRep
     constexpr static bool INVALIDATE_ON_HIT = {invalidate_on_hit};
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = {next_is_invalidate_on_hit};
 
-    {typename}(CacheControl::next_ptr& n)
-        :CacheControl(n)
+    {typename}(std::string name, CacheControl::next_ptr& n)
+        :CacheControl(name, n)
     {{}}
 }};
 '''

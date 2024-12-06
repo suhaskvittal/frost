@@ -8,7 +8,6 @@ from .files import GEN_DIR, AUTOGEN_HEADER
 ####################################################################
 ####################################################################
 
-BL = 120
 BANK_TIMINGS = [
     'CL','CWL','tRCD','tRP','tRAS','tRTP','tWR'
 ]
@@ -23,9 +22,6 @@ CHANNEL_TIMINGS = [
 
 ####################################################################
 ####################################################################
-
-def BAR(n):
-    return ''.join(['-' for _ in range(n)])
 
 def get_cache_params(cfg, caches: list[str]) -> str:
     calls = {}
@@ -133,7 +129,7 @@ void
 sim_init(void)
 {{
     GL_DRAM = dram_ptr(new DRAM({cpu_freq}, {dram_freq}));
-    GL_LLC = llc_ptr(new LLCache(GL_DRAM));
+    GL_LLC = llc_ptr(new LLCache("LLC", GL_DRAM));
     GL_OS = os_ptr(new OS);
     for (size_t i = 0; i < NUM_THREADS; i++)
         GL_CORES[i] = core_ptr(new Core(i, OPT_TRACE_FILE));
@@ -205,8 +201,6 @@ list_dram_sl(std::ostream& out, std::string_view stat, uint64_t ckS, uint64_t ck
 void
 print_config(std::ostream& out)
 {{
-    const std::string_view BAR = "{BAR(BL)}";
-
     out << "\n" << BAR << "\n";
     
     list(out, "TRACE", OPT_TRACE_FILE);

@@ -8,6 +8,7 @@
 
 #include "trace/data.h"
 
+#include <limits>
 #include <vector>
 #include <unordered_set>
 
@@ -48,6 +49,8 @@ struct Instruction
     uint64_t cycle_issued = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_done = std::numeric_limits<uint64_t>::max();
 
+    bool retired =false;
+
     Instruction(TraceData d)
         :ip(d.ip),
         branch_taken(d.branch_taken),
@@ -68,6 +71,11 @@ struct Instruction
                 && loads_in_progress == 0;
     }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+using iptr_t = std::shared_ptr<Instruction>;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

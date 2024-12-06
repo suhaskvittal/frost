@@ -66,13 +66,15 @@ public:
     stat_t s_num_penalty_{};
     stat_t s_invalidates_{};
     stat_t s_write_alloc_{};
+
+    const std::string cache_name_;
 private:
     using mshr_t = std::unordered_multimap<uint64_t, MSHREntry>;
 
     next_ptr& next_;
     mshr_t    mshr_;
 public:
-    CacheControl(next_ptr&);
+    CacheControl(std::string cache_name, next_ptr&);
 
     void tick(void);
     void mark_load_as_done(uint64_t address);

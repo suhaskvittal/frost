@@ -27,9 +27,7 @@ public:
         inline bool add_incoming(Transaction t)
         {
             size_t ch = dram_channel(t.address);
-            dram->channels_[ch]->io_->outgoing_queue_.emplace(t, GL_CYCLE+100);
-//          return dram->channels_[ch]->io_->add_incoming(t);
-            return true;
+            return dram->channels_[ch]->io_->add_incoming(t);
         }
 
         IO(DRAM* d)

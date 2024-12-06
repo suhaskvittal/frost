@@ -4,8 +4,20 @@
  * */
 
 #include "os.h"
+#include "util/stats.h"
 
 #include <iostream>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+OS::print_stats(std::ostream& out)
+{
+    out << BAR << "\n";
+    print_stat(out, "OS", "PAGE_FAULTS", s_page_faults_);
+    out << BAR << "\n";
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -39,6 +51,7 @@ OS::get_pfn(uint64_t vpn)
 void
 OS::handle_page_fault(uint64_t vpn)
 {
+    ++s_page_faults_;
     for (size_t i = 0; i < 1024; i++) {
         size_t pfn = numeric_traits<NUM_PAGE_FRAMES>::mod(rng());
         size_t ii = pfn >> numeric_traits<BITVEC_WIDTH>::log2,

@@ -3,6 +3,7 @@
  *  date:   4 December 2024
  * */
 
+#include "constants.h"
 #include "globals.h"
 #include "memsys.h"
 
@@ -76,6 +77,8 @@ DRAM::print_stats(std::ostream& out)
     VecStat<double, DRAM_CHANNELS> rbhr;
     for (size_t i = 0; i < DRAM_CHANNELS; i++)
         rbhr[i] = mean(vec_row_buffer_hits[i], vec_reads[i]+vec_writes[i]);
+
+    out << BAR << "\n";
 
     print_vecstat(out, "DRAM", "NUM_READS", vec_reads);
     print_vecstat(out, "DRAM", "NUM_WRITES", vec_writes);

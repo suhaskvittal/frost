@@ -10,9 +10,10 @@
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__
-__TEMPLATE_CLASS__::CacheControl(next_ptr& n)
+__TEMPLATE_CLASS__::CacheControl(std::string cache_name, next_ptr& n)
     :cache_(new CACHE),
     io_(new IOBus(IMPL::RQ_SIZE, IMPL::WQ_SIZE, IMPL::PQ_SIZE)),
+    cache_name_(cache_name),
     next_(n)
 {
     mshr_.reserve(IMPL::NUM_MSHR);
@@ -44,6 +45,10 @@ __TEMPLATE_CLASS__::tick()
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 {
+    if (!mshr_.count(address)) {
+        std::cerr << cache_name_ << ": zombie mshr wakeup for address " << address << "\n";
+        exit(1);
+    }
     // First, fill the entry into the cache.
     auto fill_res = cache_->fill(address);
     if (fill_res.has_value()) {
@@ -60,13 +65,11 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
     auto it = mshr_.end();
     while ((it=mshr_.find(address)) != mshr_.end()) {
         MSHREntry& e = it->second;
-        io_->outgoing_queue_.emplace(e.trans, IMPL::CACHE_LATENCY);
-
-        if constexpr (IMPL::WRITE_ALLOCATE) {
-            if (e.is_for_write_allocate) {
-                cache_->mark_dirty(e.trans.address);
-                ++s_write_alloc_[e.trans.coreid];
-            }
+        if (e.is_for_write_allocate) {
+            cache_->mark_dirty(e.trans.address);
+            ++s_write_alloc_[e.trans.coreid];
+        } else {
+            io_->outgoing_queue_.emplace(e.trans, GL_CYCLE+IMPL::CACHE_LATENCY);
         }
 
         s_tot_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
@@ -100,7 +103,6 @@ __TEMPLATE_CLASS__::next_access()
         // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
         // specified (i.e. for the L1D$, then on a write miss, install
         // an MSHR entry).
-        /*
         if constexpr (IMPL::WRITE_ALLOCATE) {
             ++s_accesses_[t.coreid];
             if (!cache_->mark_dirty(t.address))
@@ -108,8 +110,6 @@ __TEMPLATE_CLASS__::next_access()
         } else {
             cache_->mark_dirty(t.address);
         }
-        */
-        cache_->mark_dirty(t.address);
     }
 }
 
@@ -133,8 +133,13 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
     ++s_misses_[t.coreid];
 
     MSHREntry e(t, write_miss);
-    e.is_fired = (mshr_.count(t.address) > 0) || next_->io_->add_incoming(t);
-    mshr_.insert({t.address, t});
+
+    // Need to switch transaction type in case of write allocate.
+    if constexpr (IMPL::WRITE_ALLOCATE)
+        e.trans.type = TransactionType::READ;
+
+    e.is_fired = mshr_.count(t.address) > 0 || next_->io_->add_incoming(e.trans);
+    mshr_.insert({t.address, e});
 }
 
 ////////////////////////////////////////////////////////////////////////////

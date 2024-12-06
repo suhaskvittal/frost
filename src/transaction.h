@@ -6,6 +6,8 @@
 #ifndef TRANSACTION_h
 #define TRANSACTION_h
 
+#include "core/instruction.h"
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -19,7 +21,6 @@ inline bool trans_is_read(TransactionType t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-struct Instruction;
 /*
  * This struct should have all information for routing cache/memory requests
  * through the memory hierarchy.
@@ -31,13 +32,13 @@ struct Instruction;
 struct Transaction
 {
     uint8_t         coreid;
-    Instruction*    inst;
+    iptr_t          inst;
     TransactionType type;
 
     uint64_t address;
     bool     address_is_ip;
 
-    Transaction(uint8_t cid, Instruction* inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
+    Transaction(uint8_t cid, iptr_t inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
         :coreid(cid),
         inst(inst),
         type(t),

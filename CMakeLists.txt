@@ -23,7 +23,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES "Profile")
         -Wno-unused-parameter
         -Wno-unused-but-set-variable
         -Wunused
-        -O1 -g)
+        -pg -g)
 else()
     set(COMPILE_OPTIONS
         -g
@@ -50,3 +50,6 @@ add_executable(sim src/main.cpp ${SIM_FILES})
 target_compile_options(sim PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(sim PRIVATE "src" "_generated/${BUILD_ID}")
 target_link_libraries(sim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
+if (CMAKE_BUILD_TYPE MATCHES "Profile")
+    target_link_libraries(sim PRIVATE -pg)
+endif()

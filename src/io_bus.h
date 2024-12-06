@@ -117,8 +117,8 @@ IOBus::get_next_incoming(PRED pred)
             out = *w_it;
 
             --writes_to_drain_;
-            write_queue_.erase(w_it);
             dec_pending(pending_writes_, w_it->address);
+            write_queue_.erase(w_it);
         }
     } else {
         in_queue_t& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
