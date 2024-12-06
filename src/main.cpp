@@ -48,7 +48,25 @@ int main(int argc, char* argv[])
     sim_init();
     print_config(std::cout);
 
+    std::cout << "WARMUP:\t";
+    std::cout.flush();
+
     size_t curr_core_idx = 0;
+    for (uint64_t i = 0; i < OPT_INST_WARMUP; i++) {
+        if (i % 1'000'000 == 0) {
+            std::cout << ".";
+            std::cout.flush();
+        }
+
+        size_t ii = curr_core_idx;
+        for (size_t j = 0; j < NUM_THREADS; j++) {
+            GL_CORES[ii]->tick_warmup();
+            numeric_traits<NUM_THREADS>::increment_and_mod(ii);
+        }
+        numeric_traits<NUM_THREADS>::increment_and_mod(curr_core_idx);
+    }
+    std::cout << "DONE\n";
+
     bool all_done;
     do {
         if (GL_CYCLE % 100'000 == 0)

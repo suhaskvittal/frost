@@ -10,6 +10,35 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+constexpr size_t COREID_TAG_OFFSET = 52;
+
+inline void
+tag_with_coreid(uint64_t& addr, uint8_t coreid)
+{
+    addr |= static_cast<uint64_t>(coreid) << COREID_TAG_OFFSET;
+}
+
+inline void
+tag_all_with_coreid(std::vector<uint64_t>& mem, uint8_t coreid)
+{
+    std::for_each(mem.begin(), mem.end(), 
+            [coreid] (uint64_t& addr)
+            {
+                tag_with_coreid(addr, coreid);
+            });
+}
+
+inline uint8_t
+untag_coreid(uint64_t& addr)
+{
+    uint8_t coreid = static_cast<uint8_t>(addr >> COREID_TAG_OFFSET);
+    addr &= (1L<<COREID_TAG_OFFSET)-1;
+    return coreid;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 inline uint64_t LINEADDR(uint64_t byteaddr)
 {
     return byteaddr >> numeric_traits<LINESIZE>::log2;
@@ -32,6 +61,56 @@ Core::Core(uint8_t coreid, std::string trace_file)
     L2_ = l2_ptr(new L2Cache(cache_name("L2", coreid), GL_LLC));
     L1I_ = l1i_ptr(new L1ICache(cache_name("L1i", coreid), L2_));
     L1D_ = l1d_ptr(new L1DCache(cache_name("L1d", coreid), L2_));
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class L1CACHE> void
+warmup_cache_access(std::unique_ptr<L1CACHE>& L1, std::unique_ptr<L2Cache>& L2, uint64_t addr, bool write)
+{
+    bool hit = write ? L1->cache_->mark_dirty(addr) : L1->cache_->probe(addr);
+    if (hit) {
+        if (!L2->cache_->probe(addr)) {
+            GL_LLC->cache_->invalidate(addr);  // Does not matter if it really is in the LLC -- we
+                                               // are not simulating DRAM accesses
+            auto r = L2->cache_->fill(addr);
+            if (r.has_value()) {
+                CacheEntry& e = r.value();
+                if (e.dirty)
+                    GL_LLC->cache_->mark_dirty(e.address);
+                else
+                    GL_LLC->cache_->fill(e.address);
+            }
+        }
+        auto r = L1->cache_->fill(addr);
+        if (r.has_value()) {
+            CacheEntry& e = r.value();
+            if (e.dirty)
+                L2->cache_->mark_dirty(e.address);
+            else
+                L2->cache_->fill(e.address);
+        }
+        if (write)
+            L1->cache_->mark_dirty(addr);
+    }
+}
+
+void
+Core::tick_warmup()
+{
+    iptr_t inst = next_inst();
+    // Try `ip` access.
+    inst->pip = GL_OS->translate_byteaddr(inst->ip);
+    warmup_cache_access(L1I_, L2_, LINEADDR(inst->pip), false);
+    for (uint64_t addr : inst->loads) {
+        addr = GL_OS->translate_byteaddr(addr);
+        warmup_cache_access(L1D_, L2_, LINEADDR(addr), false);
+    }
+    for (uint64_t addr : inst->stores) {
+        addr = GL_OS->translate_byteaddr(addr);
+        warmup_cache_access(L1D_, L2_, LINEADDR(addr), true);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -127,44 +206,13 @@ Core::print_stats(std::ostream& out)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr size_t COREID_TAG_OFFSET = 52;
-
-inline void
-tag_with_coreid(uint64_t& addr, uint8_t coreid)
-{
-    addr |= static_cast<uint64_t>(coreid) << COREID_TAG_OFFSET;
-}
-
-inline void
-tag_all_with_coreid(std::vector<uint64_t>& mem, uint8_t coreid)
-{
-    std::for_each(mem.begin(), mem.end(), 
-            [coreid] (uint64_t& addr)
-            {
-                tag_with_coreid(addr, coreid);
-            });
-}
-
-inline uint8_t
-untag_coreid(uint64_t& addr)
-{
-    uint8_t coreid = static_cast<uint8_t>(addr >> COREID_TAG_OFFSET);
-    addr &= (1L<<COREID_TAG_OFFSET)-1;
-    return coreid;
-}
-
 void
 Core::iftr(size_t fwid)
 {
     Latch& la = la_iftr_ifmem_[fwid];
     if (la.stalled)
         return;
-    iptr_t inst = iptr_t(new Instruction(trace_reader_.read())); 
-    // Tag the ip, load, and store addresses with the coreid.
-    tag_with_coreid(inst->ip, coreid_);
-    tag_all_with_coreid(inst->loads, coreid_);
-    tag_all_with_coreid(inst->stores, coreid_);
-
+    iptr_t inst = next_inst();
     inst->cycle_fetched = GL_CYCLE;
 
     inst->ready_for_icache_access = true;
@@ -370,6 +418,20 @@ Core::operate_caches()
     L2_->tick();
     L1I_->tick();
     L1D_->tick();
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+iptr_t
+Core::next_inst()
+{
+    iptr_t inst = iptr_t(new Instruction(trace_reader_.read())); 
+    // Tag the ip, load, and store addresses with the coreid.
+    tag_with_coreid(inst->ip, coreid_);
+    tag_all_with_coreid(inst->loads, coreid_);
+    tag_all_with_coreid(inst->stores, coreid_);
+    return inst;
 }
 
 ////////////////////////////////////////////////////////////////////////////

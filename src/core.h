@@ -80,7 +80,10 @@ private:
     std::stringstream stats_stream_;
 public:
     Core(uint8_t coreid, std::string trace_file);
-
+    /*
+     * Warmup will just take the next instruction and update the caches.
+     * */
+    void tick_warmup(void);
     void tick(void);
 
     void checkpoint_stats(void);
@@ -89,10 +92,10 @@ private:
     void iftr(size_t fwid);
     void ifmem(size_t fwid);
     void disp(size_t fwid);
-
     void operate_rob(void);
-
     void operate_caches(void);
+
+    iptr_t next_inst(void);
     /*
      * This function needs access to `L2_`, which is private.
      * */
