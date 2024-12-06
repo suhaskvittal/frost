@@ -68,6 +68,8 @@ __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
 __TEMPLATE_CLASS__::fill(entry_t&& e)
 {
     fill_result_t out;
+    if constexpr (POL == CacheReplPolicy::PERFECT)
+        return out;
 
     cset_t& s = get_set(e.address);
     auto it = std::find_if_not(s.begin(), s.end(),
