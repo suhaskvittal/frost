@@ -79,20 +79,21 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::demand_fill(uint64_t address)
+__TEMPLATE_CLASS__::demand_fill(uint64_t address, bool dirty)
 {
     auto fill_res = cache_->fill(address);
+    if (dirty)
+        cache_->mark_dirty(address);
     if (fill_res.has_value()) {
         // Then we evicted some line.
         CacheEntry& e = fill_res.value();
-        // Handle dirty lines.
-        // Only worry about clean lines if the next cache is invalidate on hit.
-        if (e.dirty) {
-            if (!do_writeback(e.address))
-                writeback_queue_.push_back(e.address);
-        } else if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT) {
-            next_->demand_fill(e.address);
-        }
+        if (e.dirty)
+            ++s_writebacks_;
+        // Install into the next level of the cache.
+        if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
+            next_->demand_fill(e.address, e.dirty);
+        else if (e.dirty && !do_writeback(e.address))
+            writeback_queue_.push_back(e.address);
     }
 }
 

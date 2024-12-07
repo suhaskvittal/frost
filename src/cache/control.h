@@ -86,7 +86,10 @@ public:
 
     void tick(void);
     void mark_load_as_done(uint64_t address);
-    void demand_fill(uint64_t address);
+    /*
+     * Only use `is_dirty` if installing to an `INVALIDATE_ON_HIT` cache.
+     * */
+    void demand_fill(uint64_t address, bool is_dirty=false);
     /*
      * Searches for an instruction in this cache. If it is found, a message
      * is printed to `stderr` and this function returns true.
@@ -100,12 +103,10 @@ private:
     inline bool do_writeback(uint64_t addr)
     {
         Transaction t(0, nullptr, TransactionType::WRITE, addr);
-        if (next_->io_->add_incoming(t)) {
-            ++s_writebacks_;
+        if (next_->io_->add_incoming(t))
             return true;
-        } else {
+        else
             return false;
-        }
     }
 
     inline size_t curr_mshr_size(void)

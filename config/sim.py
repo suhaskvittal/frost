@@ -233,7 +233,7 @@ print_config(std::ostream& out)
 
     out << BAR << "\n"
         << "DRAM frequency = " << {dram_freq} << "GHz, tCK = " << {tCK:.5f} << "\n"
-        << Page Policy = {dram_page_policy}, Address Mapping = {dram_am}\n\n"
+        << "Page Policy = {dram_page_policy}, Address Mapping = {dram_am}\n\n"
         << std::setw(24) << std::left << "DRAM TIMING"
         << std::setw(12) << std::left << "ns"
         << std::setw(12) << std::left << "nCK"

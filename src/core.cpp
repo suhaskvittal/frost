@@ -16,7 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr size_t DEADLOCK_CYCLES = 50'000;
+constexpr size_t DEADLOCK_CYCLES = 500'000;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -355,8 +355,12 @@ Core::operate_rob()
     // First, check if we can complete any ROB entries.
     for (size_t i = 0; i < CORE_FETCH_WIDTH && !rob_.empty(); i++) {
         iptr_t& inst = rob_.front();
+
+        if (inst->cycle_rob_head == std::numeric_limits<uint64_t>::max())
+            inst->cycle_rob_head = GL_CYCLE;
+
         if (GL_CYCLE < inst->cycle_done) {
-            if (GL_CYCLE - inst->cycle_issued > DEADLOCK_CYCLES) {
+            if (GL_CYCLE - inst->cycle_rob_head > DEADLOCK_CYCLES) {
                 std::cerr << "\ncore: rob deadlock @ cycle = " << GL_CYCLE
                         << " for instruction #" << inst->inst_num
                         << ", ip = " << inst->ip

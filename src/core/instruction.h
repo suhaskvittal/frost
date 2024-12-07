@@ -48,6 +48,7 @@ struct Instruction
      * */
     uint64_t cycle_fetched = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_issued = std::numeric_limits<uint64_t>::max();
+    uint64_t cycle_rob_head = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_done = std::numeric_limits<uint64_t>::max();
 
     bool retired =false;
