@@ -88,8 +88,7 @@ void print_stat(std::ostream& out,
         T stat)
 {
     out << std::setw(HEADER_WIDTH) << std::left << header
-        << std::setw(STAT_NAME_WIDTH) << std::left << stat_name
-        << " :";
+        << std::setw(STAT_NAME_WIDTH) << std::left << stat_name;
     if constexpr (std::is_floating_point<T>::value)
         out << std::setprecision(5);
     out << std::setw(STAT_WIDTH) << std::right << stat << "\n";
@@ -105,18 +104,14 @@ void print_vecstat(std::ostream& out,
         VecAccMode mode = VecAccMode::SUM)
 {
     out << std::setw(HEADER_WIDTH) << std::left << header
-        << std::setw(STAT_NAME_WIDTH) << std::left << stat_name
-        << ":";
+        << std::setw(STAT_NAME_WIDTH) << std::left << stat_name;
     
     for (size_t i = 0; i < N; i++) {
         if constexpr (std::is_floating_point<T>::value)
             out << std::setprecision(5);
         out << std::setw(STAT_WIDTH) << std::right << arr.at(i);
-        if (mode != VecAccMode::NONE || i < N-1)
-            out << ",";
-        else
-            out << "\n";
     }
+
     switch (mode) {
     case VecAccMode::SUM:
         out << std::setw(STAT_WIDTH) << std::right << vec_sum(arr) << "\n";
@@ -129,6 +124,9 @@ void print_vecstat(std::ostream& out,
         break;
     case VecAccMode::HMEAN:
         out << std::setw(STAT_WIDTH) << std::right << vec_hmean(arr) << "\n";
+        break;
+    default:
+        out << "\n";
     }
 }
 

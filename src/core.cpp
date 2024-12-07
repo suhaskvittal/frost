@@ -166,6 +166,7 @@ print_cache_stats_for_core(Core* c, const std::unique_ptr<CACHE>& cache, std::os
         << std::setw(16) << std::left << std::setprecision(3) << mpki
         << std::setw(16) << std::left << std::setprecision(3) << aat
         << std::setw(16) << std::left << std::setprecision(3) << miss_penalty
+        << std::setw(16) << std::left << cache->s_writebacks_
         << "\n";
 }
 
@@ -197,6 +198,7 @@ Core::checkpoint_stats()
         << std::setw(16) << std::left << "MPKI"
         << std::setw(16) << std::left << "AAT"
         << std::setw(16) << std::left << "MISS_PENALTY"
+        << std::setw(16) << std::left << "WRITEBACKS"
         << "\n" << BAR << "\n";
 
     print_cache_stats_for_core(this, L1I_, stats_stream_, header + "_L1I$");

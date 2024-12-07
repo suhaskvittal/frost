@@ -67,6 +67,8 @@ public:
     stat_t s_invalidates_{};
     stat_t s_write_alloc_{};
 
+    uint64_t s_writebacks_ =0;
+
     const std::string cache_name_;
 private:
     using mshr_t = std::unordered_multimap<uint64_t, MSHREntry>;
@@ -98,7 +100,12 @@ private:
     inline bool do_writeback(uint64_t addr)
     {
         Transaction t(0, nullptr, TransactionType::WRITE, addr);
-        return next_->io_->add_incoming(t);
+        if (next_->io_->add_incoming(t)) {
+            ++s_writebacks_;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     inline size_t curr_mshr_size(void)
