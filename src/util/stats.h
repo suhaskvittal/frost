@@ -37,10 +37,41 @@ mean(const VecStat<T,N>& arr, T tot)
     return out;
 }
 
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 template <class T, size_t N> inline T
-vecsum(const VecStat<T,N>& arr)
+vec_sum(const VecStat<T,N>& arr)
 {
     return std::accumulate(arr.begin(), arr.end(), static_cast<T>(0));
+}
+
+template <class T, size_t N> inline double
+vec_amean(const VecStat<T,N>& arr)
+{
+    return static_cast<double>(vec_sum(arr)) / N;
+}
+
+template <class T, size_t N> inline double
+vec_gmean(const VecStat<T,N>& arr)
+{
+    double log_gmean = std::accumulate(arr.begin(), arr.end(), 0.0,
+            [] (T x, T y)
+            {
+                return x + std::log(static_cast<double>(y));
+            });
+    return std::exp(log_gmean / N);
+}
+
+template <class T, size_t N> inline double
+vec_hmean(const VecStat<T,N>& arr)
+{
+    double denom = std::accumulate(arr.begin(), arr.end(), 0.0,
+            [] (T x, T y)
+            {
+                return x + 1.0/static_cast<double>(y);
+            });
+    return static_cast<double>(N) / denom;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -64,12 +95,14 @@ void print_stat(std::ostream& out,
     out << std::setw(STAT_WIDTH) << std::right << stat << "\n";
 }
 
+enum class VecAccMode { NONE, SUM, AMEAN, GMEAN, HMEAN };
+
 template <class T, size_t N>
 void print_vecstat(std::ostream& out,
         std::string_view header,
         std::string_view stat_name,
         const VecStat<T,N>& arr,
-        bool with_acc=true)
+        VecAccMode mode = VecAccMode::SUM)
 {
     out << std::setw(HEADER_WIDTH) << std::left << header
         << std::setw(STAT_NAME_WIDTH) << std::left << stat_name
@@ -79,13 +112,23 @@ void print_vecstat(std::ostream& out,
         if constexpr (std::is_floating_point<T>::value)
             out << std::setprecision(5);
         out << std::setw(STAT_WIDTH) << std::right << arr.at(i);
-        if (with_acc || i < N-1)
+        if (mode != VecAccMode::NONE || i < N-1)
             out << ",";
         else
             out << "\n";
     }
-    if (with_acc) {
-        out << std::setw(STAT_WIDTH) << std::right << vecsum(arr) << "\n";
+    switch (mode) {
+    case VecAccMode::SUM:
+        out << std::setw(STAT_WIDTH) << std::right << vec_sum(arr) << "\n";
+        break;
+    case VecAccMode::AMEAN:
+        out << std::setw(STAT_WIDTH) << std::right << vec_amean(arr) << "\n";
+        break;
+    case VecAccMode::GMEAN:
+        out << std::setw(STAT_WIDTH) << std::right << vec_gmean(arr) << "\n";
+        break;
+    case VecAccMode::HMEAN:
+        out << std::setw(STAT_WIDTH) << std::right << vec_hmean(arr) << "\n";
     }
 }
 

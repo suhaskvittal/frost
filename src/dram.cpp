@@ -106,7 +106,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "NUM_REFRESH", vec_refreshes);
     print_vecstat(out, "DRAM", "NUM_PREDEMAND", vec_pre_demand);
     print_vecstat(out, "DRAM", "ROW_BUFFER_HITS", vec_row_buffer_hits);
-    print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr);
+    print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr, VecAccMode::HMEAN);
 }
 
 ////////////////////////////////////////////////////////////////////////////

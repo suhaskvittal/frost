@@ -102,7 +102,7 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address)
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::deadlock_find_inst(const iptr_t& inst)
 {
-    std::cerr << "searching in " << cache_name_ << "...";
+    std::cerr << "searching in " << cache_name_ << "...\n";
     if (!io_->deadlock_find_inst(inst)) {
         // Search in mshr.
         auto mshr_it = std::find_if(mshr_.cbegin(), mshr_.cend(),
@@ -113,13 +113,12 @@ __TEMPLATE_CLASS__::deadlock_find_inst(const iptr_t& inst)
                                 });
         if (mshr_it != mshr_.end()) {
             const MSHREntry& e = mshr_it->second;
-            std::cerr << "\n\tfound in mshr: is_fired = " << e.is_fired
+            std::cerr << "\tfound in mshr: is_fired = " << e.is_fired
                     << ", cycle_fired = " << e.cycle_fired << "\n";
             return true;
         }
-        std::cerr << " nothing found";
+        std::cerr << "\tnothing found\n";
     }
-    std::cerr << "\n";
     return false;
 }
 

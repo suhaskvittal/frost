@@ -62,9 +62,6 @@ IOBus::add_outgoing(Transaction t, uint64_t latency)
     if (trans_is_read(t.type)) {
         if (t.type == TransactionType::READ || t.type == TransactionType::TRANSLATION)
             outgoing_queue_.emplace(t, GL_CYCLE+latency);
-        dec_pending(pending_reads_, t.address);
-    } else {
-        dec_pending(pending_writes_, t.address);
     }
 }
 
@@ -74,6 +71,18 @@ IOBus::add_outgoing(Transaction t, uint64_t latency)
 bool
 IOBus::deadlock_find_inst(const iptr_t& inst)
 {
+    std::cerr << "\tio status: writes_to_drain = " << writes_to_drain_ 
+                << ", RQ = " << read_queue_.size()
+                << ", WQ = " << write_queue_.size()
+                << ", PQ = " << prefetch_queue_.size()
+                << "\n\tpending_reads:\n";
+    for (auto& [addr, cnt] : pending_reads_)
+        std::cerr << "\t" << addr << " : " << cnt << "\n";
+    std::cerr << "\tpending writes:\n";
+    for (auto& [addr, cnt] : pending_writes_)
+        std::cerr << "\t" << addr << " : " << cnt << "\n";
+    std::cerr << "\n";
+
     bool found = false;
     found |= deadlock_search_in_queue("read_queue", read_queue_, inst);
     found |= deadlock_search_in_queue("write_queue", write_queue_, inst);
@@ -90,11 +99,7 @@ IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transac
                             });
     if (q_it != q.end()) {
         size_t dist = std::distance(q.begin(), q_it);
-        std::cerr << "\n\tfound in " << qname << ", entry #" << dist
-                << ", io status: writes_to_drain = " << writes_to_drain_ 
-                << ", RQ = " << read_queue_.size()
-                << ", WQ = " << write_queue_.size()
-                << ", PQ = " << prefetch_queue_.size();
+        std::cerr << "\tfound in " << qname << ", entry #" << dist << "\n";
         return true;
     } else {
         return false;

@@ -332,6 +332,7 @@ Core::operate_rob()
                         << ", ip = " << inst->ip
                         << " in core " << coreid_+0 << "\n"
                         << "\tloads = " << inst->loads.size() << "\n"
+                        << "\tstores = " << inst->stores.size() << "\n"
                         << "\tloads remaining = " << inst->loads_in_progress << "\n";
                 L1D_->deadlock_find_inst(inst);
                 L2_->deadlock_find_inst(inst);

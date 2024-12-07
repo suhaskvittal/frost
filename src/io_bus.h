@@ -115,24 +115,31 @@ IOBus::get_next_incoming(PRED pred)
     if (writes_to_drain_ == 0 && write_drain_cond)
         writes_to_drain_ = write_queue_.size();
 
+    bool access_done = false;
     if (writes_to_drain_ > 0) {
         auto w_it = std::find_if(write_queue_.begin(), write_queue_.end(),
-                            [this] (Transaction& t)
+                            [this, pred] (const Transaction& t)
                             {
-                                return this->pending_reads_.count(t.address) == 0;
+                                return this->pending_reads_.count(t.address) == 0 && pred(t);
                             });
-        if (w_it != write_queue_.end() && pred(*w_it)) {
+        if (w_it != write_queue_.end()) {
+            access_done = true;
             out = *w_it;
-            write_queue_.erase(w_it);
+
+            dec_pending(pending_writes_, w_it->address);
             --writes_to_drain_;
+            write_queue_.erase(w_it);
         } else if (!write_queue_.empty()) {
             writes_to_drain_ = 0;  // Cannot proceed with writes -- might as well switch back to reads.
         }
-    } else {
+    }
+    if (!access_done) {
         in_queue_t& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
-        if (!q.empty() && pred(q.front())) {
-            out = q.front();
-            q.pop_front();
+        auto r_it = std::find_if(q.begin(), q.end(), pred);
+        if (r_it != q.end()) {
+            out = *r_it;
+            dec_pending(pending_reads_, r_it->address);
+            q.erase(r_it);
         }
     }
     return out;
