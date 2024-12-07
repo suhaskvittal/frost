@@ -65,6 +65,9 @@ def write(cfg, build):
         sl_timing_calls.append(f'list_dram_sl(out, \"{name}\", {tS}, {tL});')
     sl_timing_calls = '\n\t'.join(sl_timing_calls)
 
+    dram_page_policy = cfg['DRAM']['page_policy']
+    dram_am = cfg['DRAM']['address_mapping']
+
     with open(f'{GEN_DIR}/{build}/sim.h', 'w') as wr:
         wr.write(
 fr'''{AUTOGEN_HEADER}
@@ -229,7 +232,8 @@ print_config(std::ostream& out)
     list_cache_params(out, "LLC", {cache_params['LLC']});
 
     out << BAR << "\n"
-        << "DRAM frequency = " << {dram_freq} << "GHz, tCK = " << {tCK:.5f} << "\n\n"
+        << "DRAM frequency = " << {dram_freq} << "GHz, tCK = " << {tCK:.5f} << "\n"
+        << Page Policy = {dram_page_policy}, Address Mapping = {dram_am}\n\n"
         << std::setw(24) << std::left << "DRAM TIMING"
         << std::setw(12) << std::left << "ns"
         << std::setw(12) << std::left << "nCK"

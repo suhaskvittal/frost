@@ -16,6 +16,11 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+constexpr size_t DEADLOCK_CYCLES = 50'000;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 constexpr size_t COREID_TAG_OFFSET = 52;
 
 inline void
@@ -245,17 +250,27 @@ Core::ifmem(size_t fwid)
     Transaction t(coreid_, la.inst, TransactionType::READ, LINEADDR(la.inst->pip), true);
     // Cannot proceed if the ip has not been translated or if
     // we cannot submit `t`.
-    if (!la.inst->ready_for_icache_access 
+    iptr_t& inst = la.inst;
+    if (!inst->ready_for_icache_access 
             || ftb_.size() == CORE_FTB_SIZE
             || !L1I_->io_->add_incoming(t)) 
     {
+        if (GL_CYCLE - inst->cycle_fetched >= DEADLOCK_CYCLES) {
+            std::cerr << "\ncore: ifmem deadlock @ cycle = " << GL_CYCLE
+                    << " for instruction #" << inst->inst_num
+                    << ", ip = " << inst->ip
+                    << " in core " << coreid_+0
+                    << "\n\tftb size = " << ftb_.size()
+                    << "\n";
+            exit(1);
+        }
         la.stalled = true;
         ++s_ifmem_stalls_;
         return;
     }
     la.valid = false;
     // Place into the fetch target buffer.
-    ftb_.push_back(std::move(la.inst));
+    ftb_.push_back(std::move(inst));
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -276,11 +291,24 @@ Core::disp(size_t fwid)
 {
     if (ftb_.empty())
         return;
-    if (!ftb_.front()->inst_load_done || rob_.size() == CORE_ROB_SIZE) {
+
+    auto& inst = ftb_.front();
+    if (!inst->inst_load_done || rob_.size() == CORE_ROB_SIZE) {
+        if (GL_CYCLE - inst->cycle_fetched >= DEADLOCK_CYCLES) {
+            std::cerr << "\ncore: disp deadlock @ cycle = " << GL_CYCLE
+                    << " for instruction #" << inst->inst_num
+                    << ", ip = " << inst->ip
+                    << " in core " << coreid_+0
+                    << "\n\trob size = " << rob_.size()
+                    << "\n";
+            L1I_->deadlock_find_inst(inst);
+            L2_->deadlock_find_inst(inst);
+            GL_LLC->deadlock_find_inst(inst);
+            exit(1);
+        }
         ++s_disp_stalls_;
         return;
     }
-    auto& inst = ftb_.front();
     // Otherwise, install into the ROB.
     inst->cycle_issued = GL_CYCLE;
     // Check if `la.inst` is a memory instruction. 
@@ -328,7 +356,7 @@ Core::operate_rob()
     for (size_t i = 0; i < CORE_FETCH_WIDTH && !rob_.empty(); i++) {
         iptr_t& inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done) {
-            if (GL_CYCLE - inst->cycle_issued > 50'000) {
+            if (GL_CYCLE - inst->cycle_issued > DEADLOCK_CYCLES) {
                 std::cerr << "\ncore: rob deadlock @ cycle = " << GL_CYCLE
                         << " for instruction #" << inst->inst_num
                         << ", ip = " << inst->ip

@@ -45,6 +45,8 @@ struct Transaction
         address(addr),
         address_is_ip(addr_is_ip)
     {}
+
+    Transaction(const Transaction&) =default;
 };
 
 ////////////////////////////////////////////////////////////////////////////

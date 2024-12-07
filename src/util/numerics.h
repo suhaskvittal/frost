@@ -16,7 +16,7 @@ constexpr inline size_t _log2(size_t n)
     if (n > 1)
         return 1+_log2(n >> 1);
     else
-        return 1;
+        return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -25,7 +25,7 @@ constexpr inline size_t _log2(size_t n)
 template <size_t N>
 struct numeric_traits
 {
-    constexpr static bool   is_power_of_two = (N & (N-1) == 0);
+    constexpr static bool   is_power_of_two = (N & (N-1)) == 0;
     constexpr static size_t log2 = _log2(N);
 };
 
@@ -45,7 +45,7 @@ template <size_t N, class T> inline void
 fast_increment_and_mod_inplace(T& x)
 {
     if constexpr (numeric_traits<N>::is_power_of_two) {
-        x = (x+1) % (N-1);
+        x = (x+1) & (N-1);
     } else {
         ++x;
         if (x == N)  // Should be faster than modulo.

@@ -114,7 +114,11 @@ __TEMPLATE_CLASS__::deadlock_find_inst(const iptr_t& inst)
         if (mshr_it != mshr_.end()) {
             const MSHREntry& e = mshr_it->second;
             std::cerr << "\tfound in mshr: is_fired = " << e.is_fired
-                    << ", cycle_fired = " << e.cycle_fired << "\n";
+                    << ", cycle_fired = " << e.cycle_fired
+                    << ", write_alloc = " << e.is_for_write_allocate
+                    << ", address = " << e.trans.address
+                    << ", count = " << mshr_.count(e.trans.address)
+                    << "\n";
             return true;
         }
         std::cerr << "\tnothing found\n";
@@ -144,15 +148,17 @@ __TEMPLATE_CLASS__::next_access()
         else
             handle_miss(t);
     } else {
+        // If this cache is invalidate on hit, we must fill first.
+        if constexpr (IMPL::INVALIDATE_ON_HIT)
+            cache_->fill(t.address);
         // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
         // specified (i.e. for the L1D$, then on a write miss, install
         // an MSHR entry).
+        bool write_hit = cache_->mark_dirty(t.address);
         if constexpr (IMPL::WRITE_ALLOCATE) {
             ++s_accesses_[t.coreid];
-            if (!cache_->mark_dirty(t.address))
+            if (!write_hit)
                 handle_miss(t, true);
-        } else {
-            cache_->mark_dirty(t.address);
         }
         io_->add_outgoing(t, 0);
     }
@@ -181,7 +187,6 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
 
     // Need to switch transaction type in case of write allocate.
     e.trans.type = TransactionType::READ;
-
     e.is_fired = mshr_.count(t.address) > 0 || next_->io_->add_incoming(e.trans);
     mshr_.insert({t.address, e});
 }
