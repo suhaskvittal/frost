@@ -22,6 +22,7 @@ struct Instruction
     /*
      * These are set upon instantiation.
      * */
+    uint64_t   inst_num;
     uint64_t   ip;
     bool       branch_taken;
     BranchType branch_type;
@@ -51,8 +52,9 @@ struct Instruction
 
     bool retired =false;
 
-    Instruction(TraceData d)
-        :ip(d.ip),
+    Instruction(uint64_t inum, TraceData d)
+        :inst_num(inum),
+        ip(d.ip),
         branch_taken(d.branch_taken),
         branch_type(d.branch_type),
         loads(d.src_mem),

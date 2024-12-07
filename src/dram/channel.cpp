@@ -6,7 +6,10 @@
 #include "globals.h"
 #include "dram_timing.h"
 
+#include "dram/address.h"
 #include "dram/channel.h"
+#include "io_bus.h"
+#include "transaction.h"
 #include "util/numerics.h"
 
 #include <iomanip>
@@ -43,11 +46,29 @@ inline void update_SL(std::array<uint64_t,2>& t, uint64_t diff, uint64_t same)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+DRAMCommand::DRAMCommand()
+    :DRAMCommand(0, DRAMCommandType::READ)
+{}
+
+DRAMCommand::DRAMCommand(uint64_t addr, DRAMCommandType t)
+    :DRAMCommand(Transaction(0, nullptr, TransactionType::READ, addr), t)
+{}
+
+DRAMCommand::DRAMCommand(Transaction trans, DRAMCommandType t)
+    :trans(trans),
+    type(t)
+{}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 DRAMChannel::DRAMChannel(double freq_ghz)
     :io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
     freq_ghz_(freq_ghz),
     next_ref_cycle_(tREFI)
 {}
+
+DRAMChannel::~DRAMChannel() {}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -123,7 +144,7 @@ DRAMChannel::issue_next_cmd()
         update_timing(ready_cmd);
         if (is_read(ready_cmd.type)) {
             // Mark as outgoing.
-            io_->outgoing_queue_.emplace(ready_cmd.trans, GL_CYCLE+CL);
+            io_->add_outgoing(ready_cmd.trans, CL);
         }
     }
 }
@@ -230,7 +251,8 @@ DRAMChannel::frfcfs()
     sel_cmd_t out;
     for (size_t i = 0; i < banks_.size(); i++) {
         auto& b = banks_[next_bank_with_cmd_];
-        numeric_traits<TOT_BANKS>::increment_and_mod(next_bank_with_cmd_);
+        fast_increment_and_mod_inplace<TOT_BANKS>(next_bank_with_cmd_);
+
         // Search for first cmd queue entry with row buffer hit. 
         for (auto cmd_it = b.cmd_queue_.begin(); cmd_it != b.cmd_queue_.end(); cmd_it++) {
             DRAMCommand ready_cmd;
@@ -275,6 +297,15 @@ DRAMChannel::frfcfs()
         }
     }
     return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+DRAMBank&
+DRAMChannel::get_bank(uint64_t addr)
+{
+    return banks_.at(get_bank_idx(addr));
 }
 
 ////////////////////////////////////////////////////////////////////////////

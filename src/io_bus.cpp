@@ -3,11 +3,15 @@
  *  date:   3 December 2024
  * */
 
-#include "globals.h"
-
 #include "io_bus.h"
 
 #include <algorithm>
+#include <iostream>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+extern uint64_t GL_CYCLE;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -27,7 +31,7 @@ IOBus::add_incoming(Transaction t)
     // Check for forwarding.
     if (pending_writes_.count(t.address)) {
         if (trans_is_read(t.type))
-            outgoing_queue_.emplace(t, GL_CYCLE+1);
+            add_outgoing(t, 1);
         return true;
     }
     // Add to requisite queue.
@@ -48,6 +52,55 @@ IOBus::add_incoming(Transaction t)
     }
     return true;
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+IOBus::add_outgoing(Transaction t, uint64_t latency)
+{
+    if (trans_is_read(t.type)) {
+        if (t.type == TransactionType::READ || t.type == TransactionType::TRANSLATION)
+            outgoing_queue_.emplace(t, GL_CYCLE+latency);
+        dec_pending(pending_reads_, t.address);
+    } else {
+        dec_pending(pending_writes_, t.address);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+bool
+IOBus::deadlock_find_inst(const iptr_t& inst)
+{
+    bool found = false;
+    found |= deadlock_search_in_queue("read_queue", read_queue_, inst);
+    found |= deadlock_search_in_queue("write_queue", write_queue_, inst);
+    return found;
+}
+
+bool
+IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transaction>& q, const iptr_t& inst)
+{
+    auto q_it = std::find_if(q.cbegin(), q.cend(),
+                            [inst] (const Transaction& t)
+                            {
+                                return t.inst == inst;
+                            });
+    if (q_it != q.end()) {
+        size_t dist = std::distance(q.begin(), q_it);
+        std::cerr << "\n\tfound in " << qname << ", entry #" << dist
+                << ", io status: writes_to_drain = " << writes_to_drain_ 
+                << ", RQ = " << read_queue_.size()
+                << ", WQ = " << write_queue_.size()
+                << ", PQ = " << prefetch_queue_.size();
+        return true;
+    } else {
+        return false;
+    }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

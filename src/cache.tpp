@@ -113,7 +113,7 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
                                     return x.timestamp < y.timestamp;
                                 });
     } else if constexpr (POL == CacheReplPolicy::RAND) {
-        return std::next( s.begin(), numeric_traits<WAYS>::mod(rng_()) );
+        return std::next( s.begin(), fast_mod<WAYS>(rng_()) );
     } else {
         std::cerr << "unsupported cache replacement policy.\n";
         exit(1);

@@ -27,28 +27,31 @@ struct numeric_traits
 {
     constexpr static bool   is_power_of_two = (N & (N-1) == 0);
     constexpr static size_t log2 = _log2(N);
-
-    template <class T>
-    static inline T mod(T x)
-    {
-        if constexpr (is_power_of_two)
-            return static_cast<T>(x & (N-1));
-        else
-            return static_cast<T>(x % N);
-    }
-
-    template <class T>
-    static inline void increment_and_mod(T& x)
-    {
-        if constexpr (is_power_of_two) {
-            x = (x+1) & (N-1);
-        } else {
-            ++x;
-            if (x == N)  // Should be faster than modulo.
-                x = 0;
-        }
-    }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <size_t N, class T> inline T
+fast_mod(T x)
+{
+    if constexpr (numeric_traits<N>::is_power_of_two)
+        return static_cast<T>(x & (N-1));
+    else
+        return static_cast<T>(x % N);
+}
+
+template <size_t N, class T> inline void
+fast_increment_and_mod_inplace(T& x)
+{
+    if constexpr (numeric_traits<N>::is_power_of_two) {
+        x = (x+1) % (N-1);
+    } else {
+        ++x;
+        if (x == N)  // Should be faster than modulo.
+            x = 0;
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

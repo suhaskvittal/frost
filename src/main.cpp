@@ -61,9 +61,9 @@ int main(int argc, char* argv[])
         size_t ii = curr_core_idx;
         for (size_t j = 0; j < NUM_THREADS; j++) {
             GL_CORES[ii]->tick_warmup();
-            numeric_traits<NUM_THREADS>::increment_and_mod(ii);
+            fast_increment_and_mod_inplace<NUM_THREADS>(ii);
         }
-        numeric_traits<NUM_THREADS>::increment_and_mod(curr_core_idx);
+        fast_increment_and_mod_inplace<NUM_THREADS>(curr_core_idx);
     }
     std::cout << "DONE\n";
 
@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
                 c->checkpoint_stats();
                 c->done_ = true;
             }
-            numeric_traits<NUM_THREADS>::increment_and_mod(ii);
+            fast_increment_and_mod_inplace<NUM_THREADS>(ii);
         }
-        numeric_traits<NUM_THREADS>::increment_and_mod(curr_core_idx);
+        fast_increment_and_mod_inplace<NUM_THREADS>(curr_core_idx);
 
         all_done = std::all_of(GL_CORES.begin(), GL_CORES.end(),
                         [] (const core_ptr& c)

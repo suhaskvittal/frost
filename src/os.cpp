@@ -53,7 +53,7 @@ OS::handle_page_fault(uint64_t vpn)
 {
     ++s_page_faults_;
     for (size_t i = 0; i < 1024; i++) {
-        size_t pfn = numeric_traits<NUM_PAGE_FRAMES>::mod(rng());
+        size_t pfn = fast_mod<NUM_PAGE_FRAMES>(rng());
         size_t ii = pfn >> 6,
                jj = pfn & 0x3f;
         bool is_taken = free_page_frames_[ii] & (1L << jj);

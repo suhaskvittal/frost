@@ -6,14 +6,19 @@
 #ifndef CACHE_h
 #define CACHE_h
 
-#include "globals.h"
-
 #include "util/numerics.h"
 
 #include <array>
 #include <cstdint>
 #include <optional>
 #include <random>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+ * Defined in `globals.h`
+ * */
+extern uint64_t GL_CYCLE;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -52,7 +57,7 @@ private:
     using cset_t       = std::array<entry_t, WAYS>;
     using cset_array_t = std::array<cset_t, SETS>;
     
-    cset_array_t csets_;
+    cset_array_t csets_{};
     std::mt19937_64 rng_{0};
 public:
     using fill_result_t = std::optional<CacheEntry>;
@@ -71,7 +76,7 @@ private:
 
     inline size_t get_index(uint64_t x)
     {
-        return numeric_traits<SETS>::mod(x);
+        return fast_mod<SETS>(x);
     }
 
     inline cset_t& get_set(uint64_t x)

@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <optional>
 #include <queue>
+#include <string_view>
 #include <vector>
 
 #include "transaction.h"
@@ -84,7 +85,15 @@ public:
      * Returns `false` if there is no space.
      * */
     bool add_incoming(Transaction);
+    void add_outgoing(Transaction, uint64_t latency);
+    /*
+     * Searches for references to the instruction in the queues. 
+     * Returns true if found and writes to stderr.
+     * */
+    bool deadlock_find_inst(const iptr_t&);
 private:
+    bool deadlock_search_in_queue(std::string_view qname, const in_queue_t&, const iptr_t&);
+
     inline void dec_pending(pending_t& p, uint64_t addr)
     {
         if ((--p[addr]) == 0)
@@ -101,11 +110,10 @@ IOBus::get_next_incoming(PRED pred)
     opt_trans_t out;
     // Need to drain writes if the queue is full, or we can also
     // do it if there is nothing left to do.
-    if (write_queue_.size() == wq_size_ 
-        || (read_queue_.empty() && prefetch_queue_.empty() && !write_queue_.empty()))
-    {
+    bool write_drain_cond = write_queue_.size() == wq_size_
+                            || (read_queue_.empty() && prefetch_queue_.empty() && write_queue_.size() > 8);
+    if (writes_to_drain_ == 0 && write_drain_cond)
         writes_to_drain_ = write_queue_.size();
-    }
 
     if (writes_to_drain_ > 0) {
         auto w_it = std::find_if(write_queue_.begin(), write_queue_.end(),
@@ -115,17 +123,15 @@ IOBus::get_next_incoming(PRED pred)
                             });
         if (w_it != write_queue_.end() && pred(*w_it)) {
             out = *w_it;
-
-            --writes_to_drain_;
-            dec_pending(pending_writes_, w_it->address);
             write_queue_.erase(w_it);
+            --writes_to_drain_;
+        } else if (!write_queue_.empty()) {
+            writes_to_drain_ = 0;  // Cannot proceed with writes -- might as well switch back to reads.
         }
     } else {
         in_queue_t& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
         if (!q.empty() && pred(q.front())) {
             out = q.front();
-
-            dec_pending(pending_reads_, out.value().address);
             q.pop_front();
         }
     }

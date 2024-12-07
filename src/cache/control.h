@@ -70,18 +70,41 @@ public:
     const std::string cache_name_;
 private:
     using mshr_t = std::unordered_multimap<uint64_t, MSHREntry>;
+    using wb_queue_t = std::deque<uint64_t>;
 
     next_ptr& next_;
-    mshr_t    mshr_;
+    /*
+     * MSHR space is split between `mshr_` and `writeback_queue_`. Note that
+     * in a real system, pending writebacks would be stored in the MSHR.
+     * */
+    mshr_t     mshr_;
+    wb_queue_t writeback_queue_;
 public:
     CacheControl(std::string cache_name, next_ptr&);
 
     void tick(void);
     void mark_load_as_done(uint64_t address);
+    void demand_fill(uint64_t address);
+    /*
+     * Searches for an instruction in this cache. If it is found, a message
+     * is printed to `stderr` and this function returns true.
+     * */
+    bool deadlock_find_inst(const iptr_t& inst);
 private:
     void next_access(void);
     void handle_hit(const Transaction&);
     void handle_miss(const Transaction&, bool write_miss=false);
+
+    inline bool do_writeback(uint64_t addr)
+    {
+        Transaction t(0, nullptr, TransactionType::WRITE, addr);
+        return next_->io_->add_incoming(t);
+    }
+
+    inline size_t curr_mshr_size(void)
+    {
+        return mshr_.size() + writeback_queue_.size();
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

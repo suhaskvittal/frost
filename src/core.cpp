@@ -3,9 +3,15 @@
  *  date:   4 December 2024
  * */
 
+#include "globals.h"
+#include "memsys.h"
+
 #include "core.h"
 #include "os.h"
+#include "trace/reader.h"
 #include "util/stats.h"
+
+#include <iostream>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -55,13 +61,15 @@ cache_name(std::string base, uint8_t coreid)
 
 Core::Core(uint8_t coreid, std::string trace_file)
     :coreid_(coreid),
-    trace_reader_(trace_file)
+    trace_reader_(new TraceReader(trace_file))
 {
     // Initialize caches.
     L2_ = l2_ptr(new L2Cache(cache_name("L2", coreid), GL_LLC));
     L1I_ = l1i_ptr(new L1ICache(cache_name("L1i", coreid), L2_));
     L1D_ = l1d_ptr(new L1DCache(cache_name("L1d", coreid), L2_));
 }
+
+Core::~Core() {}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -319,13 +327,15 @@ Core::operate_rob()
         iptr_t& inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done) {
             if (GL_CYCLE - inst->cycle_issued > 50'000) {
-                std::cerr << "core: rob deadlock for instruction " << inst->ip << " in core " << coreid_+0 << "\n"
+                std::cerr << "\ncore: rob deadlock @ cycle = " << GL_CYCLE
+                        << " for instruction #" << inst->inst_num
+                        << ", ip = " << inst->ip
+                        << " in core " << coreid_+0 << "\n"
                         << "\tloads = " << inst->loads.size() << "\n"
-                        << "\tloads remaining = " << inst->loads_in_progress << "\n"
-                        << "\t-->";
-                for (uint64_t addr : inst->loads)
-                    std::cerr << " " << GL_OS->translate_lineaddr(LINEADDR(addr));
-                std::cerr << "\n";
+                        << "\tloads remaining = " << inst->loads_in_progress << "\n";
+                L1D_->deadlock_find_inst(inst);
+                L2_->deadlock_find_inst(inst);
+                GL_LLC->deadlock_find_inst(inst);
                 exit(1);
             }
             break;
@@ -390,8 +400,10 @@ Core::operate_caches()
             {
                 if (t.inst->retired) {
                     uint8_t coreid = untag_coreid(t.inst->ip);
-                    std::cerr << "core: L1i$ zombie wakeup to instruction "
-                            << t.inst->ip << " in core " << coreid+0 << "\n";
+                    std::cerr << "\ncore: L1i$ zombie wakeup @ cycle = " << GL_CYCLE
+                            << " to instruction #" << t.inst->inst_num
+                            << ", ip = " << t.inst->ip 
+                            << " in core " << coreid+0 << "\n";
                     exit(1);
                 }
                 t.inst->inst_load_done = true;
@@ -402,8 +414,10 @@ Core::operate_caches()
             {
                 if (t.inst->retired) {
                     uint8_t coreid = untag_coreid(t.inst->ip);
-                    std::cerr << "core: L1d$ zombie wakeup to instruction "
-                            << t.inst->ip << " in core " << coreid+0 << "\n"
+                    std::cerr << "\ncore: L1d$ zombie wakeup @ cycle = " << GL_CYCLE
+                            << " to instruction #" << t.inst->inst_num
+                            << ", ip = " << t.inst->ip 
+                            << ", in core " << coreid+0 << "\n"
                             << "\tpip = " << t.inst->pip << "\n"
                             << "\tload to address: " << t.address << "\n"
                             << "\tnum loads = " << t.inst->loads.size() << "\n"
@@ -426,7 +440,8 @@ Core::operate_caches()
 iptr_t
 Core::next_inst()
 {
-    iptr_t inst = iptr_t(new Instruction(trace_reader_.read())); 
+    iptr_t inst = iptr_t(new Instruction(inst_num_, trace_reader_->read())); 
+    ++inst_num_;
     // Tag the ip, load, and store addresses with the coreid.
     tag_with_coreid(inst->ip, coreid_);
     tag_all_with_coreid(inst->loads, coreid_);

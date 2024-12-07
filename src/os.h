@@ -11,7 +11,7 @@
 
 #include <array>
 #include <cstdint>
-#include <iostream>
+#include <iosfwd>
 #include <random>
 #include <unordered_map>
 
@@ -47,20 +47,18 @@ public:
     uint64_t translate_byteaddr(uint64_t);
     uint64_t translate_lineaddr(uint64_t);
 private:
+    uint64_t get_pfn(uint64_t);
+    void handle_page_fault(uint64_t vpn);
     /*
-     * This is a simple template function that handles both byte-addresses
-     * and line-addresses.
+     * A generic function for translation.
      * */
     template <size_t N_PER_PAGE>
     uint64_t translate_addr(uint64_t addr)
     {
         uint64_t vpn = addr >> numeric_traits<N_PER_PAGE>::log2,
-                 off = numeric_traits<N_PER_PAGE>::mod(addr);
+                 off = fast_mod<N_PER_PAGE>(addr);
         return (get_pfn(vpn) << numeric_traits<N_PER_PAGE>::log2) | off;
     }
-
-    uint64_t get_pfn(uint64_t);
-    void handle_page_fault(uint64_t vpn);
 };
 
 ////////////////////////////////////////////////////////////////////////////

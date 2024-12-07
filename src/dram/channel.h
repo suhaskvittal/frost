@@ -7,13 +7,18 @@
 #define DRAM_CHANNEL_h
 
 #include "constants.h"
-
-#include "dram/address.h"
-#include "io_bus.h"
+#include "transaction.h"
 
 #include <array>
 #include <deque>
 #include <optional>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+ * Defined in `io_bus.h`
+ * */
+class IOBus;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -56,18 +61,9 @@ struct DRAMCommand
     DRAMCommandType type;
     bool is_row_buffer_hit =true;
 
-    DRAMCommand(void)
-        :DRAMCommand(0, DRAMCommandType::READ)
-    {}
-
-    DRAMCommand(uint64_t addr, DRAMCommandType t)
-        :DRAMCommand(Transaction(0, nullptr, TransactionType::READ, addr), t)
-    {}
-
-    DRAMCommand(Transaction trans, DRAMCommandType t)
-        :trans(trans),
-        type(t)
-    {}
+    DRAMCommand(void);
+    DRAMCommand(uint64_t addr, DRAMCommandType);
+    DRAMCommand(Transaction, DRAMCommandType);
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -134,6 +130,7 @@ private:
     uint64_t ref_done_cycle_ =0;
 public:
     DRAMChannel(double freq_ghz);
+    ~DRAMChannel(void);
     
     void tick(void);
 private:
@@ -153,13 +150,8 @@ private:
     void update_timing(const DRAMCommand&);
 
     sel_cmd_t frfcfs(void);
-    /*
-     * Useful inlines:
-     * */
-    inline DRAMBank& get_bank(uint64_t addr)
-    {
-        return banks_.at(get_bank_idx(addr));
-    }
+
+    DRAMBank& get_bank(uint64_t);
 };
 
 ////////////////////////////////////////////////////////////////////////////

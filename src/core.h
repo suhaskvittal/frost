@@ -6,14 +6,13 @@
 #ifndef CORE_h
 #define CORE_h
 
-#include "memsys.h"
-
 #include "core/instruction.h"
-#include "trace/reader.h"
 
 #include <array>
 #include <memory>
-#include <iostream>
+#include <iosfwd>
+#include <string>
+#include <sstream>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -24,6 +23,19 @@ struct Latch
     bool stalled =false;
     iptr_t inst;
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+ * These are defined in `memsys.h`.
+ * */
+struct L1ICache;
+struct L1DCache;
+struct L2Cache;
+/*
+ * Defined in `trace/reader.h`
+ * */
+class TraceReader;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -46,6 +58,8 @@ private:
     using latch_t = std::array<Latch, CORE_FETCH_WIDTH>;
     using ftb_t = std::deque<iptr_t>;
     using rob_t = std::deque<iptr_t>;
+
+    using tracereader_t = std::unique_ptr<TraceReader>;
     /*
      * Caches: we will tie them together in the constructor.
      * */
@@ -70,8 +84,9 @@ private:
     /*
      * Trace management:
      * */
-    std::string trace_file_;
-    TraceReader trace_reader_;
+    std::string   trace_file_;
+    tracereader_t trace_reader_;
+    uint64_t      inst_num_ =0;
     /*
      * For stats, we don't want to collect any results once `checkpoint_stats` is
      * called. `stats_stream_` holds a checkpoint of the stats at the call time and
@@ -80,6 +95,7 @@ private:
     std::stringstream stats_stream_;
 public:
     Core(uint8_t coreid, std::string trace_file);
+    ~Core(void);
     /*
      * Warmup will just take the next instruction and update the caches.
      * */

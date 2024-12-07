@@ -6,7 +6,16 @@
 #ifndef DRAM_h
 #define DRAM_h
 
-#include "dram/channel.h"
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+ * Defined in `transaction.h`
+ * */
+class Transaction;
+/*
+ * Defined in `dram/channel.h`
+ * */
+class DRAMChannel;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -24,15 +33,8 @@ public:
     {
         DRAM* dram;
 
-        inline bool add_incoming(Transaction t)
-        {
-            size_t ch = dram_channel(t.address);
-            return dram->channels_[ch]->io_->add_incoming(t);
-        }
-
-        IO(DRAM* d)
-            :dram(d)
-        {}
+        IO(DRAM*);
+        bool add_incoming(Transaction);
     };
 
     using io_ptr = std::unique_ptr<IO>;
@@ -49,6 +51,7 @@ private:
     const double clock_scale_;
 public:
     DRAM(double cpu_freq_ghz, double freq_ghz);
+    ~DRAM(void);
 
     void tick(void);
     void print_stats(std::ostream&);

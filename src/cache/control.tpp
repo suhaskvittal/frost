@@ -31,8 +31,13 @@ __TEMPLATE_CLASS__::tick()
                         {
                             return x.second.is_fired;
                         });
-    if (mshr_it != mshr_.end()) {
+    if (mshr_it != mshr_.end())
         mshr_it->second.is_fired = next_->io_->add_incoming(mshr_it->second.trans);
+    // Now try writebacks
+    if (!writeback_queue_.empty()) {
+        uint64_t addr = writeback_queue_.front();
+        if (do_writeback(addr))
+            writeback_queue_.pop_front();
     }
     // Now perform cache accesses.
     for (size_t i = 0; i < IMPL::NUM_RW_PORTS; i++)
@@ -50,17 +55,8 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
         exit(1);
     }
     // First, fill the entry into the cache.
-    auto fill_res = cache_->fill(address);
-    if (fill_res.has_value()) {
-        // Then we evicted some line.
-        CacheEntry& e = fill_res.value();
-        // Handle dirty lines.
-        // Only worry about clean lines if the next cache is invalidate on hit.
-        if (e.dirty)
-            next_->io_->add_incoming(Transaction(0, 0, TransactionType::WRITE, e.address));
-        else if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
-            next_->cache_->fill(e.address);
-    }
+    if constexpr (!IMPL::INVALIDATE_ON_HIT)
+        demand_fill(address);
     // Now handle MSHR
     auto it = mshr_.end();
     while ((it=mshr_.find(address)) != mshr_.end()) {
@@ -69,7 +65,7 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
             cache_->mark_dirty(e.trans.address);
             ++s_write_alloc_[e.trans.coreid];
         } else {
-            io_->outgoing_queue_.emplace(e.trans, GL_CYCLE+IMPL::CACHE_LATENCY);
+            io_->add_outgoing(e.trans, IMPL::CACHE_LATENCY);
         }
 
         s_tot_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
@@ -83,11 +79,60 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::demand_fill(uint64_t address)
+{
+    auto fill_res = cache_->fill(address);
+    if (fill_res.has_value()) {
+        // Then we evicted some line.
+        CacheEntry& e = fill_res.value();
+        // Handle dirty lines.
+        // Only worry about clean lines if the next cache is invalidate on hit.
+        if (e.dirty) {
+            if (!do_writeback(e.address))
+                writeback_queue_.push_back(e.address);
+        } else if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT) {
+            next_->demand_fill(e.address);
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::deadlock_find_inst(const iptr_t& inst)
+{
+    std::cerr << "searching in " << cache_name_ << "...";
+    if (!io_->deadlock_find_inst(inst)) {
+        // Search in mshr.
+        auto mshr_it = std::find_if(mshr_.cbegin(), mshr_.cend(),
+                                [inst] (const auto& e)
+                                {
+                                    const Transaction& t = e.second.trans;
+                                    return t.inst == inst;
+                                });
+        if (mshr_it != mshr_.end()) {
+            const MSHREntry& e = mshr_it->second;
+            std::cerr << "\n\tfound in mshr: is_fired = " << e.is_fired
+                    << ", cycle_fired = " << e.cycle_fired << "\n";
+            return true;
+        }
+        std::cerr << " nothing found";
+    }
+    std::cerr << "\n";
+    return false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::next_access()
 {
-    // Now try to issue some access
-    if (mshr_.size() == IMPL::NUM_MSHR)
+    if (curr_mshr_size() == IMPL::NUM_MSHR)
         return;
+
+    // Now try to issue some access
     auto tt = io_->get_next_incoming();
     if (!tt.has_value())
         return;
@@ -110,6 +155,7 @@ __TEMPLATE_CLASS__::next_access()
         } else {
             cache_->mark_dirty(t.address);
         }
+        io_->add_outgoing(t, 0);
     }
 }
 
@@ -120,7 +166,7 @@ __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::handle_hit(const Transaction& t)
 {
     // Update `io_`'s outgoing queue.
-    io_->outgoing_queue_.emplace(t, GL_CYCLE + IMPL::CACHE_LATENCY);
+    io_->add_outgoing(t, IMPL::CACHE_LATENCY);
     if constexpr (IMPL::INVALIDATE_ON_HIT) {
         cache_->invalidate(t.address);
         ++s_invalidates_[t.coreid];
@@ -135,8 +181,7 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
     MSHREntry e(t, write_miss);
 
     // Need to switch transaction type in case of write allocate.
-    if constexpr (IMPL::WRITE_ALLOCATE)
-        e.trans.type = TransactionType::READ;
+    e.trans.type = TransactionType::READ;
 
     e.is_fired = mshr_.count(t.address) > 0 || next_->io_->add_incoming(e.trans);
     mshr_.insert({t.address, e});
