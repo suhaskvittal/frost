@@ -3,7 +3,9 @@
  *  date:   4 December 2024
  * */
 
+#include "core.h"
 #include "os.h"
+#include "transaction.h"
 #include "util/stats.h"
 
 #include <iostream>
@@ -17,6 +19,57 @@ OS::print_stats(std::ostream& out)
     out << BAR << "\n";
     print_stat(out, "OS", "PAGE_FAULTS", s_page_faults_);
     out << BAR << "\n";
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+OS::tick()
+{
+    // Handle TLB outgoing requests.
+    drain_cache_outgoing_queue(ITLB_,
+            [this] (const Transaction& t)
+            {
+                pending_ip_translations[inst] = TranslationState::DONE;
+            });
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+bool
+OS::translate_ip(uint8_t coreid, iptr_t inst)
+{
+    if (pending_ip_translations_.count(inst)) {
+        std::cerr << "os: instruction #" << inst->inst_num
+                << ", ip = " << inst->ip << " from core " << coreid+0
+                << " tried to start ip translation but already pending.\n";
+        exit(1);
+    }
+
+    uint64_t vpn = inst->ip >> numeric_traits<PAGESIZE>::log2,
+             off = fast_mod<PAGESIZE>(inst->ip);
+    // Attempt to access iTLB.
+    Transaction t(coreid, inst, TransactionType::TRANSLATION, vpn, true);
+    if (ITLB_->add_incoming(t)) {
+        pending_ip_translations[inst] = TranslationState::IN_TLB;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool
+OS::check_if_ip_translation_is_done(iptr_t inst)
+{
+    auto it = pending_ip_translations_.find(inst);
+    if (it->second == TranslationState::DONE) {
+        pending_ip_translations_.erase(it);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -40,6 +93,7 @@ OS::translate_lineaddr(uint64_t addr)
 uint64_t
 OS::get_pfn(uint64_t vpn)
 {
+    // Do page walk.
     if (!pt_.count(vpn))
         handle_page_fault(vpn);
     return pt_[vpn];
