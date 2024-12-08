@@ -22,7 +22,7 @@ os.system(fr'rm -rf _generated/{build_id}; mkdir -p _generated/{build_id}')
 cfg = configparser.ConfigParser()
 cfg.read(config_file)
 
-caches = ['L1i', 'L1d', 'L2', 'LLC']
+caches = ['L1i', 'L1d', 'L2', 'LLC', 'iTLB', 'dTLB', 'L2TLB']
 
 validate_core_section(cfg['CORE'])
 # For the LLC config, if `size_kb_per_core` is specified,

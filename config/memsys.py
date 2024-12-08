@@ -59,10 +59,13 @@ f'''{AUTOGEN_HEADER}
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ''')
-    caches = ['LLC', 'L2', 'L1d', 'L1i']
+    caches = ['LLC', 'L2', 'L1d', 'L1i',
+              'L2TLB', 'iTLB', 'dTLB']
     # First write cache classes
-    cache_typenames = ['LLCache', 'L2Cache', 'L1DCache', 'L1ICache']
-    next_idx = [-1, 0, 1, 1]
+    cache_typenames = ['LLCache', 'L2Cache', 'L1DCache', 'L1ICache',
+                        'L2TLB', 'ITLB', 'DTLB']
+    next_idx = [-1, 0, 1, 1,
+                1, 4, 4]
     # Do in reverse order so `next_typename` is declared.
     for (i, c) in enumerate(caches):
         typename = cache_typenames[i]
