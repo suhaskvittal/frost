@@ -37,7 +37,7 @@ split_address(uint64_t addr)
 template <size_t OFFSET_SIZE> inline uint64_t
 join_address(uint64_t page, uint64_t offset)
 {
-    return (page << numeric_traits<N>::log2) | off;
+    return (page << numeric_traits<N>::log2) | offset;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -46,8 +46,8 @@ join_address(uint64_t page, uint64_t offset)
 template <size_t OFFSET_SIZE> inline uint64_t
 translate(uint64_t vaddr, std::unique_ptr<VirtualMemory>& vmem)
 {
-    auto& [vpn, off] = split_address<OFFSET_SIZE>(vaddr);
-    return join_address(vmem->get_pfn(vpn), off);
+    auto [vpn, off] = split_address<OFFSET_SIZE>(vaddr);
+    return join_address<OFFSET_SIZE>(vmem->get_pfn(vpn), off);
 }
 
 ////////////////////////////////////////////////////////////////////////////

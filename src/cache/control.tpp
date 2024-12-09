@@ -3,8 +3,6 @@
  *  date:   4 December 2024
  * */
 
-#include <type_traits>
-
 #define __TEMPLATE_HEADER__ template <class IMPL, class CACHE, class NEXT_CONTROL>
 #define __TEMPLATE_CLASS__ CacheControl<IMPL, CACHE, NEXT_CONTROL>
 
@@ -31,7 +29,7 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
     if (hit) {
         if constexpr (IMPL::INVALIDATE_ON_HIT)
             cache_->invalidate(addr);
-    } else if (std::is_same<NEXT_CONTROL, DRAM>::value) {
+    } else {
         // Handle miss.
         if (write) {
             if constexpr (IMPL::WRITE_ALLOCATE)
@@ -47,7 +45,7 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
                 if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
                     next_->cache_->fill(e.address);
                 if (e.dirty)
-                    next_->cache_->mark_dirty(e.address);
+                    next_->warmup_access(addr, true);
             }
         }
     }

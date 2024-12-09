@@ -53,6 +53,8 @@ public:
     DRAM(double cpu_freq_ghz, double freq_ghz);
     ~DRAM(void);
 
+    void warmup_access(uint64_t, bool) {}
+
     void tick(void);
     void print_stats(std::ostream&);
 };

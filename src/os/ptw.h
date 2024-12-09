@@ -5,10 +5,9 @@
 #ifndef OS_PTW_h
 #define OS_PTW_h
 
-#include "globals.h"
-#include "util/numerics.h"
 #include "os/vmem.h"
 #include "os/ptw/cache.h"
+#include "util/numerics.h"
 
 #include <array>
 #include <cstdint>
@@ -20,8 +19,8 @@
 ////////////////////////////////////////////////////////////////////////////
 
 class Transaction;
-class L2TLB;
-class L2Cache;
+struct L2TLB;
+struct L1DCache;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -94,6 +93,11 @@ public:
     using ptwc_init_array_t = std::array<ptwc_init_params_t, PT_LEVELS-1>;
 
     PageTableWalker(uint8_t coreid, l2tlb_ptr&, l1d_ptr&, vmem_ptr&, const ptwc_init_array_t&);
+    /*
+     * This `warmup_access` method mimics the same method found in `CacheControl (control.tpp)`.
+     * Note that the second argument, `write`, is unused.
+     * */
+    void warmup_access(uint64_t vpn, bool);
 
     void tick(void);
     void handle_tlb_miss(const Transaction&);

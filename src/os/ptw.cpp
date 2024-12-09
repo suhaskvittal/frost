@@ -48,6 +48,17 @@ PageTableWalker::PageTableWalker(
 ////////////////////////////////////////////////////////////////////////////
 
 void
+PageTableWalker::warmup_access(uint64_t vpn, bool)
+{
+    // Do page table walk + access all caches.
+    vmem_->do_page_walk(vpn);
+    ptwc_get_initial_directory_level(caches_, vpn);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
 PageTableWalker::tick()
 {
     // Handle any accesses that still need to access the L1D$.

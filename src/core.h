@@ -9,6 +9,7 @@
 #include "core/instruction.h"
 
 #include <array>
+#include <deque>
 #include <memory>
 #include <iosfwd>
 #include <string>
@@ -80,6 +81,7 @@ private:
      * From there, each instruction will be on its own. We only model delays due
      * to memory accesses.
      * */
+    latch_t la_ifbp_iftr_;
     latch_t la_iftr_ifmem_;
     ftb_t ftb_;
     rob_t rob_;
@@ -114,7 +116,7 @@ private:
     void operate_rob(void);
     void operate_caches(void);
 
-    iptr_t next_inst(void);
+    iptr_t next_inst(bool warmup=false);
     /*
      * This function needs access to `L2_`, which is private.
      * */

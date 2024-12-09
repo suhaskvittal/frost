@@ -4,6 +4,8 @@
  * */
 
 #include "globals.h"
+#include "memsys.h"
+
 #include "core.h"
 #include "os.h"
 #include "os/address.h"
@@ -21,18 +23,17 @@ OS::OS(const ptwc_init_array_t& ptwc_init)
 {
     for (size_t i = 0; i < NUM_THREADS; i++) {
         // Initialize virtual memory and PTWs
-        core_mmu_[i] = mmu_ptr(new CoreMMU);
-        core_mmu_[i]->vmem = vmem_ptr(new VirtualMemory(i));
-        core_mmu_[i]->ptw = ptw_ptr(new PageTableWalker(
+        core_mmu_[i].vmem = vmem_ptr(new VirtualMemory(i));
+        core_mmu_[i].ptw = ptw_ptr(new PageTableWalker(
                                 static_cast<uint8_t>(i),
-                                L2TLB_,
-                                GL_CORE[i]->L1D_,
-                                core_mmu_[i]->vmem,
+                                L2TLB_[i],
+                                GL_CORES[i]->L1D_,
+                                core_mmu_[i].vmem,
                                 ptwc_init));
         // Now do TLBs.
-        L2TLB_[i] = l2tlb_ptr(new L2TLB("L2TLB", core_mmu_[i]->ptw));
+        L2TLB_[i] = l2tlb_ptr(new L2TLB("L2TLB", core_mmu_[i].ptw));
         ITLB_[i] = itlb_ptr(new ITLB("iTLB", L2TLB_[i]));
-        DTLB_[i] = dtlb_ptr(new ITLB("dTLB", L2TLB_[i]));
+        DTLB_[i] = dtlb_ptr(new DTLB("dTLB", L2TLB_[i]));
     }
 }
 
@@ -40,20 +41,15 @@ OS::OS(const ptwc_init_array_t& ptwc_init)
 ////////////////////////////////////////////////////////////////////////////
 
 uint64_t
-OS::warmup_translate(iptr_t& inst, uint8_t coreid)
+OS::warmup_translate(uint64_t byteaddr, uint8_t coreid, bool is_inst)
 {
-    auto& itlb = ITLB_[coreid];
-    auto& dtlb = DTLB_[coreid];
-    auto& l2tlb = L2TLB_[coreid];
-
-    uint64_t ip = inst->ip;
-    uint64_t ip_vpn = ip >> numeric_traits<PAGESIZE>::log2;
-    
-    if (!itlb->probe(ip_vpn)) {
-        if (!l2tlb->probe(ip_vpn)) {
-
-        }
-    }
+    auto [vpn, offset] = split_address<1>(byteaddr);
+    if (is_inst)
+        ITLB_[coreid]->warmup_access(vpn, false);
+    else
+        DTLB_[coreid]->warmup_access(vpn, false);
+    uint64_t pfn = core_mmu_[coreid].vmem->get_pfn(vpn);
+    return join_address<1>(pfn, offset);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -67,9 +63,9 @@ move_on_translate(
         std::unique_ptr<VirtualMemory>& vmem)
 {
     for (auto it = from.begin(); it != from.end(); ) {
-        auto& [vpn, off] = split_address<LINESIZE>(*it);
+        auto [vpn, off] = split_address<LINESIZE>(*it);
         if (vpn == match_vpn) {
-            to.insert(join_address(vmem->get_pfn(vpn), off));
+            to.insert(join_address<LINESIZE>(vmem->get_pfn(vpn), off));
             it = from.erase(it);
         } else {
             ++it;
@@ -82,32 +78,30 @@ OS::tick()
 {
     // Tick all PTWs
     for (size_t i = 0; i < NUM_THREADS; i++) {
-        core_mmu_[i]->ptw->tick();
-
-        auto& vmem = core_mmu_[i]->vmem;
+        core_mmu_[i].ptw->tick();
         // Handle TLB outgoing requests.
         drain_cache_outgoing_queue(L2TLB_[i],
-                [itlb = ITLB_[i], dtlb = DTLB_[i]] (const Transaction& t)
+                [this, i] (const Transaction& t)
                 {
                     if (t.address_is_ip)
-                        itlb->mark_load_as_done(t.address);
+                        this->ITLB_[i]->mark_load_as_done(t.address);
                     else
-                        dtlb->mark_load_as_done(t.address);
+                        this->DTLB_[i]->mark_load_as_done(t.address);
                 });
         drain_cache_outgoing_queue(ITLB_[i],
-                [vmem] (Transaction& t)
+                [this, i] (const Transaction& t)
                 {
                     // Just need to update instruction.
-                    t.inst->ready_for_cache_access = true;
-                    t.inst->pip = translate<1>(t.inst->ip, vmem);
+                    t.inst->ready_for_icache_access = true;
+                    t.inst->pip = translate<1>(t.inst->ip, this->core_mmu_[i].vmem);
                 });
         drain_cache_outgoing_queue(DTLB_[i],
-                [vmem] (Transaction& t)
+                [this, i] (const Transaction& t)
                 {
                     auto& inst = t.inst;
                     uint64_t vpn = t.address;
-                    move_on_translate(inst->v_ld_lineaddr, inst->p_ld_lineaddr, vpn, vmem);
-                    move_on_translate(inst->v_st_lineaddr, inst->p_st_lineaddr, vpn, vmem);
+                    move_on_translate(inst->v_ld_lineaddr, inst->p_ld_lineaddr, vpn, this->core_mmu_[i].vmem);
+                    move_on_translate(inst->v_st_lineaddr, inst->p_st_lineaddr, vpn, this->core_mmu_[i].vmem);
                 });
     }
 }
@@ -118,21 +112,18 @@ OS::tick()
 bool
 OS::translate_ip(uint8_t coreid, iptr_t inst)
 {
-    if (pending_ip_translations_.count(inst)) {
-        std::cerr << "os: instruction #" << inst->inst_num
-                << ", ip = " << inst->ip << " from core " << coreid+0
-                << " tried to start ip translation but already pending.\n";
-        exit(1);
-    }
-
     uint64_t vpn = inst->ip >> numeric_traits<PAGESIZE>::log2;
     // Attempt to access iTLB.
     Transaction t(coreid, inst, TransactionType::TRANSLATION, vpn, true);
-    if (ITLB_->add_incoming(t)) {
-        return true;
-    } else {
-        return false;
-    }
+    return ITLB_[coreid]->io_->add_incoming(t);
+}
+
+bool
+OS::translate_ldst(uint8_t coreid, iptr_t inst, uint64_t addr)
+{
+    uint64_t vpn = addr >> numeric_traits<PAGESIZE/LINESIZE>::log2;
+    Transaction t(coreid, inst, TransactionType::TRANSLATION, vpn, false);
+    return DTLB_[coreid]->io_->add_incoming(t);
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -25,9 +25,9 @@ constexpr size_t NUM_PAGE_FRAMES = (DRAM_SIZE_MB*1024*1024) / PAGESIZE;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-class ITLB;
-class DTLB;
-class L2LTB;
+struct ITLB;
+struct DTLB;
+struct L2LTB;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -60,8 +60,7 @@ private:
         ptw_ptr  ptw;
     };
 
-    using mmu_ptr = std::unique_ptr<CoreMMU>;
-    using mmu_array_t = std::array<mmu_ptr, NUM_THREADS>;
+    using mmu_array_t = std::array<CoreMMU, NUM_THREADS>;
     using free_bitvec_t = std::array<uint64_t, BITVEC_WIDTH>;
     /*
      * Each core has its own virtual memory and page walker (`CoreMMU`):
@@ -78,12 +77,12 @@ public:
         
     OS(const ptwc_init_array_t&);
 
-    uint64_t warmup_translate(iptr_t&, uint8_t coreid);
+    uint64_t warmup_translate(uint64_t byteaddr, uint8_t coreid, bool is_inst);
 
     void tick(void);
 
-    bool translate_ip(iptr_t);
-    bool translate_ldst(iptr_t, uint64_t);
+    bool translate_ip(uint8_t coreid, iptr_t);
+    bool translate_ldst(uint8_t coreid, iptr_t, uint64_t);
     /*
      * Searches for a free, random page frame. If found, then returns this pfn.
      * Otherwise, prints to `stderr` and exits with code 1.
@@ -96,7 +95,7 @@ public:
      * */
     inline void handle_l1d_outgoing(uint8_t coreid, const Transaction& t)
     {
-        core_mmu_[coreid]->ptw->handle_l1d_outgoing(t);
+        core_mmu_[coreid].ptw->handle_l1d_outgoing(t);
     }
 };
 

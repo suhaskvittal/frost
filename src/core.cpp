@@ -82,7 +82,19 @@ Core::~Core() {}
 void
 Core::tick_warmup()
 {
-    iptr_t inst = next_inst();
+    iptr_t inst = next_inst(true);
+    // First do icache access
+    inst->pip = GL_OS->warmup_translate(inst->ip, coreid_, true);
+    L1I_->warmup_access(LINEADDR(inst->pip), false);
+    // Now do data access
+    for (uint64_t vaddr : inst->loads) {
+        uint64_t paddr = GL_OS->warmup_translate(vaddr, coreid_, false);
+        L1D_->warmup_access(LINEADDR(paddr), false);
+    }
+    for (uint64_t vaddr : inst->stores) {
+        uint64_t paddr = GL_OS->warmup_translate(vaddr, coreid_, false);
+        L1D_->warmup_access(LINEADDR(paddr), true);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -187,7 +199,7 @@ Core::print_stats(std::ostream& out)
 void
 Core::ifbp(size_t fwid)
 {
-    Latch& la = if_ifbp_iftr_[fwid];
+    Latch& la = la_ifbp_iftr_[fwid];
     if (la.stalled)
         return;
     iptr_t inst = next_inst();
@@ -209,7 +221,7 @@ Core::iftr(size_t fwid)
     if (!la.valid)
         return;
     iptr_t& inst = la.inst;
-    if (la_next.stalled || !GL_OS->translate_ip(inst)) {
+    if (la_next.stalled || !GL_OS->translate_ip(coreid_, inst)) {
         ++s_iftr_stalls_;
         la.stalled = true;
         return;
@@ -310,11 +322,11 @@ Core::disp(size_t fwid)
 ////////////////////////////////////////////////////////////////////////////
 
 inline void
-sched_translate(iptr_t& inst, std::unordered_set<uint64_t>& v)
+sched_translate(uint8_t coreid, iptr_t& inst, std::unordered_set<uint64_t>& v)
 {
     for (auto it = v.begin(); it != v.end(); ) {
         if (!inst->v_lineaddr_awaiting_translation.count(*it)
-                && GL_OS->translate_ldst(inst, *it))
+                && GL_OS->translate_ldst(coreid, inst, *it))
         {
             inst->v_lineaddr_awaiting_translation.insert(*it);
         }
@@ -388,8 +400,8 @@ Core::operate_rob()
                     else
                         return false;
                 });
-        sched_translate(inst, inst->v_ld_lineaddr);
-        sched_translate(inst, inst->v_st_lineaddr);
+        sched_translate(coreid_, inst, inst->v_ld_lineaddr);
+        sched_translate(coreid_, inst, inst->v_st_lineaddr);
         // If this is a store instruction and it has launched all its stores, finish now 
         if (inst->mem_inst_is_done() && inst->loads.empty())
             inst->cycle_done = GL_CYCLE+1;
@@ -441,9 +453,14 @@ Core::operate_caches()
                             << "\tnum stores = " << t.inst->stores.size() << "\n";
                     exit(1);
                 }
-                --t.inst->loads_in_progress;
-                if (t.inst->mem_inst_is_done())
-                    t.inst->cycle_done = GL_CYCLE;
+                // Intercept any accesses that should go the PTW.
+                if (t.type == TransactionType::TRANSLATION) {
+                    GL_OS->handle_l1d_outgoing(t.coreid, t);
+                } else {
+                    --t.inst->loads_in_progress;
+                    if (t.inst->mem_inst_is_done())
+                        t.inst->cycle_done = GL_CYCLE;
+                }
             });
     // Tick each of the caches.
     L2_->tick();
@@ -455,14 +472,12 @@ Core::operate_caches()
 ////////////////////////////////////////////////////////////////////////////
 
 iptr_t
-Core::next_inst()
+Core::next_inst(bool warmup)
 {
     iptr_t inst = iptr_t(new Instruction(inst_num_, trace_reader_->read())); 
-    ++inst_num_;
+    if (!warmup)
+        ++inst_num_;
     // Tag the ip, load, and store addresses with the coreid.
-    tag_with_coreid(inst->ip, coreid_);
-    tag_all_with_coreid(inst->loads, coreid_);
-    tag_all_with_coreid(inst->stores, coreid_);
     return inst;
 }
 

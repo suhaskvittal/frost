@@ -33,9 +33,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(SIM_FILES
     src/core.cpp
     src/dram.cpp
+    src/dram/channel.cpp
     src/io_bus.cpp
     src/os.cpp
-    src/dram/channel.cpp
+    src/os/ptw.cpp
+    src/os/ptw/cache.cpp
+    src/os/vmem.cpp
     src/trace/data.cpp
     src/trace/reader.cpp
     src/util/argparse.cpp

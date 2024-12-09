@@ -53,6 +53,7 @@ f'''{AUTOGEN_HEADER}
 
 #include "cache/control.h"
 #include "dram.h"
+#include "os/ptw.h"
 
 #include <memory>
 
@@ -65,7 +66,7 @@ f'''{AUTOGEN_HEADER}
     cache_typenames = ['LLCache', 'L2Cache', 'L1DCache', 'L1ICache',
                         'L2TLB', 'ITLB', 'DTLB']
     next_idx = [-1, 0, 1, 1,
-                1, 4, 4]
+                -2, 4, 4]
     # Do in reverse order so `next_typename` is declared.
     for (i, c) in enumerate(caches):
         typename = cache_typenames[i]
@@ -73,7 +74,7 @@ f'''{AUTOGEN_HEADER}
         if ii == -1:
             next_typename = 'DRAM'
         elif ii == -2:
-            next_typename = 'PageWalker'
+            next_typename = 'PageTableWalker'
         else:
             next_typename = cache_typenames[ii]
             if cfg[caches[ii]]['mode'] == 'INVALIDATE_ON_HIT':
