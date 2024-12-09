@@ -64,9 +64,20 @@ def write(cfg, build):
         name, tS, tL = t % '_S(L)', t % '_S', t % '_L'
         sl_timing_calls.append(f'list_dram_sl(out, \"{name}\", {tS}, {tL});')
     sl_timing_calls = '\n\t'.join(sl_timing_calls)
-
     dram_page_policy = cfg['DRAM']['page_policy']
     dram_am = cfg['DRAM']['address_mapping']
+
+    # OS params:
+    ptwc_params = ''
+    pt_levels = int(cfg['OS']['levels'])
+    for i in range(1, pt_levels):
+        sw = cfg['OS'][f'ptwc_{i}_sw']
+        dat = sw.split(':')
+        sets, ways = int(dat[0]), int(dat[1])
+        if i > 1:
+            ptwc_params += ', '
+        ptwc_params += f'{{{sets},{ways}}}'
+    ptwc_params = f'{{ {ptwc_params} }}'
 
     with open(f'{GEN_DIR}/{build}/sim.h', 'w') as wr:
         wr.write(
@@ -134,7 +145,7 @@ sim_init(void)
 {{
     GL_DRAM = dram_ptr(new DRAM({cpu_freq}, {dram_freq}));
     GL_LLC = llc_ptr(new LLCache("LLC", GL_DRAM));
-    GL_OS = os_ptr(new OS);
+    GL_OS = os_ptr(new OS({ptwc_params}));
     for (size_t i = 0; i < NUM_THREADS; i++)
         GL_CORES[i] = core_ptr(new Core(i, OPT_TRACE_FILE));
 }}

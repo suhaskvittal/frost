@@ -32,6 +32,7 @@ if 'size_kb_per_core' in cfg['LLC']:
 for c in caches:
     validate_cache_section(cfg[c])
 validate_dram_section(cfg['DRAM'])
+validate_os_section(cfg['OS'])
 
 constants.write(cfg, build_id)
 memsys.write(cfg, build_id)

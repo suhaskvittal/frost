@@ -73,9 +73,9 @@ private:
     free_bitvec_t free_page_frames_{};
     std::mt19937_64 rng{0};
 public:
-    using ptwc_init_array_t = PageTableWalker::ptwc_init_array_t;
+    using ptwc_init_list_t = PageTableWalker::ptwc_init_list_t;
         
-    OS(const ptwc_init_array_t&);
+    OS(ptwc_init_list_t);
 
     uint64_t warmup_translate(uint64_t byteaddr, uint8_t coreid, bool is_inst);
 

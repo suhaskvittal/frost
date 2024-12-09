@@ -14,6 +14,7 @@ def BAR(n):
 def write(cfg, build):
     core_cfg = cfg['CORE']
     dram_cfg = cfg['DRAM']
+    os_cfg = cfg['OS']
 
     num_threads = core_cfg['num_threads']
     fetch_width = core_cfg['fetch_width']
@@ -32,6 +33,9 @@ def write(cfg, build):
         am_txt = f'#define DRAM_AM_MOP {mop_size}'
     else:
         am_txt = f'#define DRAM_AM_{am}'
+
+    pt_levels = os_cfg['levels']
+
     # Finally, write to file. 
     with open(f'{GEN_DIR}/{build}/constants.h', 'w') as wr:
         wr.write(
@@ -49,7 +53,9 @@ constexpr size_t LINESIZE = 64;
 constexpr size_t PAGESIZE = 4096;
 constexpr size_t PTESIZE = 8;
 
-constexpr size_t PT_LEVELS = 4;
+constexpr size_t PT_LEVELS = {pt_levels};
+
+constexpr size_t NUM_PTE_PER_TABLE = PAGESIZE/PTESIZE;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

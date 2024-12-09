@@ -19,11 +19,11 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-OS::OS(const ptwc_init_array_t& ptwc_init)
+OS::OS(ptwc_init_list_t ptwc_init)
 {
     for (size_t i = 0; i < NUM_THREADS; i++) {
         // Initialize virtual memory and PTWs
-        core_mmu_[i].vmem = vmem_ptr(new VirtualMemory(i));
+        core_mmu_[i].vmem = vmem_ptr(new VirtualMemory(get_and_reserve_free_page_frame()));
         core_mmu_[i].ptw = ptw_ptr(new PageTableWalker(
                                 static_cast<uint8_t>(i),
                                 L2TLB_[i],

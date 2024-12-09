@@ -80,3 +80,12 @@ def validate_dram_section(cfg) -> bool:
 
 ####################################################################
 ####################################################################
+
+def validate_os_section(cfg) -> bool:
+    if 'levels' not in cfg:
+        return False
+    pt_levels = int(cfg['levels'])
+    return all(f'ptwc_{i}_sw' in cfg for i in range(1, pt_levels))
+
+####################################################################
+####################################################################

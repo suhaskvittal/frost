@@ -3,8 +3,9 @@
  *  date:   8 December 2024
  * */
 
+#include "os.h"
+#include "os/vmem.h"
 #include "util/numerics.h"
-#include "vmem.h"
 
 #include <algorithm>
 
@@ -14,6 +15,24 @@
 VirtualMemory::VirtualMemory(uint64_t ptbr)
     :ptbr_(ptbr)
 {}
+
+void
+free_pt(page_table_t& pt)
+{
+    for (size_t i = 0; i < pt.size(); i++) {
+        pte_ptr e = pt[i];
+        if (e->next != nullptr) {
+            free_pt(*e->next);
+            delete e->next;
+        }
+        delete e;
+    }
+}
+
+VirtualMemory::~VirtualMemory()
+{
+    free_pt(base_pt_);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -31,7 +50,7 @@ VirtualMemory::do_page_walk(uint64_t vpn)
     }
 
     // Try to access each level.
-    out[1] = PAGE_TABLE_BASE_REGISTER;
+    out[1] = ptbr_;
     out[2] = levels[PT_LEVELS-1];
     size_t k = 3;
 
@@ -42,7 +61,7 @@ VirtualMemory::do_page_walk(uint64_t vpn)
             e->next = page_table_ptr(new page_table_t);
             e->next->fill(nullptr);
         }
-        curr_pt = *e->next;
+        curr_pt = *(e->next);
         out[k] = e->pfn;
         out[k+1] = levels[i-1];
         k += 2;
@@ -64,7 +83,7 @@ VirtualMemory::access_entry_and_alloc_if_dne(page_table_t& pt, size_t idx)
     return pt[idx];
 }
 
-pte_ptr&&
+pte_ptr
 VirtualMemory::make_new_pte()
 {
     pte_ptr e = pte_ptr(new PageTableEntry);

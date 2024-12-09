@@ -3,8 +3,13 @@
  *  date:   8 December 2024
  * */
 
+#include "constants.h"
 #include "globals.h"
+
 #include "os/ptw/cache.h"
+#include "util/numerics.h"
+
+#include <algorithm>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -12,7 +17,7 @@
 PTWCache::PTWCache(size_t num_sets, size_t num_ways)
     :num_sets_(num_sets),
     num_ways_(num_ways),
-    csets_(num_sets_, std::vector<cset_t>(num_ways))
+    csets_(num_sets_, cset_t(num_ways))
 {}
 
 ////////////////////////////////////////////////////////////////////////////

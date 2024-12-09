@@ -9,6 +9,7 @@
 #include "trace/data.h"
 
 #include <limits>
+#include <memory>
 #include <vector>
 #include <unordered_set>
 

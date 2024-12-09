@@ -17,16 +17,11 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr size_t NUM_PTE_PER_TABLE = PAGESIZE/PTESIZE;
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 struct PageTableEntry;
 
-using pte_ptr        = std::unique_ptr<PageTableEntry>;
+using pte_ptr        = PageTableEntry*;
 using page_table_t   = std::array<pte_ptr, NUM_PTE_PER_TABLE>; 
-using page_table_ptr = std::unique_ptr<page_table_t>;
+using page_table_ptr = page_table_t*;
 /*
  * If `next` is null, then this points to a virtual page. Otherwise,
  * it points to another page table.
@@ -73,6 +68,7 @@ public:
     using walk_result_t = std::array<uint64_t, 2*PT_LEVELS+1>;
 
     VirtualMemory(uint64_t ptbr);
+    ~VirtualMemory(void);
     /*
      * Performs a walk starting from `base_pt_` to find the page frame of `vpn`.
      * Returns the page frames according to `walk_result_t`.
@@ -93,7 +89,7 @@ public:
     }
 private:
     pte_ptr& access_entry_and_alloc_if_dne(page_table_t&, size_t idx);
-    pte_ptr&& make_new_ptr(void);
+    pte_ptr make_new_pte(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

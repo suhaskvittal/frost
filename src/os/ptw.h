@@ -12,6 +12,7 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
+#include <initializer_list>
 #include <memory>
 #include <unordered_map>
 
@@ -69,6 +70,9 @@ public:
         IO(PageTableWalker*);
         bool add_incoming(Transaction);
     };
+    using io_ptr = std::unique_ptr<IO>;
+
+    io_ptr io_;
 
     const uint8_t coreid_;
 private:
@@ -90,9 +94,9 @@ private:
     ptw_tracker_t ongoing_walks_;
 public:
     using ptwc_init_params_t = std::tuple<size_t, size_t>;
-    using ptwc_init_array_t = std::array<ptwc_init_params_t, PT_LEVELS-1>;
+    using ptwc_init_list_t = std::initializer_list<ptwc_init_params_t>;
 
-    PageTableWalker(uint8_t coreid, l2tlb_ptr&, l1d_ptr&, vmem_ptr&, const ptwc_init_array_t&);
+    PageTableWalker(uint8_t coreid, l2tlb_ptr&, l1d_ptr&, vmem_ptr&, ptwc_init_list_t);
     /*
      * This `warmup_access` method mimics the same method found in `CacheControl (control.tpp)`.
      * Note that the second argument, `write`, is unused.
