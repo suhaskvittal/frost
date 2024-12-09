@@ -30,22 +30,30 @@ OS::OS(const ptwc_init_array_t& ptwc_init)
                                 core_mmu_[i]->vmem,
                                 ptwc_init));
         // Now do TLBs.
-        std::string prefix = "CORE_" + std::to_string(i);
-        L2TLB_[i] = l2tlb_ptr(new L2TLB(prefix + "_L2TLB", core_mmu_[i]->ptw));
-        ITLB_[i] = itlb_ptr(new ITLB(prefix + "_iTLB", L2TLB_[i]));
-        DTLB_[i] = dtlb_ptr(new ITLB(prefix + "_dTLB", L2TLB_[i]));
+        L2TLB_[i] = l2tlb_ptr(new L2TLB("L2TLB", core_mmu_[i]->ptw));
+        ITLB_[i] = itlb_ptr(new ITLB("iTLB", L2TLB_[i]));
+        DTLB_[i] = dtlb_ptr(new ITLB("dTLB", L2TLB_[i]));
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-void
-OS::print_stats(std::ostream& out)
+uint64_t
+OS::warmup_translate(iptr_t& inst, uint8_t coreid)
 {
-    out << BAR << "\n";
-    print_stat(out, "OS", "PAGE_FAULTS", s_page_faults_);
-    out << BAR << "\n";
+    auto& itlb = ITLB_[coreid];
+    auto& dtlb = DTLB_[coreid];
+    auto& l2tlb = L2TLB_[coreid];
+
+    uint64_t ip = inst->ip;
+    uint64_t ip_vpn = ip >> numeric_traits<PAGESIZE>::log2;
+    
+    if (!itlb->probe(ip_vpn)) {
+        if (!l2tlb->probe(ip_vpn)) {
+
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -151,6 +159,17 @@ OS::get_and_reserve_free_page_frame()
                                         });
     std::cerr << "os: failed to find free page frame, free page frames: " << num_free << "\n";
     exit(1);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+OS::print_stats(std::ostream& out)
+{
+    out << BAR << "\n";
+    print_stat(out, "OS", "PAGE_FAULTS", s_page_faults_);
+    out << BAR << "\n";
 }
 
 ////////////////////////////////////////////////////////////////////////////

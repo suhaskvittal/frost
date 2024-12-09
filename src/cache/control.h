@@ -84,6 +84,8 @@ private:
 public:
     CacheControl(std::string cache_name, next_ptr&);
 
+    void warmup_access(uint64_t, bool write);
+
     void tick(void);
     void mark_load_as_done(uint64_t address);
     /*

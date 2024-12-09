@@ -1,6 +1,5 @@
 ''' author: Suhas Vittal
-    date:   4 December 2024
-'''
+    date:   4 December 2024 '''
 
 from .files import GEN_DIR, AUTOGEN_HEADER
 
@@ -48,6 +47,9 @@ f'''{AUTOGEN_HEADER}
 
 constexpr size_t LINESIZE = 64;
 constexpr size_t PAGESIZE = 4096;
+constexpr size_t PTESIZE = 8;
+
+constexpr size_t PT_LEVELS = 4;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

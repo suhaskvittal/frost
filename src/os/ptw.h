@@ -7,6 +7,8 @@
 
 #include "globals.h"
 #include "util/numerics.h"
+#include "os/vmem.h"
+#include "os/ptw/cache.h"
 
 #include <array>
 #include <cstdint>
@@ -20,8 +22,6 @@
 class Transaction;
 class L2TLB;
 class L2Cache;
-class PTWCache;
-class VirtualMemory;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ struct PTWEntry
 {
     using walk_data_t = VirtualMemory::walk_result_t;
 
-    size_t      curr_level =PTW_LEVELS-1;
+    size_t      curr_level =PT_LEVELS-1;
     PTWState    state =PTWState::NEED_ACCESS;
     walk_data_t walk_data;
     size_t      curr_walk_data_idx = 1;
@@ -91,7 +91,7 @@ private:
     ptw_tracker_t ongoing_walks_;
 public:
     using ptwc_init_params_t = std::tuple<size_t, size_t>;
-    using ptwc_init_array_t = std:array<ptwc_init_params_t, PT_LEVELS-1>;
+    using ptwc_init_array_t = std::array<ptwc_init_params_t, PT_LEVELS-1>;
 
     PageTableWalker(uint8_t coreid, l2tlb_ptr&, l1d_ptr&, vmem_ptr&, const ptwc_init_array_t&);
 

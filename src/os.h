@@ -7,6 +7,8 @@
 
 #include "constants.h"
 #include "core/instruction.h"
+#include "os/ptw.h"
+#include "os/vmem.h"
 #include "util/numerics.h"
 
 #include <array>
@@ -33,8 +35,8 @@ class L2LTB;
 class OS
 {
 public:
-    using itlb_ptr  = std::unique_ptr<iTLB>;
-    using dtlb_ptr  = std::unique_ptr<dTLB>;
+    using itlb_ptr  = std::unique_ptr<ITLB>;
+    using dtlb_ptr  = std::unique_ptr<DTLB>;
     using l2tlb_ptr = std::unique_ptr<L2TLB>;
 
     using itlb_array_t = std::array<itlb_ptr, NUM_THREADS>;
@@ -60,6 +62,7 @@ private:
 
     using mmu_ptr = std::unique_ptr<CoreMMU>;
     using mmu_array_t = std::array<mmu_ptr, NUM_THREADS>;
+    using free_bitvec_t = std::array<uint64_t, BITVEC_WIDTH>;
     /*
      * Each core has its own virtual memory and page walker (`CoreMMU`):
      * */
@@ -73,9 +76,9 @@ private:
 public:
     using ptwc_init_array_t = PageTableWalker::ptwc_init_array_t;
         
-    OS(const ptwc_init_array&);
+    OS(const ptwc_init_array_t&);
 
-    void print_stats(std::ostream&);
+    uint64_t warmup_translate(iptr_t&, uint8_t coreid);
 
     void tick(void);
 
@@ -86,6 +89,8 @@ public:
      * Otherwise, prints to `stderr` and exits with code 1.
      * */
     uint64_t get_and_reserve_free_page_frame(void);
+
+    void print_stats(std::ostream&);
     /*
      * Inlines:
      * */

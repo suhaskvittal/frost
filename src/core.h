@@ -46,6 +46,7 @@ public:
     uint64_t finished_inst_num_ =0;
     bool done_ =false;
 
+    uint64_t s_iftr_stalls_ =0;
     uint64_t s_ifmem_stalls_ =0;
     uint64_t s_disp_stalls_ =0;
 
@@ -67,7 +68,8 @@ private:
     l1d_ptr L1D_;
     l2_ptr  L2_;
     /*
-     * Pipeline latches: we model a simple decoupled frontend with two stages:
+     * Pipeline latches: we model a simple decoupled frontend:
+     *  IFbp: instruction fetch, branch prediction
      *  IFtr: instruction fetch, translate ip
      *  IFmem: instruction fetch, access L1
      *
@@ -105,6 +107,7 @@ public:
     void checkpoint_stats(void);
     void print_stats(std::ostream&);
 private:
+    void ifbp(size_t fwid);
     void iftr(size_t fwid);
     void ifmem(size_t fwid);
     void disp(size_t fwid);

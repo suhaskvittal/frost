@@ -49,20 +49,14 @@ public:
     
     const uint64_t ptbr_;
 private:
-
     using memo_t = std::unordered_map<uint64_t, uint64_t>;
-    using free_bitvec_t = std::array<uint64_t, BITVEC_WIDTH>;
 
     page_table_t  base_pt_{};
     /*
      * This is just for fast lookups (memoization) when we only want the pfn
      * but don't want to do a page walk.
      * */
-    memo_t vpn_to_fpn_memo_;
-    /*
-     * `rng` is for page frame allocation.
-     * */
-    std::mt19937_64 rng{0};
+    memo_t vpn_to_pfn_memo_;
 public:
     /*
      * `walk_result_t` will have the structure where the first entry is the page

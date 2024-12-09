@@ -79,51 +79,10 @@ Core::~Core() {}
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class L1CACHE> void
-warmup_cache_access(std::unique_ptr<L1CACHE>& L1, std::unique_ptr<L2Cache>& L2, uint64_t addr, bool write)
-{
-    bool hit = write ? L1->cache_->mark_dirty(addr) : L1->cache_->probe(addr);
-    if (hit) {
-        if (!L2->cache_->probe(addr)) {
-            GL_LLC->cache_->invalidate(addr);  // Does not matter if it really is in the LLC -- we
-                                               // are not simulating DRAM accesses
-            auto r = L2->cache_->fill(addr);
-            if (r.has_value()) {
-                CacheEntry& e = r.value();
-                if (e.dirty)
-                    GL_LLC->cache_->mark_dirty(e.address);
-                else
-                    GL_LLC->cache_->fill(e.address);
-            }
-        }
-        auto r = L1->cache_->fill(addr);
-        if (r.has_value()) {
-            CacheEntry& e = r.value();
-            if (e.dirty)
-                L2->cache_->mark_dirty(e.address);
-            else
-                L2->cache_->fill(e.address);
-        }
-        if (write)
-            L1->cache_->mark_dirty(addr);
-    }
-}
-
 void
 Core::tick_warmup()
 {
     iptr_t inst = next_inst();
-    // Try `ip` access.
-    inst->pip = GL_OS->translate_byteaddr(inst->ip);
-    warmup_cache_access(L1I_, L2_, LINEADDR(inst->pip), false);
-    for (uint64_t addr : inst->loads) {
-        addr = GL_OS->translate_byteaddr(addr);
-        warmup_cache_access(L1D_, L2_, LINEADDR(addr), false);
-    }
-    for (uint64_t addr : inst->stores) {
-        addr = GL_OS->translate_byteaddr(addr);
-        warmup_cache_access(L1D_, L2_, LINEADDR(addr), true);
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -138,6 +97,7 @@ Core::tick()
         disp(i);
         ifmem(i);
         iftr(i);
+        ifbp(i);
     }
 }
 
@@ -210,6 +170,9 @@ Core::checkpoint_stats()
     print_cache_stats_for_core(this, L1D_, stats_stream_, header + "_L1D$");
     print_cache_stats_for_core(this, L2_, stats_stream_, header + "_L2$");
     print_cache_stats_for_core(this, GL_LLC, stats_stream_, header + "_LLC");
+    print_cache_stats_for_core(this, GL_OS->ITLB_[coreid_], stats_stream_, header + "_iTLB");
+    print_cache_stats_for_core(this, GL_OS->DTLB_[coreid_], stats_stream_, header + "_dTLB");
+    print_cache_stats_for_core(this, GL_OS->L2TLB_[coreid_], stats_stream_, header + "_L2TLB");
 }
 
 void
@@ -222,19 +185,38 @@ Core::print_stats(std::ostream& out)
 ////////////////////////////////////////////////////////////////////////////
 
 void
-Core::iftr(size_t fwid)
+Core::ifbp(size_t fwid)
 {
-    Latch& la = la_iftr_ifmem_[fwid];
+    Latch& la = if_ifbp_iftr_[fwid];
     if (la.stalled)
         return;
     iptr_t inst = next_inst();
     inst->cycle_fetched = GL_CYCLE;
 
-    inst->ready_for_icache_access = true;
-    inst->pip = GL_OS->translate_byteaddr(inst->ip);
-    
     la.inst = std::move(inst);
     la.valid = true;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+Core::iftr(size_t fwid)
+{
+    Latch& la = la_ifbp_iftr_[fwid],
+         & la_next = la_iftr_ifmem_[fwid];
+    la.stalled = false;
+    if (!la.valid)
+        return;
+    iptr_t& inst = la.inst;
+    if (la_next.stalled || !GL_OS->translate_ip(inst)) {
+        ++s_iftr_stalls_;
+        la.stalled = true;
+        return;
+    }
+    la.valid = false;
+    la_next.inst = std::move(la.inst);
+    la_next.valid = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -328,13 +310,14 @@ Core::disp(size_t fwid)
 ////////////////////////////////////////////////////////////////////////////
 
 inline void
-translate_and_delete(std::unordered_set<uint64_t>& v, std::unordered_set<uint64_t>& p)
+sched_translate(iptr_t& inst, std::unordered_set<uint64_t>& v)
 {
     for (auto it = v.begin(); it != v.end(); ) {
-        // TODO: add TLB logic. Right now, since we assume perfect translation,
-        // we will always erase `it`.
-        p.insert(GL_OS->translate_lineaddr(*it));
-        it = v.erase(it);
+        if (!inst->v_lineaddr_awaiting_translation.count(*it)
+                && GL_OS->translate_ldst(inst, *it))
+        {
+            inst->v_lineaddr_awaiting_translation.insert(*it);
+        }
     }
 }
 
@@ -405,9 +388,8 @@ Core::operate_rob()
                     else
                         return false;
                 });
-
-        translate_and_delete(inst->v_ld_lineaddr, inst->p_ld_lineaddr);
-        translate_and_delete(inst->v_st_lineaddr, inst->p_st_lineaddr);
+        sched_translate(inst, inst->v_ld_lineaddr);
+        sched_translate(inst, inst->v_st_lineaddr);
         // If this is a store instruction and it has launched all its stores, finish now 
         if (inst->mem_inst_is_done() && inst->loads.empty())
             inst->cycle_done = GL_CYCLE+1;

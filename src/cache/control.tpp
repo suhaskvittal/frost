@@ -3,6 +3,8 @@
  *  date:   4 December 2024
  * */
 
+#include <type_traits>
+
 #define __TEMPLATE_HEADER__ template <class IMPL, class CACHE, class NEXT_CONTROL>
 #define __TEMPLATE_CLASS__ CacheControl<IMPL, CACHE, NEXT_CONTROL>
 
@@ -17,6 +19,38 @@ __TEMPLATE_CLASS__::CacheControl(std::string cache_name, next_ptr& n)
     next_(n)
 {
     mshr_.reserve(IMPL::NUM_MSHR);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
+{
+    bool hit = write ? cache_->mark_dirty(addr) : cache_->probe(addr);
+    if (hit) {
+        if constexpr (IMPL::INVALIDATE_ON_HIT)
+            cache_->invalidate(addr);
+    } else if (std::is_same<NEXT_CONTROL, DRAM>::value) {
+        // Handle miss.
+        if (write) {
+            if constexpr (IMPL::WRITE_ALLOCATE)
+                next_->warmup_access(addr, false);
+        } else {
+            next_->warmup_access(addr, false);
+        }
+        // Do fill.
+        if constexpr (!IMPL::INVALIDATE_ON_HIT) {
+            auto res = cache_->fill(addr);
+            if (res.has_value()) {
+                CacheEntry& e = res.value();
+                if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
+                    next_->cache_->fill(e.address);
+                if (e.dirty)
+                    next_->cache_->mark_dirty(e.address);
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

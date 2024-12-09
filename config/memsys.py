@@ -72,6 +72,8 @@ f'''{AUTOGEN_HEADER}
         ii = next_idx[i]
         if ii == -1:
             next_typename = 'DRAM'
+        elif ii == -2:
+            next_typename = 'PageWalker'
         else:
             next_typename = cache_typenames[ii]
             if cfg[caches[ii]]['mode'] == 'INVALIDATE_ON_HIT':
