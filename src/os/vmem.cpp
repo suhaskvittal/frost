@@ -32,7 +32,8 @@ VirtualMemory::do_page_walk(uint64_t vpn)
 
     // Try to access each level.
     out[1] = PAGE_TABLE_BASE_REGISTER;
-    size_t k = 2;
+    out[2] = levels[PT_LEVELS-1];
+    size_t k = 3;
 
     page_table_t& curr_pt = base_pt_;
     for (size_t i = PT_LEVELS-1; i > 0; i--) {
@@ -42,7 +43,9 @@ VirtualMemory::do_page_walk(uint64_t vpn)
             e->next->fill(nullptr);
         }
         curr_pt = *e->next;
-        out[k++] = e->pfn;
+        out[k] = e->pfn;
+        out[k+1] = levels[i-1];
+        k += 2;
     }
     // At the lowest level, which will have the pfn.
     pte_ptr& e = access_entry_and_alloc_if_dne(curr_pt, levels[0]);
@@ -53,27 +56,20 @@ VirtualMemory::do_page_walk(uint64_t vpn)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-uint64_t
-VirtualMemory::get_and_reserve_free_page_frame()
+pte_ptr&
+VirtualMemory::access_entry_and_alloc_if_dne(page_table_t& pt, size_t idx)
 {
-    ++s_page_faults_;
-    for (size_t i = 0; i < 1024; i++) {
-        size_t pfn = fast_mod<NUM_PAGE_FRAMES>(rng());
-        size_t ii = pfn >> 6,
-               jj = pfn & 0x3f;
-        bool is_taken = free_page_frames_[ii] & (1L << jj);
-        if (!is_taken) {
-            free_page_frames_[ii] |= (1L << jj);
-            return pfn;
-        }
-    }
-    size_t num_free = std::accumulate(free_page_frames_.begin(), free_page_frames_.end(), 0ull,
-                                        [] (uint64_t x, uint64_t y)
-                                        {
-                                            return x + __builtin_popcount(~y);
-                                        });
-    std::cerr << "os: failed to find free page frame, free page frames: " << num_free << "\n";
-    exit(1);
+    if (pt[idx] == nullptr)
+        pt[idx] = make_new_pte();
+    return pt[idx];
+}
+
+pte_ptr&&
+VirtualMemory::make_new_pte()
+{
+    pte_ptr e = pte_ptr(new PageTableEntry);
+    e->pfn = GL_OS->get_and_reserve_free_page_frame();
+    return e;
 }
 
 ////////////////////////////////////////////////////////////////////////////

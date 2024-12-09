@@ -17,8 +17,8 @@
 
 struct Instruction
 {
-    using vmemop_list_t = std::vector<uint64_t>;
-    using pmemop_set_t = std::unordered_set<uint64_t>;
+    using memop_list_t = std::vector<uint64_t>;
+    using memop_set_t = std::unordered_set<uint64_t>;
     /*
      * These are set upon instantiation.
      * */
@@ -27,8 +27,8 @@ struct Instruction
     bool       branch_taken;
     BranchType branch_type;
 
-    vmemop_list_t loads;
-    vmemop_list_t stores;
+    memop_list_t loads;
+    memop_list_t stores;
     /*
      * Additional metadata for iTLB and L1i interaction
      * */
@@ -38,10 +38,12 @@ struct Instruction
     /*
      * Additional metadata for dTLB and L1d interaction
      * */
-    pmemop_set_t v_ld_lineaddr;
-    pmemop_set_t v_st_lineaddr;
-    pmemop_set_t p_ld_lineaddr;
-    pmemop_set_t p_st_lineaddr;
+    memop_set_t v_ld_lineaddr;
+    memop_set_t v_st_lineaddr;
+    memop_set_t v_lineaddr_awaiting_translation;
+
+    memop_set_t p_ld_lineaddr;
+    memop_set_t p_st_lineaddr;
     uint64_t loads_in_progress =0;
     /*
      * Additional metadata for stats and ROB management

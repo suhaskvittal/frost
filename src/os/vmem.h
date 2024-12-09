@@ -68,9 +68,15 @@ public:
      * `walk_result_t` will have the structure where the first entry is the page
      * frame number of the requested VPN, and the remaining entries are the
      * physical addresses of the accessed page tables from highest level (i.e., `base_pt_`)
-     * to lowest level.
+     * to lowest level, and the offsets into the tables.
+     *
+     * For instance, the layout is as such:
+     *  [0] = pfn
+     *  [1] = pfn of `base_pt_`
+     *  [2] = page offset into `base_pt`.
+     *  (etc.)
      * */
-    using walk_result_t = std::array<uint64_t, PT_LEVELS+1>;
+    using walk_result_t = std::array<uint64_t, 2*PT_LEVELS+1>;
 
     VirtualMemory(uint64_t ptbr);
     /*
@@ -92,27 +98,8 @@ public:
         return vpn_to_pfn_memo_[vpn];
     }
 private:
-    /*
-     * Searches for a free, random page frame. If found, then returns this pfn.
-     * Otherwise, prints to `stderr` and exits with code 1.
-     * */
-    uint64_t get_and_reserve_free_page_frame(void);
-    /*
-     * Useful inlines:
-     * */
-    inline pte_ptr& access_entry_and_alloc_if_dne(page_table_t& pt, size_t idx)
-    {
-        if (pt[idx] == nullptr)
-            pt[idx] = make_new_pte();
-        return pt[idx];
-    }
-
-    inline pte_ptr&& make_new_pte(void)
-    {
-        pte_ptr e = pte_ptr(new PageTableEntry);
-        e->pfn = GL_OS->get_and_reserve_free_page_frame();
-        return e;
-    }
+    pte_ptr& access_entry_and_alloc_if_dne(page_table_t&, size_t idx);
+    pte_ptr&& make_new_ptr(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

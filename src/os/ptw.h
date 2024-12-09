@@ -32,13 +32,24 @@ struct PTWEntry
 {
     using walk_data_t = VirtualMemory::walk_result_t;
 
-    size_t curr_level =PTW_LEVELS-1;
-    PTWState state =PTWState::NEED_ACCESS;
+    size_t      curr_level =PTW_LEVELS-1;
+    PTWState    state =PTWState::NEED_ACCESS;
     walk_data_t walk_data;
+    size_t      curr_walk_data_idx = 1;
 
     inline uint64_t get_curr_pfn_lineaddr(void) const
     {
-        return walk_data.at(curr_level) >> numeric_traits<LINESIZE>::log2;
+        uint64_t pfn = walk_data.at(curr_walk_data_idx),
+                 off = walk_data.at(curr_walk_data_idx+1);
+        uint64_t paddr = (pfn << numeric_traits<PAGESIZE>::log2) | off;
+        return paddr >> numeric_traits<LINESIZE>::log2;
+    }
+
+    inline void next(void)
+    {
+        --curr_level;
+        curr_walk_data_idx += 2;
+        state = PTWState::NEED_ACCESS;
     }
 };
 

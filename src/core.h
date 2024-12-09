@@ -116,6 +116,10 @@ private:
      * This function needs access to `L2_`, which is private.
      * */
     friend void drain_llc_outgoing_queue(void);
+    /*
+     * OS needs access to `L1D_` to initialize the page table walker.
+     * */
+    friend class OS;
 };
 
 ////////////////////////////////////////////////////////////////////////////

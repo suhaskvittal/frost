@@ -94,8 +94,7 @@ PageTableWalker::handle_l1d_outgoing(const Transaction& t)
                 it = ongoing_walks_.erase(it);
                 continue;
             } else {
-                --e.curr_level;
-                e.state = PTWState::NEED_ACCESS;
+                e.next();
             }
         }
         ++it;
