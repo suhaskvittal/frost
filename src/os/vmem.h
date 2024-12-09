@@ -6,6 +6,7 @@
 #ifndef OS_VMEM_h
 #define OS_VMEM_h
 
+#include "constants.h"
 #include "globals.h"
 
 #include <array>
@@ -16,8 +17,6 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr uint64_t PAGE_TABLE_BASE_REGISTER = 0;
-constexpr size_t NUM_PAGE_FRAMES = (DRAM_SIZE_MB*1024*1024) / PAGESIZE;
 constexpr size_t NUM_PTE_PER_TABLE = PAGESIZE/PTESIZE;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -47,14 +46,14 @@ class VirtualMemory
 {
 public:
     uint64_t s_page_faults_ =0;
+    
+    const uint64_t ptbr_;
 private:
-    constexpr static size_t BITVEC_WIDTH = NUM_PAGE_FRAMES/64;
 
     using memo_t = std::unordered_map<uint64_t, uint64_t>;
     using free_bitvec_t = std::array<uint64_t, BITVEC_WIDTH>;
 
     page_table_t  base_pt_{};
-    free_bitvec_t free_page_frames_{};  // Note that active-low means available.
     /*
      * This is just for fast lookups (memoization) when we only want the pfn
      * but don't want to do a page walk.
@@ -65,7 +64,6 @@ private:
      * */
     std::mt19937_64 rng{0};
 public:
-    VirtualMemory(void) =default;
     /*
      * `walk_result_t` will have the structure where the first entry is the page
      * frame number of the requested VPN, and the remaining entries are the
@@ -73,6 +71,8 @@ public:
      * to lowest level.
      * */
     using walk_result_t = std::array<uint64_t, PT_LEVELS+1>;
+
+    VirtualMemory(uint64_t ptbr);
     /*
      * Performs a walk starting from `base_pt_` to find the page frame of `vpn`.
      * Returns the page frames according to `walk_result_t`.
@@ -110,7 +110,7 @@ private:
     inline pte_ptr&& make_new_pte(void)
     {
         pte_ptr e = pte_ptr(new PageTableEntry);
-        e->pfn = get_and_reserve_free_page_frame();
+        e->pfn = GL_OS->get_and_reserve_free_page_frame();
         return e;
     }
 };
