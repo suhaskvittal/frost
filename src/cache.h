@@ -23,7 +23,12 @@ extern uint64_t GL_CYCLE;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-enum class CacheReplPolicy { LRU, RAND, PERFECT };
+enum class CacheReplPolicy { LRU, RAND, SRRIP, PERFECT };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+constexpr uint8_t SRRIP_MAX = 7;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -37,12 +42,14 @@ struct CacheEntry
      * Replacement policy data:
      * */
     uint64_t timestamp;
+    uint8_t  rrpv;
 
     CacheEntry(void) =default;
-    CacheEntry(uint64_t addr)
+    CacheEntry(uint64_t addr, size_t num_refs)
         :valid(true),
         address(addr),
-        timestamp(GL_CYCLE)
+        timestamp(GL_CYCLE),
+        rrpv(num_refs > 1 ? SRRIP_MAX : 1)
     {}
 };
 
@@ -66,8 +73,11 @@ public:
 
     bool probe(uint64_t);
     bool mark_dirty(uint64_t);
-
-    fill_result_t fill(uint64_t);
+    /*
+     * `num_refs` here corresponds to the number of MSHR/instruction references
+     * at the time of install. Necessary for SRRIP, for example.
+     * */
+    fill_result_t fill(uint64_t, size_t num_refs);
     fill_result_t fill(entry_t&&);
 
     void invalidate(uint64_t);
@@ -87,15 +97,14 @@ public:
     }
 private:
     typename cset_t::iterator find_victim(cset_t&);
+    /*
+     * Update replacement metadata for the entry.
+     * */
+    void update(entry_t&);
 
     inline cset_t& get_set(uint64_t x)
     {
         return csets_.at(fast_mod<SETS>(x));
-    }
-
-    inline void update(CacheEntry& e)
-    {
-        e.timestamp = GL_CYCLE;
     }
 };
 

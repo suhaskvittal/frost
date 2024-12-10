@@ -91,7 +91,7 @@ public:
     /*
      * Only use `is_dirty` if installing to an `INVALIDATE_ON_HIT` cache.
      * */
-    void demand_fill(uint64_t address, bool is_dirty=false);
+    void demand_fill(uint64_t address, size_t refcnt, bool is_dirty=false);
     /*
      * Searches for an instruction in this cache. If it is found, a message
      * is printed to `stderr` and this function returns true.

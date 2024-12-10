@@ -45,11 +45,11 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
         next_->warmup_access(addr, false);
         // Do fill.
         if constexpr (!IMPL::INVALIDATE_ON_HIT) {
-            auto res = cache_->fill(addr);
+            auto res = cache_->fill(addr, 1);
             if (res.has_value()) {
                 CacheEntry& e = res.value();
                 if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
-                    next_->cache_->fill(e.address);
+                    next_->cache_->fill(e.address, 1);
                 if (e.dirty)
                     next_->warmup_access(addr, true);
             }
@@ -93,33 +93,39 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
         exit(1);
     }
     // First, fill the entry into the cache.
-    if constexpr (!IMPL::INVALIDATE_ON_HIT)
-        demand_fill(address);
+    auto [begin, end] = mshr_.equal_range(address);
+    if constexpr (!IMPL::INVALIDATE_ON_HIT) {
+        size_t refcnt = std::transform_reduce(begin, end, static_cast<size_t>(0),
+                                    std::plus<size_t>{},
+                                    [] (const auto& x)
+                                    {
+                                        const MSHREntry& e = x.second;
+                                        return e.trans.inst_list.size();
+                                    });
+        demand_fill(address, refcnt);
+    }
     // Now handle MSHR
-    auto it = mshr_.end();
-    while ((it=mshr_.find(address)) != mshr_.end()) {
-        MSHREntry& e = it->second;
+    for (auto it = begin; it != end; it++) {
+        const MSHREntry& e = it->second;
         if (e.is_for_write_allocate) {
             cache_->mark_dirty(e.trans.address);
             ++s_write_alloc_[e.trans.coreid];
         } else {
             io_->add_outgoing(e.trans, IMPL::CACHE_LATENCY);
         }
-
         s_tot_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
         ++s_num_penalty_[e.trans.coreid];
-
-        mshr_.erase(it);
     }
+    mshr_.erase(begin, end);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::demand_fill(uint64_t address, bool dirty)
+__TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
 {
-    auto fill_res = cache_->fill(address);
+    auto fill_res = cache_->fill(address, refcnt);
     if (dirty)
         cache_->mark_dirty(address);
     if (fill_res.has_value()) {
@@ -129,7 +135,7 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, bool dirty)
             ++s_writebacks_;
         // Install into the next level of the cache.
         if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
-            next_->demand_fill(e.address, e.dirty);
+            next_->demand_fill(e.address, 1, e.dirty);
         else if (e.dirty && !do_writeback(e.address))
             writeback_queue_.push_back(e.address);
     }
@@ -189,7 +195,7 @@ __TEMPLATE_CLASS__::next_access()
     } else {
         // If this cache is invalidate on hit, we must fill first.
         if constexpr (IMPL::INVALIDATE_ON_HIT)
-            cache_->fill(t.address);
+            cache_->fill(t.address, 1);
         // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
         // specified (i.e. for the L1D$, then on a write miss, install
         // an MSHR entry).

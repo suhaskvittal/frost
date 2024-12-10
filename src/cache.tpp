@@ -61,9 +61,9 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
-__TEMPLATE_CLASS__::fill(uint64_t addr)
+__TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs)
 {
-    return fill(entry_t(addr));
+    return fill(entry_t(addr, num_refs));
 }
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
@@ -131,16 +131,38 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
 {
     if constexpr (POL == CacheReplPolicy::LRU) {
         return std::min_element(s.begin(), s.end(),
-                                [] (entry_t& x, entry_t& y)
+                                [] (const entry_t& x, const entry_t& y)
                                 {
                                     return x.timestamp < y.timestamp;
                                 });
     } else if constexpr (POL == CacheReplPolicy::RAND) {
         return std::next( s.begin(), fast_mod<WAYS>(rng_()) );
+    } else if constexpr (POL == CacheReplPolicy::SRRIP) {
+        auto v_it = std::min_element(s.begin(), s.end(),
+                                [] (const entry_t& x, const entry_t& y)
+                                {
+                                    return x.rrpv < y.rrpv;
+                                });
+        if (v_it->rrpv > 0) {
+            // Reduce all entries' rrpv values.
+            for (entry_t& x : s)
+                x.rrpv -= v_it->rrpv;
+        }
+        return v_it;
     } else {
         std::cerr << "unsupported cache replacement policy.\n";
         exit(1);
     }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::update(entry_t& e)
+{
+    e.timestamp = GL_CYCLE;
+    e.rrpv = SRRIP_MAX;
 }
 
 ////////////////////////////////////////////////////////////////////////////
