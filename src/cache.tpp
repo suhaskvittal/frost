@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 
 #define __TEMPLATE_HEADER__ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 #define __TEMPLATE_CLASS__  Cache<SETS,WAYS,POL>
@@ -99,6 +100,27 @@ __TEMPLATE_CLASS__::invalidate(uint64_t addr)
                         return e.address == addr;
                     });
     it->valid = false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__
+template <class PRED> size_t
+__TEMPLATE_CLASS__::get_occupancy(const PRED& pred)
+{
+    size_t cnt = std::accumulate(csets_.begin(), csets_.end(), static_cast<size_t>(0),
+                        [pred] (size_t tot, const cset_t& s)
+                        {
+                            return tot + std::count_if(s.begin(), s.end(), pred);
+                        });
+    return cnt;
+}
+
+__TEMPLATE_HEADER__ size_t
+__TEMPLATE_CLASS__::get_occupancy()
+{
+    return get_occupancy([] (const entry_t& e) { return e.valid; });
 }
 
 ////////////////////////////////////////////////////////////////////////////

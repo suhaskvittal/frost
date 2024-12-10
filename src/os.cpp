@@ -162,10 +162,12 @@ OS::print_stats(std::ostream& out)
     // Print out stats of page table walker caches.
     out << std::setw(12) << std::left << "PTW$";
     for (size_t i = 0; i < PT_LEVELS-1; i++) {
-        std::string stat = "MISS_RATE_L" + std::to_string(i);
+        std::string stat = "MISS_RATE_L" + std::to_string(i+1);
         out << std::setw(16) << std::left << stat;
     }
-    out << "\n" << BAR;
+    out << std::setw(16) << "TLB MISSES"
+        << std::setw(16) << "L1D$ ACCESSES"
+        << "\n" << BAR;
     for (size_t i = 0; i < NUM_THREADS; i++) {
         std::string name = "CORE_" + std::to_string(i);
         out << "\n" << std::setw(12) << name;
@@ -174,6 +176,8 @@ OS::print_stats(std::ostream& out)
             double miss_rate = mean(c->s_misses_, c->s_accesses_);
             out << std::setw(16) << std::setprecision(3) << miss_rate;
         }
+        out << std::setw(16) << ptw_[i]->s_tlb_misses_
+            << std::setw(16) << ptw_[i]->s_requests_to_data_cache_;
     }
     out << "\n" << BAR << "\n";
 }

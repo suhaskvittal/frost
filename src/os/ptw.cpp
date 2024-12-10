@@ -80,8 +80,10 @@ PageTableWalker::tick()
     if (ptw_it != ongoing_walks_.end()) {
         PTWEntry& e = ptw_it->second;
         Transaction t(coreid_, nullptr, TransactionType::TRANSLATION, e.get_curr_pfn_lineaddr());
-        if (L1D_->io_->add_incoming(t))
+        if (L1D_->io_->add_incoming(t)) {
+            ++s_requests_to_data_cache_;
             e.state = PTWState::WAITING_ON_ACCESS;
+        }
     }
 }
 
@@ -97,6 +99,8 @@ PageTableWalker::handle_tlb_miss(const Transaction& t)
     e.walk_data = vmem_->do_page_walk(vpn);
     e.curr_level = ptwc_get_initial_directory_level(caches_, vpn);
     ongoing_walks_.insert({vpn, e});
+
+    ++s_tlb_misses_;
 }
 
 ////////////////////////////////////////////////////////////////////////////

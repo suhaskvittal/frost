@@ -104,6 +104,8 @@ int main(int argc, char* argv[])
     GL_DRAM->print_stats(std::cout);
     GL_OS->print_stats(std::cout);
 
+    std::cout << "LLC occupancy: " << GL_LLC->cache_->get_occupancy() << " of " << GL_LLC->cache_->size() << "\n";
+
     return 0;
 }
 

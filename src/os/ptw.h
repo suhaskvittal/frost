@@ -75,6 +75,9 @@ public:
     io_ptr io_;
     ptwc_array_t  caches_;
 
+    uint64_t s_requests_to_data_cache_ =0;
+    uint64_t s_tlb_misses_ =0;
+
     const uint8_t coreid_;
 private:
     using l2tlb_ptr = std::unique_ptr<L2TLB>;

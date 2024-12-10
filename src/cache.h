@@ -71,17 +71,26 @@ public:
     fill_result_t fill(entry_t&&);
 
     void invalidate(uint64_t);
+    /*
+     * Counts number of elements in cache meeting criteria. If `get_occupancy(void)` is
+     * used, then this just counts the number of valid elements in the cache.
+     * */
+    template <class PRED>
+    size_t get_occupancy(const PRED&);
+    size_t get_occupancy(void);
+    /*
+     * Returns number of entries in the cache.
+     * */
+    inline size_t size(void)
+    {
+        return WAYS*SETS;
+    }
 private:
     typename cset_t::iterator find_victim(cset_t&);
 
-    inline size_t get_index(uint64_t x)
-    {
-        return fast_mod<SETS>(x);
-    }
-
     inline cset_t& get_set(uint64_t x)
     {
-        return csets_.at(get_index(x));
+        return csets_.at(fast_mod<SETS>(x));
     }
 
     inline void update(CacheEntry& e)
