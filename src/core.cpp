@@ -327,12 +327,10 @@ inline void
 sched_translate(uint8_t coreid, iptr_t& inst, std::unordered_set<uint64_t>& v)
 {
     auto& await = inst->v_lineaddr_awaiting_translation;
-
-    std::copy_if(v.begin(), v.end(), std::inserter(await, await.begin()),
-            [await, coreid, inst] (uint64_t addr)
-            {
-                return !await.count(addr) && GL_OS->translate_ldst(coreid, inst, addr);
-            });
+    for (uint64_t addr : v) {
+        if (!await.count(addr) && GL_OS->translate_ldst(coreid, inst, addr))
+            await.insert(addr);
+    }
 }
 
 template <class CACHE_TYPE, class PRED> inline void
