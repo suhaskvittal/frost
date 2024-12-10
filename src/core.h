@@ -134,7 +134,7 @@ private:
  * due to the common pattern used below.
  * */
 template <class CACHE_TYPE, class DRAIN_CALLBACK>
-void drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>& c, DRAIN_CALLBACK handle_drain)
+void drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>& c, const DRAIN_CALLBACK& handle_drain)
 {
     // Need to make sure queue is drained at the appropriate time (hence the second check).
     auto& out_queue = c->io_->outgoing_queue_;

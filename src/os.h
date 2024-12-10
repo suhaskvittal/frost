@@ -74,7 +74,8 @@ public:
         
     OS(ptwc_init_list_t);
 
-    uint64_t warmup_translate(uint64_t byteaddr, uint8_t coreid, bool is_inst);
+    uint64_t warmup_translate_ip(uint8_t coreid, uint64_t byteaddr);
+    uint64_t warmup_translate_ldst(uint8_t coreid, uint64_t lineaddr);
 
     void tick(void);
 

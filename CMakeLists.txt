@@ -3,9 +3,11 @@ project(Frost VERSION 0.1)
 
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
-        -O3
+        -Ofast
 #       -flto=auto
-        -fno-strict-aliasing
+#       -funroll-loops
+        -fstrict-aliasing
+        -march=native
         -Wno-deprecated
         -Wno-unknown-warming-option
         -Wno-self-assign
@@ -32,6 +34,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(SIM_FILES
     src/core.cpp
+    src/core/instruction.cpp
     src/dram.cpp
     src/dram/channel.cpp
     src/io_bus.cpp
@@ -41,6 +44,7 @@ set(SIM_FILES
     src/os/vmem.cpp
     src/trace/data.cpp
     src/trace/reader.cpp
+    src/transaction.cpp
     src/util/argparse.cpp
     # Generated files
     _generated/${BUILD_ID}/sim.cpp)

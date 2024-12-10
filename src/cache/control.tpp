@@ -142,7 +142,7 @@ __TEMPLATE_CLASS__::deadlock_find_inst(const iptr_t& inst)
                                 [inst] (const auto& e)
                                 {
                                     const Transaction& t = e.second.trans;
-                                    return t.inst == inst;
+                                    return t.contains_inst(inst);
                                 });
         if (mshr_it != mshr_.end()) {
             const MSHREntry& e = mshr_it->second;

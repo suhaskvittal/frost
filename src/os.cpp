@@ -40,38 +40,29 @@ OS::OS(ptwc_init_list_t ptwc_init)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+template <size_t N, class CACHE_TYPE> uint64_t
+warmup_translate(std::unique_ptr<CACHE_TYPE>& tlb, uint64_t addr, std::unique_ptr<VirtualMemory>& vmem)
+{
+    auto [vpn, offset] = split_address<N>(addr);
+    tlb->warmup_access(vpn, false);
+    uint64_t pfn = vmem->get_pfn(vpn);
+    return join_address<N>(pfn, offset);
+}
+
 uint64_t
-OS::warmup_translate(uint64_t byteaddr, uint8_t coreid, bool is_inst)
+OS::warmup_translate_ip(uint8_t coreid, uint64_t ip)
 {
-    auto [vpn, offset] = split_address<1>(byteaddr);
-    if (is_inst)
-        ITLB_[coreid]->warmup_access(vpn, false);
-    else
-        DTLB_[coreid]->warmup_access(vpn, false);
-    uint64_t pfn = vmem_[coreid]->get_pfn(vpn);
-    return join_address<1>(pfn, offset);
+    return warmup_translate<1>(ITLB_[coreid], ip, vmem_[coreid]);
+}
+
+uint64_t
+OS::warmup_translate_ldst(uint8_t coreid, uint64_t addr)
+{
+    return warmup_translate<LINESIZE>(DTLB_[coreid], addr, vmem_[coreid]);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-void
-move_on_translate(
-        Instruction::memop_set_t& from,
-        Instruction::memop_set_t& to,
-        uint64_t match_vpn,
-        std::unique_ptr<VirtualMemory>& vmem)
-{
-    for (auto it = from.begin(); it != from.end(); ) {
-        auto [vpn, off] = split_address<LINESIZE>(*it);
-        if (vpn == match_vpn) {
-            to.insert(join_address<LINESIZE>(vmem->get_pfn(vpn), off));
-            it = from.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
 
 void
 OS::tick()
@@ -92,16 +83,18 @@ OS::tick()
                 [this, i] (const Transaction& t)
                 {
                     // Just need to update instruction.
-                    t.inst->ready_for_icache_access = true;
-                    t.inst->pip = translate<1>(t.inst->ip, this->vmem_[i]);
+                    for (auto inst : t.inst_list) {
+                        inst->ip_state = AccessState::READY;
+                        inst->pip = translate<1>(inst->ip, this->vmem_[i]);
+                    }
                 });
         drain_cache_outgoing_queue(DTLB_[i],
                 [this, i] (const Transaction& t)
                 {
-                    auto& inst = t.inst;
                     uint64_t vpn = t.address;
-                    move_on_translate(inst->v_ld_lineaddr, inst->p_ld_lineaddr, vpn, this->vmem_[i]);
-                    move_on_translate(inst->v_st_lineaddr, inst->p_st_lineaddr, vpn, this->vmem_[i]);
+                    uint64_t pfn = this->vmem_[i]->get_pfn(vpn);
+                    for (auto inst : t.inst_list)
+                        inst_dtlb_done(inst, vpn, pfn);
                 });
         L2TLB_[i]->tick();
         ITLB_[i]->tick();

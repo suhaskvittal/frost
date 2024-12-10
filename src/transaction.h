@@ -6,21 +6,21 @@
 #ifndef TRANSACTION_h
 #define TRANSACTION_h
 
-#include "core/instruction.h"
+#include <memory>
+#include <vector>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 enum class TransactionType { READ, WRITE, PREFETCH, TRANSLATION };
 
-inline bool trans_is_read(TransactionType t)
-{
-    return t != TransactionType::WRITE;
-}
+bool trans_is_read(TransactionType);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+struct Instruction;
+using iptr_t = std::shared_ptr<Instruction>;
 /*
  * This struct should have all information for routing cache/memory requests
  * through the memory hierarchy.
@@ -31,22 +31,20 @@ inline bool trans_is_read(TransactionType t)
  * */
 struct Transaction
 {
+    using inst_list_t = std::vector<iptr_t>;
+
     uint8_t         coreid;
-    iptr_t          inst;
+    inst_list_t     inst_list;
     TransactionType type;
 
     uint64_t address;
     bool     address_is_ip;
 
-    Transaction(uint8_t cid, iptr_t inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
-        :coreid(cid),
-        inst(inst),
-        type(t),
-        address(addr),
-        address_is_ip(addr_is_ip)
-    {}
-
+    Transaction(uint8_t cid, iptr_t, TransactionType, uint64_t addr, bool addr_is_ip=false);
     Transaction(const Transaction&) =default;
+
+    bool contains_inst(iptr_t) const;
+    void merge(Transaction&);
 };
 
 ////////////////////////////////////////////////////////////////////////////

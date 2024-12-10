@@ -34,6 +34,16 @@ IOBus::add_incoming(Transaction t)
             add_outgoing(t, 1);
         return true;
     }
+    // Same thing for reads: merge if there is an existing read already.
+    if (trans_is_read(t.type) && pending_reads_.count(t.address)) {
+        auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
+                            [addr = t.address] (const Transaction& x)
+                            {
+                                return x.address == addr;
+                            });
+        rd_it->merge(t);
+        return true;
+    }
     // Add to requisite queue.
     if (trans_is_read(t.type)) {
         size_t s = (t.type == TransactionType::PREFETCH) ? pq_size_ : rq_size_;
@@ -95,7 +105,7 @@ IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transac
     auto q_it = std::find_if(q.cbegin(), q.cend(),
                             [inst] (const Transaction& t)
                             {
-                                return t.inst == inst;
+                                return t.contains_inst(inst);
                             });
     if (q_it != q.end()) {
         size_t dist = std::distance(q.begin(), q_it);
