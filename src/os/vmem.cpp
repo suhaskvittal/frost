@@ -50,9 +50,10 @@ VirtualMemory::do_page_walk(uint64_t vpn)
 
     // Compute level indices for the page.
     std::array<size_t, PT_LEVELS> levels;
+    uint64_t bits = vpn;
     for (size_t i = 0; i < PT_LEVELS; i++) {
-        levels[i] = fast_mod<NUM_PTE_PER_TABLE>(vpn);
-        vpn >>= numeric_traits<NUM_PTE_PER_TABLE>::log2;
+        levels[i] = fast_mod<NUM_PTE_PER_TABLE>(bits);
+        bits >>= numeric_traits<NUM_PTE_PER_TABLE>::log2;
     }
 
     // Try to access each level.

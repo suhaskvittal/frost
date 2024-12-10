@@ -85,7 +85,7 @@ public:
     {
         if (!vpn_to_pfn_memo_.count(vpn))
             do_page_walk(vpn);
-        return vpn_to_pfn_memo_[vpn];
+        return vpn_to_pfn_memo_.at(vpn);
     }
 private:
     pte_ptr access_entry_and_alloc_if_dne(page_table_ptr, size_t idx);
