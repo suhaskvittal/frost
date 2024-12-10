@@ -40,9 +40,9 @@ PageTableWalker::PageTableWalker(
     L1D_(l1d),
     vmem_(vmem)
 {
-    if (ptwc_init.size() != PT_LEVELS) {
+    if (ptwc_init.size() != caches_.size()) {
         std::cerr << "ptw: too few page table walker cache parameters: got "
-                << ptwc_init.size() << ", expected " << PT_LEVELS << "\n";
+                << ptwc_init.size() << ", expected " << caches_.size() << "\n";
         exit(1);
     }
     // Initialize PTW caches.

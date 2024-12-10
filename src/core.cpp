@@ -133,7 +133,7 @@ print_cache_stats_for_core(Core* c, const std::unique_ptr<CACHE>& cache, std::os
     double miss_rate = mean(misses, accesses);
     double aat = CACHE::CACHE_LATENCY * (1-miss_rate) + miss_penalty*miss_rate;
 
-    out << std::setw(12) << std::left << header
+    out << std::setw(16) << std::left << header
         << std::setw(16) << std::left << accesses
         << std::setw(16) << std::left << misses
         << std::setw(16) << std::left << std::setprecision(3) << miss_rate
@@ -165,7 +165,7 @@ Core::checkpoint_stats()
 
     stats_stream_ << BAR << "\n";
 
-    stats_stream_ << std::setw(12) << std::left << "CACHE"
+    stats_stream_ << std::setw(16) << std::left << "CACHE"
         << std::setw(16) << std::left << "ACCESSES"
         << std::setw(16) << std::left << "MISSES"
         << std::setw(16) << std::left << "MISS_RATE"
@@ -256,6 +256,8 @@ Core::ifmem(size_t fwid)
                     << " in core " << coreid_+0
                     << "\n\tftb size = " << ftb_.size()
                     << "\n";
+            GL_OS->ITLB_[coreid_]->deadlock_find_inst(inst);
+            GL_OS->L2TLB_[coreid_]->deadlock_find_inst(inst);
             exit(1);
         }
         la.stalled = true;
@@ -324,13 +326,13 @@ Core::disp(size_t fwid)
 inline void
 sched_translate(uint8_t coreid, iptr_t& inst, std::unordered_set<uint64_t>& v)
 {
-    for (auto it = v.begin(); it != v.end(); ) {
-        if (!inst->v_lineaddr_awaiting_translation.count(*it)
-                && GL_OS->translate_ldst(coreid, inst, *it))
-        {
-            inst->v_lineaddr_awaiting_translation.insert(*it);
-        }
-    }
+    auto& await = inst->v_lineaddr_awaiting_translation;
+
+    std::copy_if(v.begin(), v.end(), std::inserter(await, await.begin()),
+            [await, coreid, inst] (uint64_t addr)
+            {
+                return !await.count(addr) && GL_OS->translate_ldst(coreid, inst, addr);
+            });
 }
 
 template <class CACHE_TYPE, class PRED> inline void
@@ -441,6 +443,12 @@ Core::operate_caches()
     drain_cache_outgoing_queue(L1D_,
             [] (const Transaction& t)
             {
+                // Intercept any accesses that should go the PTW.
+                if (t.type == TransactionType::TRANSLATION) {
+                    GL_OS->handle_l1d_outgoing(t.coreid, t);
+                    return;
+                }
+
                 if (t.inst->retired) {
                     uint8_t coreid = untag_coreid(t.inst->ip);
                     std::cerr << "\ncore: L1d$ zombie wakeup @ cycle = " << GL_CYCLE
@@ -453,14 +461,9 @@ Core::operate_caches()
                             << "\tnum stores = " << t.inst->stores.size() << "\n";
                     exit(1);
                 }
-                // Intercept any accesses that should go the PTW.
-                if (t.type == TransactionType::TRANSLATION) {
-                    GL_OS->handle_l1d_outgoing(t.coreid, t);
-                } else {
-                    --t.inst->loads_in_progress;
-                    if (t.inst->mem_inst_is_done())
-                        t.inst->cycle_done = GL_CYCLE;
-                }
+                --t.inst->loads_in_progress;
+                if (t.inst->mem_inst_is_done())
+                    t.inst->cycle_done = GL_CYCLE;
             });
     // Tick each of the caches.
     L2_->tick();

@@ -8,25 +8,31 @@
 #include "util/numerics.h"
 
 #include <algorithm>
+#include <iostream>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 VirtualMemory::VirtualMemory(uint64_t ptbr)
-    :ptbr_(ptbr)
-{}
+    :ptbr_(ptbr),
+    base_pt_(new page_table_t)
+{
+    base_pt_->fill(nullptr);
+}
 
 void
-free_pt(page_table_t& pt)
+free_pt(page_table_ptr pt)
 {
-    for (size_t i = 0; i < pt.size(); i++) {
-        pte_ptr e = pt[i];
+    for (size_t i = 0; i < pt->size(); i++) {
+        pte_ptr e = pt->at(i);
+        if (e == nullptr)
+            continue;
         if (e->next != nullptr) {
-            free_pt(*e->next);
-            delete e->next;
+            free_pt(e->next);
         }
         delete e;
     }
+    delete pt;
 }
 
 VirtualMemory::~VirtualMemory()
@@ -54,33 +60,35 @@ VirtualMemory::do_page_walk(uint64_t vpn)
     out[2] = levels[PT_LEVELS-1];
     size_t k = 3;
 
-    page_table_t& curr_pt = base_pt_;
+    page_table_ptr curr_pt = base_pt_;
     for (size_t i = PT_LEVELS-1; i > 0; i--) {
-        pte_ptr& e = access_entry_and_alloc_if_dne(curr_pt, levels[i]);
+        pte_ptr e = access_entry_and_alloc_if_dne(curr_pt, levels[i]);
         if (e->next == nullptr) {
             e->next = page_table_ptr(new page_table_t);
             e->next->fill(nullptr);
         }
-        curr_pt = *(e->next);
+        curr_pt = e->next;
         out[k] = e->pfn;
         out[k+1] = levels[i-1];
         k += 2;
     }
     // At the lowest level, which will have the pfn.
-    pte_ptr& e = access_entry_and_alloc_if_dne(curr_pt, levels[0]);
+    pte_ptr e = access_entry_and_alloc_if_dne(curr_pt, levels[0]);
     out[0] = e->pfn;
+    vpn_to_pfn_memo_[vpn] = e->pfn;
     return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-pte_ptr&
-VirtualMemory::access_entry_and_alloc_if_dne(page_table_t& pt, size_t idx)
+pte_ptr
+VirtualMemory::access_entry_and_alloc_if_dne(page_table_ptr pt, size_t idx)
 {
-    if (pt[idx] == nullptr)
-        pt[idx] = make_new_pte();
-    return pt[idx];
+    if (pt->at(idx) == nullptr) {
+        pt->at(idx) = make_new_pte();
+    }
+    return pt->at(idx);
 }
 
 pte_ptr

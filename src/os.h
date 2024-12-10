@@ -52,20 +52,17 @@ private:
     constexpr static size_t BITVEC_WIDTH = NUM_PAGE_FRAMES/64;
 
     using vmem_ptr = std::unique_ptr<VirtualMemory>;
+    using vmem_array_t = std::array<vmem_ptr, NUM_THREADS>;
+
     using ptw_ptr = std::unique_ptr<PageTableWalker>;
+    using ptw_array_t = std::array<ptw_ptr, NUM_THREADS>;
 
-    struct CoreMMU
-    {
-        vmem_ptr vmem;
-        ptw_ptr  ptw;
-    };
-
-    using mmu_array_t = std::array<CoreMMU, NUM_THREADS>;
     using free_bitvec_t = std::array<uint64_t, BITVEC_WIDTH>;
     /*
      * Each core has its own virtual memory and page walker (`CoreMMU`):
      * */
-    mmu_array_t core_mmu_;
+    vmem_array_t vmem_;
+    ptw_array_t  ptw_;
     /*
      * Page frame management. `free_page_frames_` uses active-low as available,
      * and `rng` is used for randomized page allocation.
@@ -95,7 +92,7 @@ public:
      * */
     inline void handle_l1d_outgoing(uint8_t coreid, const Transaction& t)
     {
-        core_mmu_[coreid].ptw->handle_l1d_outgoing(t);
+        ptw_[coreid]->handle_l1d_outgoing(t);
     }
 };
 

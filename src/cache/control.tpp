@@ -219,7 +219,8 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
     MSHREntry e(t, write_miss);
 
     // Need to switch transaction type in case of write allocate.
-    e.trans.type = TransactionType::READ;
+    if (write_miss)
+        e.trans.type = TransactionType::READ;
     e.is_fired = mshr_.count(t.address) > 0 || next_->io_->add_incoming(e.trans);
     mshr_.insert({t.address, e});
 }

@@ -46,7 +46,7 @@ public:
 private:
     using memo_t = std::unordered_map<uint64_t, uint64_t>;
 
-    page_table_t  base_pt_{};
+    page_table_ptr base_pt_;
     /*
      * This is just for fast lookups (memoization) when we only want the pfn
      * but don't want to do a page walk.
@@ -84,11 +84,11 @@ public:
     inline uint64_t get_pfn(uint64_t vpn)
     {
         if (!vpn_to_pfn_memo_.count(vpn))
-            vpn_to_pfn_memo_[vpn] = do_page_walk(vpn)[0];
+            do_page_walk(vpn);
         return vpn_to_pfn_memo_[vpn];
     }
 private:
-    pte_ptr& access_entry_and_alloc_if_dne(page_table_t&, size_t idx);
+    pte_ptr access_entry_and_alloc_if_dne(page_table_ptr, size_t idx);
     pte_ptr make_new_pte(void);
 };
 

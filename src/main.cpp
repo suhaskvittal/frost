@@ -74,6 +74,7 @@ int main(int argc, char* argv[])
 
         GL_DRAM->tick();
         GL_LLC->tick();
+        GL_OS->tick();
 
         drain_llc_outgoing_queue();
 

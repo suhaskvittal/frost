@@ -145,9 +145,9 @@ sim_init(void)
 {{
     GL_DRAM = dram_ptr(new DRAM({cpu_freq}, {dram_freq}));
     GL_LLC = llc_ptr(new LLCache("LLC", GL_DRAM));
-    GL_OS = os_ptr(new OS({ptwc_params}));
     for (size_t i = 0; i < NUM_THREADS; i++)
         GL_CORES[i] = core_ptr(new Core(i, OPT_TRACE_FILE));
+    GL_OS = os_ptr(new OS({ptwc_params}));
 }}
 
 ////////////////////////////////////////////////////////////////////////////

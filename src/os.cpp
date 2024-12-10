@@ -23,15 +23,15 @@ OS::OS(ptwc_init_list_t ptwc_init)
 {
     for (size_t i = 0; i < NUM_THREADS; i++) {
         // Initialize virtual memory and PTWs
-        core_mmu_[i].vmem = vmem_ptr(new VirtualMemory(get_and_reserve_free_page_frame()));
-        core_mmu_[i].ptw = ptw_ptr(new PageTableWalker(
+        vmem_[i] = vmem_ptr(new VirtualMemory(get_and_reserve_free_page_frame()));
+        ptw_[i] = ptw_ptr(new PageTableWalker(
                                 static_cast<uint8_t>(i),
                                 L2TLB_[i],
                                 GL_CORES[i]->L1D_,
-                                core_mmu_[i].vmem,
+                                vmem_[i],
                                 ptwc_init));
         // Now do TLBs.
-        L2TLB_[i] = l2tlb_ptr(new L2TLB("L2TLB", core_mmu_[i].ptw));
+        L2TLB_[i] = l2tlb_ptr(new L2TLB("L2TLB", ptw_[i]));
         ITLB_[i] = itlb_ptr(new ITLB("iTLB", L2TLB_[i]));
         DTLB_[i] = dtlb_ptr(new DTLB("dTLB", L2TLB_[i]));
     }
@@ -48,7 +48,7 @@ OS::warmup_translate(uint64_t byteaddr, uint8_t coreid, bool is_inst)
         ITLB_[coreid]->warmup_access(vpn, false);
     else
         DTLB_[coreid]->warmup_access(vpn, false);
-    uint64_t pfn = core_mmu_[coreid].vmem->get_pfn(vpn);
+    uint64_t pfn = vmem_[coreid]->get_pfn(vpn);
     return join_address<1>(pfn, offset);
 }
 
@@ -78,7 +78,7 @@ OS::tick()
 {
     // Tick all PTWs
     for (size_t i = 0; i < NUM_THREADS; i++) {
-        core_mmu_[i].ptw->tick();
+        ptw_[i]->tick();
         // Handle TLB outgoing requests.
         drain_cache_outgoing_queue(L2TLB_[i],
                 [this, i] (const Transaction& t)
@@ -93,16 +93,20 @@ OS::tick()
                 {
                     // Just need to update instruction.
                     t.inst->ready_for_icache_access = true;
-                    t.inst->pip = translate<1>(t.inst->ip, this->core_mmu_[i].vmem);
+                    t.inst->pip = translate<1>(t.inst->ip, this->vmem_[i]);
                 });
         drain_cache_outgoing_queue(DTLB_[i],
                 [this, i] (const Transaction& t)
                 {
                     auto& inst = t.inst;
                     uint64_t vpn = t.address;
-                    move_on_translate(inst->v_ld_lineaddr, inst->p_ld_lineaddr, vpn, this->core_mmu_[i].vmem);
-                    move_on_translate(inst->v_st_lineaddr, inst->p_st_lineaddr, vpn, this->core_mmu_[i].vmem);
+                    move_on_translate(inst->v_ld_lineaddr, inst->p_ld_lineaddr, vpn, this->vmem_[i]);
+                    move_on_translate(inst->v_st_lineaddr, inst->p_st_lineaddr, vpn, this->vmem_[i]);
                 });
+        L2TLB_[i]->tick();
+        ITLB_[i]->tick();
+        DTLB_[i]->tick();
+        ptw_[i]->tick();
     }
 }
 
@@ -133,7 +137,7 @@ uint64_t
 OS::get_and_reserve_free_page_frame()
 {
     ++s_page_faults_;
-    for (size_t i = 0; i < 1024; i++) {
+    for (size_t i = 0; i < 2048; i++) {
         size_t pfn = fast_mod<NUM_PAGE_FRAMES>(rng());
         size_t ii = pfn >> 6,
                jj = pfn & 0x3f;
@@ -148,7 +152,8 @@ OS::get_and_reserve_free_page_frame()
                                         {
                                             return x + __builtin_popcount(~y);
                                         });
-    std::cerr << "os: failed to find free page frame, free page frames: " << num_free << "\n";
+    std::cerr << "os: failed to find free page frame, free page frames: " << num_free
+        << ", total = " << NUM_PAGE_FRAMES << "\n";
     exit(1);
 }
 
