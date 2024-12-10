@@ -50,6 +50,7 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
     if (it == s.end()) {
         return false;
     } else {
+        update(*it);
         it->dirty = true;
         return true;
     }

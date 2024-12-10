@@ -5,7 +5,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
         -Ofast
 #       -flto=auto
-#       -funroll-loops
+        -funroll-loops
         -fstrict-aliasing
         -march=native
         -Wno-deprecated

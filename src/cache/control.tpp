@@ -25,18 +25,24 @@ __TEMPLATE_CLASS__::CacheControl(std::string cache_name, next_ptr& n)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
 {
-    bool hit = write ? cache_->mark_dirty(addr) : cache_->probe(addr);
+    // If the cache is not write-allocate, then writes are pretty easy to handle.
+    bool hit;
+    if (write) {
+        if (IMPL::WRITE_ALLOCATE) {
+            hit = cache_->mark_dirty(addr);
+        } else {
+            cache_->mark_dirty(addr);
+            return;
+        }
+    } else {
+        hit = cache_->probe(addr);
+    }
     if (hit) {
         if constexpr (IMPL::INVALIDATE_ON_HIT)
             cache_->invalidate(addr);
     } else {
         // Handle miss.
-        if (write) {
-            if constexpr (IMPL::WRITE_ALLOCATE)
-                next_->warmup_access(addr, false);
-        } else {
-            next_->warmup_access(addr, false);
-        }
+        next_->warmup_access(addr, false);
         // Do fill.
         if constexpr (!IMPL::INVALIDATE_ON_HIT) {
             auto res = cache_->fill(addr);

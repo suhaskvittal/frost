@@ -73,6 +73,7 @@ public:
     using io_ptr = std::unique_ptr<IO>;
 
     io_ptr io_;
+    ptwc_array_t  caches_;
 
     const uint8_t coreid_;
 private:
@@ -90,7 +91,6 @@ private:
      * */
     vmem_ptr& vmem_;
 
-    ptwc_array_t  caches_;
     ptw_tracker_t ongoing_walks_;
 public:
     using ptwc_init_params_t = std::tuple<size_t, size_t>;
