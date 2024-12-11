@@ -71,7 +71,7 @@ public:
 
     Cache(void) =default;
 
-    bool probe(uint64_t);
+    bool probe(uint64_t, bool write=false);
     bool mark_dirty(uint64_t);
     /*
      * `num_refs` here corresponds to the number of MSHR/instruction references

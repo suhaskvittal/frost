@@ -37,17 +37,22 @@ enum class DRAMCommandType {
     PRECHARGE
 };
 
-inline bool is_read(DRAMCommandType t)
+inline bool cmd_is_read(DRAMCommandType t)
 {
     return t == DRAMCommandType::READ || t == DRAMCommandType::READ_PRECHARGE;
 }
 
-inline bool is_write(DRAMCommandType t)
+inline bool cmd_is_write(DRAMCommandType t)
 {
     return t == DRAMCommandType::WRITE || t == DRAMCommandType::WRITE_PRECHARGE;
 }
 
-inline bool is_autopre(DRAMCommandType t)
+inline bool cmd_is_cas(DRAMCommandType t)
+{
+    return cmd_is_read(t) || cmd_is_write(t);
+}
+
+inline bool cmd_is_autopre(DRAMCommandType t)
 {
     return t == DRAMCommandType::READ_PRECHARGE || t == DRAMCommandType::WRITE_PRECHARGE;
 }
@@ -152,6 +157,10 @@ private:
     sel_cmd_t frfcfs(void);
 
     DRAMBank& get_bank(uint64_t);
+
+    void bank_update_act(DRAMBank&, uint64_t row);
+    void bank_update_cas(DRAMBank&, bool is_read, bool autopre);
+    void bank_update_pre(DRAMBank&);
 };
 
 ////////////////////////////////////////////////////////////////////////////

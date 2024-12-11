@@ -29,7 +29,7 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
     bool hit;
     if (write) {
         if (IMPL::WRITE_ALLOCATE) {
-            hit = cache_->mark_dirty(addr);
+            hit = cache_->probe(addr, true);
         } else {
             cache_->mark_dirty(addr);
             return;
@@ -46,12 +46,14 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
         // Do fill.
         if constexpr (!IMPL::INVALIDATE_ON_HIT) {
             auto res = cache_->fill(addr, 1);
+            if constexpr (IMPL::WRITE_ALLOCATE)
+                cache_->mark_dirty(addr);
             if (res.has_value()) {
                 CacheEntry& e = res.value();
                 if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
                     next_->cache_->fill(e.address, 1);
                 if (e.dirty)
-                    next_->warmup_access(addr, true);
+                    next_->warmup_access(e.address, true);
             }
         }
     }
@@ -193,19 +195,16 @@ __TEMPLATE_CLASS__::next_access()
         else
             handle_miss(t);
     } else {
-        // If this cache is invalidate on hit, we must fill first.
-        if constexpr (IMPL::INVALIDATE_ON_HIT)
-            cache_->fill(t.address, 1);
         // Mark the line in the cache as dirty. If `WRITE_ALLOCATE` is
         // specified (i.e. for the L1D$, then on a write miss, install
         // an MSHR entry).
-        bool write_hit = cache_->mark_dirty(t.address);
         if constexpr (IMPL::WRITE_ALLOCATE) {
             ++s_accesses_[t.coreid];
-            if (!write_hit)
+            if (!cache_->probe(t.address, true))
                 handle_miss(t, true);
+        } else {
+            cache_->mark_dirty(t.address);
         }
-        io_->add_outgoing(t, 0);
     }
 }
 

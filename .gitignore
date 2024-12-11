@@ -12,4 +12,5 @@ config/__pycache__
 config/__pycache__/*
 TRACES/
 TRACES/*
-
+out
+out/*

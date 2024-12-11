@@ -14,7 +14,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::probe(uint64_t addr)
+__TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
 {
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return true;
@@ -29,6 +29,7 @@ __TEMPLATE_CLASS__::probe(uint64_t addr)
         return false;
     } else {
         update(*it);
+        it->dirty = write;
         return true;
     }
 }
@@ -51,7 +52,6 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
     if (it == s.end()) {
         return false;
     } else {
-        update(*it);
         it->dirty = true;
         return true;
     }

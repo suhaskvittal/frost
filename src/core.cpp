@@ -324,16 +324,20 @@ Core::operate_rob()
 
         if (GL_CYCLE < inst->cycle_done) {
             if (GL_CYCLE - inst->cycle_rob_head > DEADLOCK_CYCLES) {
-                uint64_t loads_remaining = std::count_if(inst->loads.begin(), inst->loads.end(),
-                                                    [] (Memop x) { return x.state != AccessState::DONE; });
+                uint64_t loads_remaining = inst->loads.size() 
+                                            - inst->num_loads_in_state[static_cast<int>(AccessState::DONE)];
+                uint64_t stores_remaining = inst->stores.size()
+                                            - inst->num_stores_in_state[static_cast<int>(AccessState::IN_CACHE)];
 
                 std::cerr << "\ncore: rob deadlock @ cycle = " << GL_CYCLE
                         << " for instruction #" << inst->inst_num
                         << ", ip = " << inst->ip
                         << " in core " << coreid_+0 << "\n"
+                        << "\tcycle done = " << inst->cycle_done << "\n"
                         << "\tloads = " << inst->loads.size() << "\n"
                         << "\tstores = " << inst->stores.size() << "\n"
-                        << "\tloads remaining = " << loads_remaining << "\n";
+                        << "\tloads remaining = " << loads_remaining << "\n"
+                        << "\tstores remaining = " << stores_remaining << "\n";
                 L1D_->deadlock_find_inst(inst);
                 L2_->deadlock_find_inst(inst);
                 GL_LLC->deadlock_find_inst(inst);
