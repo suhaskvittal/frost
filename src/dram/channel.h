@@ -39,7 +39,7 @@ enum class DRAMCommandType {
 
 inline bool is_read(DRAMCommandType t)
 {
-    return t == DRAMCommandType::READ || t == DRAMCommandType::WRITE;
+    return t == DRAMCommandType::READ || t == DRAMCommandType::READ_PRECHARGE;
 }
 
 inline bool is_write(DRAMCommandType t)

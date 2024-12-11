@@ -77,7 +77,7 @@ void
 DRAMChannel::tick()
 {
     // Update FAW:
-    while (!faw_.empty() && faw_.front() <= GL_DRAM_CYCLE + tFAW)
+    while (!faw_.empty() && GL_DRAM_CYCLE >= faw_.front() + tFAW)
         faw_.pop_front();
 
     if (GL_DRAM_CYCLE >= next_ref_cycle_) {
@@ -102,13 +102,10 @@ DRAMChannel::tick()
             ++s_refreshes_;
         }
     } else {
-        // Cannot proceed if we are blocked by REF.
-        if (GL_DRAM_CYCLE < ref_done_cycle_)
-            return;
-        // Otherwise, pretty straightforward:
-        issue_next_cmd();
-        schedule_next_cmd();
+        if (GL_DRAM_CYCLE >= ref_done_cycle_)
+            issue_next_cmd();
     }
+    schedule_next_cmd();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -210,7 +207,7 @@ DRAMChannel::update_timing(const DRAMCommand& cmd)
         break;
     case DRAMCommandType::ACTIVATE:
         update(b.cas_ok_cycle_, tRCD);
-        update(b.pre_ok_cycle_, tRP);
+        update(b.pre_ok_cycle_, tRAS);
         b.open_row_ = dram_row(cmd.trans.address);
         ++s_activates_;
         break;
