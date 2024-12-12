@@ -10,6 +10,10 @@ def get_name(suite, filename):
         left, right = filename.find('.')+1, filename.find('_s')
     elif suite == 'ligra':
         return filename
+    elif suite == 'stream':
+        left, right = 0, filename.find('.')
+    elif suite == 'parsec':
+        return filename
     return filename[left:right]
 
 suite = argv[1]

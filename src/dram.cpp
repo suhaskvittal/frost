@@ -94,8 +94,13 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(row_buffer_hits)
 
     VecStat<double, DRAM_CHANNELS> rbhr;
-    for (size_t i = 0; i < DRAM_CHANNELS; i++)
+    VecStat<uint64_t, DRAM_CHANNELS> write_blocked_cycles;
+
+    for (size_t i = 0; i < DRAM_CHANNELS; i++) {
         rbhr[i] = mean(vec_row_buffer_hits[i], vec_reads[i]+vec_writes[i]);
+        write_blocked_cycles[i] = channels_[i]->io_->s_blocking_writes_;
+    }
+    VecStat<double, DRAM_CHANNELS> write_blocked_prop = mean(write_blocked_cycles, GL_DRAM_CYCLE);
 
     out << BAR << "\n";
 
@@ -106,7 +111,10 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "NUM_REFRESH", vec_refreshes);
     print_vecstat(out, "DRAM", "NUM_PREDEMAND", vec_pre_demand);
     print_vecstat(out, "DRAM", "ROW_BUFFER_HITS", vec_row_buffer_hits);
+
     print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr, VecAccMode::HMEAN);
+    print_vecstat(out, "DRAM", "WRITE_BLOCKED_CYCLES", write_blocked_cycles, VecAccMode::AMEAN);
+    print_vecstat(out, "DRAM", "WRITE_BLOCKED_FRACTION", write_blocked_prop, VecAccMode::GMEAN);
 }
 
 ////////////////////////////////////////////////////////////////////////////

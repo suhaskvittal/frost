@@ -130,9 +130,11 @@ print_cache_stats_for_core(Core* c, const std::unique_ptr<CACHE>& cache, std::os
 
     double apki = mean(accesses, inst) * 1000.0,
            mpki = mean(misses, inst) * 1000.0;
-    double miss_penalty = mean(cache->s_tot_penalty_.at(id), cache->s_num_penalty_.at(id));
+    double miss_penalty = misses == 0 ? 0.0 : mean(cache->s_tot_penalty_.at(id), cache->s_num_penalty_.at(id));
     double miss_rate = mean(misses, accesses);
     double aat = CACHE::CACHE_LATENCY * (1-miss_rate) + miss_penalty*miss_rate;
+
+    uint64_t write_blocked_cycles = cache->io_->s_blocking_writes_ / CACHE::NUM_RW_PORTS;
 
     out << std::setw(16) << std::left << header
         << std::setw(16) << std::left << accesses
@@ -145,6 +147,7 @@ print_cache_stats_for_core(Core* c, const std::unique_ptr<CACHE>& cache, std::os
         << std::setw(16) << std::left << std::setprecision(3) << aat
         << std::setw(16) << std::left << std::setprecision(3) << miss_penalty
         << std::setw(16) << std::left << cache->s_writebacks_
+        << std::setw(16) << std::left << write_blocked_cycles
         << "\n";
 }
 
@@ -177,6 +180,7 @@ Core::checkpoint_stats()
         << std::setw(16) << std::left << "AAT"
         << std::setw(16) << std::left << "MISS_PENALTY"
         << std::setw(16) << std::left << "WRITEBACKS"
+        << std::setw(16) << std::left << "WRITE_BLOCKED"
         << "\n" << BAR << "\n";
 
     print_cache_stats_for_core(this, L1I_, stats_stream_, header + "_L1I$");

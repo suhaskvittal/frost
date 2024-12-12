@@ -1,5 +1,4 @@
-/*
- *  author: Suhas Vittal
+/* author: Suhas Vittal
  *  date:   3 December 2024
  * */
 
@@ -46,6 +45,8 @@ public:
      * will manipulate the outputs.
      * */
     out_queue_t outgoing_queue_;
+
+    uint64_t s_blocking_writes_ =0;
     /*
      * Queue sizes for each of the input queues.
      * */
@@ -128,6 +129,10 @@ IOBus::get_next_incoming(PRED pred)
 
             dec_pending(pending_writes_, w_it->address);
             --writes_to_drain_;
+
+            if (!read_queue_.empty() || !prefetch_queue_.empty())
+                ++s_blocking_writes_;
+
             write_queue_.erase(w_it);
         } else if (!write_queue_.empty()) {
             writes_to_drain_ = 0;  // Cannot proceed with writes -- might as well switch back to reads.
