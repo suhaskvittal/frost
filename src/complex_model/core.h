@@ -7,6 +7,8 @@
 
 #include "constants.h"
 #include "instruction.h"
+#include "trace/fmt.h"
+#include "trace/reader.h"
 
 #include <array>
 #include <deque>
@@ -33,10 +35,6 @@ struct Latch
 struct L1ICache;
 struct L1DCache;
 struct L2Cache;
-/*
- * Defined in `trace/reader.h`
- * */
-class TraceReader;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -61,7 +59,7 @@ private:
     using ftb_t = std::deque<iptr_t>;
     using rob_t = std::deque<iptr_t>;
 
-    using tracereader_t = std::unique_ptr<TraceReader>;
+    using tracereader_t = TraceReader<ChampsimTraceFormat>;
     /*
      * Caches: we will tie them together in the constructor.
      * */

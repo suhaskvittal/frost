@@ -39,8 +39,8 @@ cache_name(std::string base, uint8_t coreid)
 
 Core::Core(uint8_t coreid, std::string trace_file)
     :coreid_(coreid),
-    trace_file(trace_file),
-    trace_reader_(new TraceReader(trace_file))
+    trace_file_(trace_file),
+    trace_reader_(trace_file)
 {
     // Initialize caches.
     L2_ = l2_ptr(new L2Cache(cache_name("L2", coreid), GL_LLC));
@@ -417,7 +417,7 @@ Core::operate_caches()
 iptr_t
 Core::next_inst(bool warmup)
 {
-    iptr_t inst = iptr_t(new Instruction(inst_num_, trace_reader_->read())); 
+    iptr_t inst = iptr_t(new Instruction(inst_num_, trace_reader_())); 
     if (!warmup)
         ++inst_num_;
     // Tag the ip, load, and store addresses with the coreid.

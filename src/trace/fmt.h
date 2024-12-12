@@ -3,19 +3,17 @@
  *  date:   27 November 2024
  * */
 
-#ifndef TRACE_DATA_h
-#define TRACE_DATA_h
-
-#include "branch.h"
+#ifndef TRACE_FMT_h
+#define TRACE_FMT_h
 
 #include <cstdint>
 #include <cstddef>
-#include <vector>
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-struct ChampSimTraceFormat {
+struct ChampsimTraceFormat
+{
     constexpr static uint8_t R_SP = 6;
     constexpr static uint8_t R_CC = 25;
     constexpr static uint8_t R_IP = 26;
@@ -35,28 +33,14 @@ struct ChampSimTraceFormat {
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-struct TraceData {
-    uint64_t ip;
-    bool branch_taken;
-    BranchType branch_type =BranchType::INVALID;
-
-    std::vector<uint8_t> dst_regs;
-    std::vector<uint8_t> src_regs;
-    std::vector<uint64_t> dst_mem;
-    std::vector<uint64_t> src_mem;
-        
-    bool reads_sp =false;
-    bool writes_sp =false;
-    bool reads_ip =false;
-    bool writes_ip =false;
-    bool reads_cc =false;
-    bool reads_other =false;
-
-    TraceData(const ChampSimTraceFormat&);
+struct MemsimTraceFormat
+{
+    char inst_num[5];
+    char is_write;
+    char v_lineaddr[4];
 };
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-#endif  // TRACE_DATA_h
-
+#endif  // TRACE_FMT_h

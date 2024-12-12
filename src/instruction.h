@@ -8,6 +8,7 @@
 
 #include "branch.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <limits>
@@ -17,8 +18,8 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-class TraceData;
-class L1DCache;
+class ChampsimTraceFormat;
+class MemsimTraceFormat;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -83,8 +84,14 @@ struct Instruction
     uint64_t cycle_rob_head = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_done = std::numeric_limits<uint64_t>::max();
     bool retired =false;
-
-    Instruction(uint64_t inum, TraceData);
+    /*
+     * We need to specify a constructor for each trace format.
+     * We also provide an additional constructor that only takes
+     * an instruction number for dummy instructions.
+     * */
+    Instruction(uint64_t inst_num);
+    Instruction(uint64_t inst_num, const ChampsimTraceFormat&);
+    Instruction(const MemsimTraceFormat&);
 
     bool is_mem_inst(void) const;
     bool is_done(void) const;

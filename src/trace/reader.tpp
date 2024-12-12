@@ -3,8 +3,6 @@
  *  date:   26 November 2024
  * */
 
-#include "trace/reader.h"
-
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -12,7 +10,14 @@
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-TraceReader::TraceReader(std::string filename)
+#define __TEMPLATE_HEADER__ template <class TRACE_FORMAT>
+#define __TEMPLATE_CLASS__ TraceReader<TRACE_FORMAT>
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__
+__TEMPLATE_CLASS__::TraceReader(std::string filename)
     :filename_(filename),
     type_( filename.find(".xz") != std::string::npos ? TraceType::XZ : TraceType::GZ )
 {
@@ -33,7 +38,8 @@ TraceReader::TraceReader(std::string filename)
     }
 }
 
-TraceReader::~TraceReader()
+__TEMPLATE_HEADER__
+__TEMPLATE_CLASS__::~TraceReader()
 {
     if (type_ == TraceType::XZ) {
         lzma_end(&xz_strm_);
@@ -47,31 +53,32 @@ TraceReader::~TraceReader()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-TraceData
-TraceReader::read()
+__TEMPLATE_HEADER__ TRACE_FORMAT&
+__TEMPLATE_CLASS__::operator()()
 {
     memset(&blk_, 0, sizeof(blk_));
-    if (type_ == TraceType::XZ) xz_read();
-    else                        gz_read();
-    return TraceData(blk_);
+    if (type_ == TraceType::XZ)
+        xz_read();
+    else
+        gz_read();
+    return blk_;
 }
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-void
-TraceReader::gz_read()
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::gz_read()
 {
     gzread(gz_fin_, &blk_, sizeof(blk_));
-    if (gzeof(gz_fin_)) {
+    if (gzeof(gz_fin_))
         eof_ = true;
-    }
 }
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-void
+inline void
 handle_xz_error(lzma_ret r)
 {
     std::cerr << "xz: ";
@@ -97,16 +104,15 @@ handle_xz_error(lzma_ret r)
     exit(1);
 }
 
-void
-TraceReader::xz_read()
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::xz_read()
 {
     xz_strm_.next_out = (uint8_t*)&blk_;
     xz_strm_.avail_out = sizeof(blk_);
 
     while (xz_strm_.avail_out > 0) {
-        if (xz_strm_.avail_in == 0 && !eof_) {
+        if (xz_strm_.avail_in == 0 && !eof_)
             xz_get_next_chunk();
-        }
         lzma_ret r = lzma_code(&xz_strm_, eof_ ? LZMA_FINISH : LZMA_RUN);
         if (r != LZMA_OK) {
             if (r == LZMA_STREAM_END)
@@ -120,8 +126,8 @@ TraceReader::xz_read()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-void
-TraceReader::xz_get_next_chunk()
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::xz_get_next_chunk()
 {
     // Read next 1K bytes from file. 
     size_t num_bytes_read = fread(xz_buf_, 1, CHUNK_SIZE, xz_fin_);
@@ -133,6 +139,12 @@ TraceReader::xz_get_next_chunk()
     xz_strm_.avail_in = num_bytes_read;
     eof_ = feof(xz_fin_);
 }
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+#undef __TEMPLATE_HEADER__
+#undef __TEMPLATE_CLASS__
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////

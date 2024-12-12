@@ -5,8 +5,6 @@
 #ifndef TRACE_READER_h
 #define TRACE_READER_h
 
-#include "trace/data.h"
-
 #include <cstdio>
 #include <string>
 #include <string_view>
@@ -22,6 +20,7 @@ enum class TraceType { XZ, GZ };
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
+template <class TRACE_FORMAT>
 class TraceReader
 {
 public:
@@ -41,18 +40,23 @@ private:
     FILE*       xz_fin_;
     char*       xz_buf_;
 
-    ChampSimTraceFormat blk_;
+    TRACE_FORMAT blk_;
 public:
     TraceReader(std::string);
     ~TraceReader(void);
 
-    TraceData read(void);
+    TRACE_FORMAT& operator()(void);
 private:
     void gz_read(void);
     void xz_read(void);
 
     void xz_get_next_chunk(void);
 };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+#include "reader.tpp"
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
