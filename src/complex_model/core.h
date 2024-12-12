@@ -1,12 +1,12 @@
-/*
- *  author: Suhas Vittal
+/* author: Suhas Vittal
  *  date:   4 December 2024
  * */
 
-#ifndef CORE_h
-#define CORE_h
+#ifndef COMPLEX_MODEL_CORE_h
+#define COMPLEX_MODEL_CORE_h
 
-#include "core/instruction.h"
+#include "constants.h"
+#include "instruction.h"
 
 #include <array>
 #include <deque>
@@ -129,28 +129,10 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-/*
- * Generic function handles drains from `c`. This is provided as a template function
- * due to the common pattern used below.
- * */
-template <class CACHE_TYPE, class DRAIN_CALLBACK>
-void drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>& c, const DRAIN_CALLBACK& handle_drain)
-{
-    // Need to make sure queue is drained at the appropriate time (hence the second check).
-    auto& out_queue = c->io_->outgoing_queue_;
-    while (!out_queue.empty()) {
-        auto& [t, cycle_done] = out_queue.top();
-        if (GL_CYCLE < cycle_done)
-            return;
-        handle_drain(t);
-        out_queue.pop();
-    }
-}
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void drain_llc_outgoing_queue(void);
+void inst_dtlb_access(iptr_t&, uint8_t coreid);
+void inst_dtlb_done(iptr_t&, uint64_t vpn, uint64_t pfn);
+void inst_dcache_access(iptr_t&, uint8_t coreid, std::unique_ptr<L1DCache>&);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

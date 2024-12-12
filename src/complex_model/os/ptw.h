@@ -5,8 +5,8 @@
 #ifndef OS_PTW_h
 #define OS_PTW_h
 
-#include "os/vmem.h"
-#include "os/ptw/cache.h"
+#include "complex_model/os/vmem.h"
+#include "complex_model/os/ptw/cache.h"
 #include "util/numerics.h"
 
 #include <array>

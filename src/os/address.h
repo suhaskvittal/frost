@@ -7,7 +7,7 @@
 #define OS_ADDRESS_h
 
 #include "constants.h"
-#include "os/vmem.h"
+#include "complex_model/os/vmem.h"
 #include "util/numerics.h"
 
 ////////////////////////////////////////////////////////////////////////////

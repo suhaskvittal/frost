@@ -8,9 +8,9 @@
 #include "globals.h"
 #include "sim.h"
 
-#include "core.h"
+#include "complex_model/core.h"
+#include "complex_model/os.h"
 #include "dram.h"
-#include "os.h"
 #include "util/argparse.h"
 
 ////////////////////////////////////////////////////////////////////////////

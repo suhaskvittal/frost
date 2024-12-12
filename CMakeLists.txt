@@ -32,26 +32,32 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(SIM_FILES
-    src/core.cpp
-    src/core/instruction.cpp
+set(COMPLEX_CORE_MODEL_FILES
+    src/complex_model/core.cpp
+    src/complex_model/os.cpp
+    src/complex_model/os/ptw/cache.cpp
+    src/complex_model/os/ptw.cpp
+    src/complex_model/os/vmem.cpp)
+
+set(MAIN_SIM_FILES
     src/dram.cpp
     src/dram/channel.cpp
+    src/instruction.cpp
     src/io_bus.cpp
-    src/os.cpp
-    src/os/ptw.cpp
-    src/os/ptw/cache.cpp
-    src/os/vmem.cpp
+    src/os/free_list.cpp
     src/trace/data.cpp
     src/trace/reader.cpp
     src/transaction.cpp
     src/util/argparse.cpp
     # Generated files
-    _generated/${BUILD_ID}/sim.cpp)
+    _generated/${BUILD_ID}/sim.cpp
+    # CORE MODEL FILES)
+    ${COMPLEX_CORE_MODEL_FILES})
+
 find_package(ZLIB)
 find_package(LibLZMA)
 
-add_executable(sim src/main.cpp ${SIM_FILES})
+add_executable(sim src/main.cpp ${MAIN_SIM_FILES})
 target_compile_options(sim PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(sim PRIVATE "src" "_generated/${BUILD_ID}")
 target_link_libraries(sim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)

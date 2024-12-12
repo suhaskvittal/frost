@@ -3,8 +3,8 @@
  *  date:   8 December 2024
  * */
 
-#include "os.h"
-#include "os/vmem.h"
+#include "complex_model/os.h"
+#include "complex_model/os/vmem.h"
 #include "util/numerics.h"
 
 #include <algorithm>
@@ -96,7 +96,7 @@ pte_ptr
 VirtualMemory::make_new_pte()
 {
     pte_ptr e = pte_ptr(new PageTableEntry);
-    e->pfn = GL_OS->get_and_reserve_free_page_frame();
+    e->pfn = GL_OS->free_list_.get_and_reserve_free_page_frame();
     return e;
 }
 

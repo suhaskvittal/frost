@@ -91,6 +91,11 @@ fr'''{AUTOGEN_HEADER}
 #include <string>
 #include <string_view>
 
+// Include specific core model files here:
+#include "complex_model/core.h"
+#include "complex_model/os.h"
+#include "dram.h"
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /*
@@ -130,10 +135,7 @@ fr'''{AUTOGEN_HEADER}
 #include "globals.h"
 #include "memsys.h"
 
-#include "core.h"
-#include "dram.h"
 #include "dram/address.h"
-#include "os.h"
 
 #include <sstream>
 

@@ -6,7 +6,7 @@
 #ifndef TRACE_DATA_h
 #define TRACE_DATA_h
 
-#include "core/branch.h"
+#include "branch.h"
 
 #include <cstdint>
 #include <cstddef>

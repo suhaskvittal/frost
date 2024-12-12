@@ -6,9 +6,10 @@
 #include "globals.h"
 #include "memsys.h"
 
-#include "core.h"
-#include "os.h"
+#include "complex_model/core.h"
+#include "complex_model/os.h"
 #include "trace/reader.h"
+#include "os/address.h"
 #include "util/stats.h"
 
 #include <iostream>
@@ -30,35 +31,6 @@ LINEADDR(uint64_t byteaddr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr size_t COREID_TAG_OFFSET = 52;
-
-inline void
-tag_with_coreid(uint64_t& addr, uint8_t coreid)
-{
-    addr |= static_cast<uint64_t>(coreid) << COREID_TAG_OFFSET;
-}
-
-inline void
-tag_all_with_coreid(std::vector<uint64_t>& mem, uint8_t coreid)
-{
-    std::for_each(mem.begin(), mem.end(), 
-            [coreid] (uint64_t& addr)
-            {
-                tag_with_coreid(addr, coreid);
-            });
-}
-
-inline uint8_t
-untag_coreid(uint64_t& addr)
-{
-    uint8_t coreid = static_cast<uint8_t>(addr >> COREID_TAG_OFFSET);
-    addr &= (1L<<COREID_TAG_OFFSET)-1;
-    return coreid;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 inline std::string
 cache_name(std::string base, uint8_t coreid)
 {
@@ -67,6 +39,7 @@ cache_name(std::string base, uint8_t coreid)
 
 Core::Core(uint8_t coreid, std::string trace_file)
     :coreid_(coreid),
+    trace_file(trace_file),
     trace_reader_(new TraceReader(trace_file))
 {
     // Initialize caches.
@@ -90,11 +63,11 @@ Core::tick_warmup()
     // Now do data access
     for (Memop& x : inst->loads) {
         x.p_lineaddr = GL_OS->warmup_translate_ldst(this->coreid_, x.v_lineaddr);
-        this->L1D_->warmup_access(x.p_lineaddr, false);
+        L1D_->warmup_access(x.p_lineaddr, false);
     }
     for (Memop& x : inst->stores) {
         x.p_lineaddr = GL_OS->warmup_translate_ldst(this->coreid_, x.v_lineaddr);
-        this->L1D_->warmup_access(x.p_lineaddr, true);
+        L1D_->warmup_access(x.p_lineaddr, true);
     }
 }
 
@@ -391,11 +364,10 @@ Core::operate_caches()
             {
                 for (auto inst : t.inst_list) {
                     if (inst->retired) {
-                        uint8_t coreid = untag_coreid(inst->ip);
                         std::cerr << "\ncore: L1i$ zombie wakeup @ cycle = " << GL_CYCLE
                                 << " to instruction #" << inst->inst_num
                                 << ", ip = " << inst->ip 
-                                << " in core " << coreid+0 << "\n";
+                                << " in core " << t.coreid+0 << "\n";
                         exit(1);
                     }
                     inst->ip_state = AccessState::DONE;
@@ -413,11 +385,10 @@ Core::operate_caches()
 
                 for (auto inst : t.inst_list) {
                     if (inst->retired) {
-                        uint8_t coreid = untag_coreid(inst->ip);
                         std::cerr << "\ncore: L1d$ zombie wakeup @ cycle = " << GL_CYCLE
                                 << " to instruction #" << inst->inst_num
                                 << ", ip = " << inst->ip 
-                                << ", in core " << coreid+0 << "\n"
+                                << ", in core " << t.coreid+0 << "\n"
                                 << "\tpip = " << inst->pip << "\n"
                                 << "\tload to address: " << t.address << "\n"
                                 << "\tnum loads = " << inst->loads.size() << "\n"
@@ -451,6 +422,73 @@ Core::next_inst(bool warmup)
         ++inst_num_;
     // Tag the ip, load, and store addresses with the coreid.
     return inst;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+inst_dtlb_access(iptr_t& inst, uint8_t coreid)
+{
+    auto func = [inst, coreid] (Instruction::memop_list_t& v)
+    {
+        for (Memop& x : v) {
+            if (x.state == AccessState::NOT_READY && GL_OS->translate_ldst(coreid, inst, x.v_lineaddr))
+                x.state = AccessState::IN_TLB;
+        }
+    };
+    
+    inst_do_func_dependent_on_state<AccessState::IN_TLB>(inst, func);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+inst_dtlb_done(iptr_t& inst, uint64_t vpn, uint64_t pfn)
+{
+    auto func = [match_vpn=vpn, pfn] (Instruction::memop_list_t& v)
+    {
+        for (Memop& x : v) {
+            if (x.state == AccessState::IN_TLB) {
+                const auto [vpn, offset] = split_address<LINESIZE>(x.v_lineaddr);
+                x.p_lineaddr = join_address<LINESIZE>(pfn, offset);
+                x.state = AccessState::READY;
+            }
+        }
+    };
+
+    inst_do_func_dependent_on_state<AccessState::READY>(inst, func);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <TransactionType TTYPE> inline void
+do_ldst(iptr_t& inst,
+        uint8_t coreid,
+        std::unique_ptr<L1DCache>& cache,
+        Instruction::memop_state_array_t& st,
+        Instruction::memop_list_t& v)
+{
+    inst_do_func_dependent_on_state<AccessState::IN_CACHE>(st, v, 
+            [inst, coreid, c=cache.get()] (Instruction::memop_list_t& v)
+            {
+                for (Memop& x : v) {
+                    if (x.state == AccessState::READY) {
+                        Transaction trans(coreid, inst, TTYPE, x.p_lineaddr);
+                        if (c->io_->add_incoming(trans))
+                            x.state = AccessState::IN_CACHE;
+                    }
+                }
+            });
+}
+
+void
+inst_dcache_access(iptr_t& inst, uint8_t coreid, std::unique_ptr<L1DCache>& cache)
+{
+    do_ldst<TransactionType::READ>(inst, coreid, cache, inst->num_loads_in_state, inst->loads);
+    do_ldst<TransactionType::WRITE>(inst, coreid, cache, inst->num_stores_in_state, inst->stores);
 }
 
 ////////////////////////////////////////////////////////////////////////////

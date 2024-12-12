@@ -3,10 +3,10 @@
  *  date:   4 December 2024
  * */
 
-#ifndef CORE_INSTRUCTION_h
-#define CORE_INSTRUCTION_h
+#ifndef INSTRUCTION_h
+#define INSTRUCTION_h
 
-#include "core/branch.h"
+#include "branch.h"
 
 #include <array>
 #include <cstdint>
@@ -97,10 +97,34 @@ using iptr_t = std::shared_ptr<Instruction>;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+/*
+ * These functions here are very useful for implementing functions with
+ * state updates, such as cache accesses (on success -- want to indicate
+ * that the access is unneeded).
+ *
+ * As shown, the function given only executes if any entry is not
+ * in `STATE`.
+ * */
+template <AccessState STATE, class FUNC> void
+inst_do_func_dependent_on_state(Instruction::memop_state_array_t& st, Instruction::memop_list_t& v, const FUNC& func)
+{
+    constexpr size_t N = static_cast<size_t>(STATE);
+    if (st[N] < v.size()) {
+        func(v);
+        st[N] = std::count_if(v.begin(), v.end(),
+                        [] (const Memop& x)
+                        {
+                            return static_cast<size_t>(x.state) >= N;
+                        });
+    }
+}
 
-void inst_dtlb_access(iptr_t&, uint8_t coreid);
-void inst_dtlb_done(iptr_t&, uint64_t vpn, uint64_t pfn);
-void inst_dcache_access(iptr_t&, uint8_t coreid, std::unique_ptr<L1DCache>&);
+template <AccessState STATE, class FUNC> void
+inst_do_func_dependent_on_state(iptr_t& inst, const FUNC& func)
+{
+    inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_loads_in_state, inst->loads, func);
+    inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_stores_in_state, inst->stores, func);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

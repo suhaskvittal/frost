@@ -6,7 +6,7 @@
 #include "constants.h"
 #include "globals.h"
 
-#include "os/ptw/cache.h"
+#include "complex_model/os/ptw/cache.h"
 #include "util/numerics.h"
 
 #include <algorithm>

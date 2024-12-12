@@ -53,7 +53,7 @@ f'''{AUTOGEN_HEADER}
 
 #include "cache/control.h"
 #include "dram.h"
-#include "os/ptw.h"
+#include "complex_model/os/ptw.h"
 
 #include <memory>
 

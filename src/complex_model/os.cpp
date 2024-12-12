@@ -6,12 +6,12 @@
 #include "globals.h"
 #include "memsys.h"
 
-#include "core.h"
-#include "os.h"
-#include "os/address.h"
-#include "os/ptw.h"
-#include "os/vmem.h"
+#include "complex_model/core.h"
+#include "complex_model/os.h"
+#include "complex_model/os/ptw.h"
+#include "complex_model/os/vmem.h"
 #include "transaction.h"
+#include "os/address.h"
 #include "util/stats.h"
 
 #include <iostream>
@@ -23,7 +23,7 @@ OS::OS(ptwc_init_list_t ptwc_init)
 {
     for (size_t i = 0; i < NUM_THREADS; i++) {
         // Initialize virtual memory and PTWs
-        vmem_[i] = vmem_ptr(new VirtualMemory(get_and_reserve_free_page_frame()));
+        vmem_[i] = vmem_ptr(new VirtualMemory(free_list_.get_and_reserve_free_page_frame()));
         ptw_[i] = ptw_ptr(new PageTableWalker(
                                 static_cast<uint8_t>(i),
                                 L2TLB_[i],
@@ -126,38 +126,11 @@ OS::translate_ldst(uint8_t coreid, iptr_t inst, uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-uint64_t
-OS::get_and_reserve_free_page_frame()
-{
-    ++s_page_faults_;
-    for (size_t i = 0; i < 2048; i++) {
-        size_t pfn = fast_mod<NUM_PAGE_FRAMES>(rng());
-        size_t ii = pfn >> 6,
-               jj = pfn & 0x3f;
-        bool is_taken = free_page_frames_[ii] & (1L << jj);
-        if (!is_taken) {
-            free_page_frames_[ii] |= (1L << jj);
-            return pfn;
-        }
-    }
-    size_t num_free = std::accumulate(free_page_frames_.begin(), free_page_frames_.end(), 0ull,
-                                        [] (uint64_t x, uint64_t y)
-                                        {
-                                            return x + __builtin_popcount(~y);
-                                        });
-    std::cerr << "os: failed to find free page frame, free page frames: " << num_free
-        << ", total = " << NUM_PAGE_FRAMES << "\n";
-    exit(1);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 void
 OS::print_stats(std::ostream& out)
 {
     out << BAR << "\n";
-    print_stat(out, "OS", "PAGE_FAULTS", s_page_faults_);
+    print_stat(out, "OS", "PAGE_FAULTS", free_list_.s_page_faults_);
     out << BAR << "\n";
     // Print out stats of page table walker caches.
     out << std::setw(12) << std::left << "PTW$";

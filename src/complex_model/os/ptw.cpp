@@ -4,9 +4,9 @@
  * */
 
 #include "memsys.h"
-#include "os/ptw.h"
-#include "os/ptw/cache.h"
-#include "os/vmem.h"
+#include "complex_model/os/ptw.h"
+#include "complex_model/os/ptw/cache.h"
+#include "complex_model/os/vmem.h"
 #include "transaction.h"
 
 #include <algorithm>
