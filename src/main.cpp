@@ -8,9 +8,6 @@
 #include "globals.h"
 #include "sim.h"
 
-#include "complex_model/core.h"
-#include "complex_model/os.h"
-#include "dram.h"
 #include "util/argparse.h"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -69,8 +66,7 @@ int main(int argc, char* argv[])
 
     bool all_done;
     do {
-        if (GL_CYCLE % 100'000 == 0)
-            print_progress(std::cout);
+        print_progress(std::cout);
 
         GL_DRAM->tick();
         GL_LLC->tick();

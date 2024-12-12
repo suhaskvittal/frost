@@ -84,6 +84,8 @@ struct Instruction
     uint64_t cycle_rob_head = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_done = std::numeric_limits<uint64_t>::max();
     bool retired =false;
+
+    size_t rob_refs =1;
     /*
      * We need to specify a constructor for each trace format.
      * We also provide an additional constructor that only takes

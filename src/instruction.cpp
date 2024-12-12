@@ -24,7 +24,8 @@ Instruction::Instruction(uint64_t i)
 
 Instruction::Instruction(uint64_t inst_num, const ChampsimTraceFormat& blk)
     :inst_num(inst_num),
-    ip(blk.ip)
+    ip(blk.ip),
+    branch_taken(blk.branch_taken)
 {
     std::vector<uint64_t> dst_regs,
                           src_regs;

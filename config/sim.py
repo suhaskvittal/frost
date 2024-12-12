@@ -46,6 +46,8 @@ def get_cache_params(cfg, caches: list[str]) -> str:
 ####################################################################
 
 def write(cfg, build):
+    sim_model = cfg['SYSTEM']['model']
+
     cpu_freq = cfg['CORE']['frequency_ghz']
     dram_freq = cfg['DRAM']['frequency_ghz']
     tCK = 1.0/float(dram_freq)
@@ -69,15 +71,22 @@ def write(cfg, build):
 
     # OS params:
     ptwc_params = ''
-    pt_levels = int(cfg['OS']['levels'])
-    for i in range(1, pt_levels):
-        sw = cfg['OS'][f'ptwc_{i}_sw']
-        dat = sw.split(':')
-        sets, ways = int(dat[0]), int(dat[1])
-        if i > 1:
-            ptwc_params += ', '
-        ptwc_params += f'{{{sets},{ways}}}'
-    ptwc_params = f'{{ {ptwc_params} }}'
+    if sim_model == 'complex':
+        pt_levels = int(cfg['OS']['levels'])
+        for i in range(1, pt_levels):
+            sw = cfg['OS'][f'ptwc_{i}_sw']
+            dat = sw.split(':')
+            sets, ways = int(dat[0]), int(dat[1])
+            if i > 1:
+                ptwc_params += ', '
+            ptwc_params += f'{{{sets},{ways}}}'
+        ptwc_params = f'{{ {ptwc_params} }}'
+
+    # Progress params:
+    epoch_size = 50_000_000
+    if sim_model == 'complex':
+        epoch_size = 5_000_000
+    dot_size = epoch_size // 50
 
     with open(f'{GEN_DIR}/{build}/sim.h', 'w') as wr:
         wr.write(
@@ -92,8 +101,8 @@ fr'''{AUTOGEN_HEADER}
 #include <string_view>
 
 // Include specific core model files here:
-#include "complex_model/core.h"
-#include "complex_model/os.h"
+#include "{sim_model}_model/core.h"
+#include "{sim_model}_model/os.h"
 #include "dram.h"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -268,15 +277,17 @@ print_config(std::ostream& out)
 void
 print_progress(std::ostream& out)
 {{
-    if (GL_CYCLE % 5'000'000 == 0) {{
-        out << "\nCYCLE = " << std::setw(4) << std::left << fmt_bignum(GL_CYCLE)
-            << "[ INST:";
-        for (size_t i = 0; i < NUM_THREADS; i++)
-            out << std::setw(7) << std::right << fmt_bignum(GL_CORES[i]->finished_inst_num_);
-        out << " ]\n\tprogress: ";
+    if (GL_CYCLE % {dot_size} == 0) {{
+        if (GL_CYCLE % {epoch_size} == 0) {{
+            out << "\nCYCLE = " << std::setw(4) << std::left << fmt_bignum(GL_CYCLE)
+                << "[ INST:";
+            for (size_t i = 0; i < NUM_THREADS; i++)
+                out << std::setw(7) << std::right << fmt_bignum(GL_CORES[i]->finished_inst_num_);
+            out << " ]\n\tprogress: ";
+        }}
+        out << ".";
+        out.flush();
     }}
-    out << ".";
-    out.flush();
 }}
 
 ////////////////////////////////////////////////////////////////////////////

@@ -8,6 +8,10 @@
 
 #include "os/free_list.h"
 
+#include <cstdint>
+#include <iosfwd>
+#include <unordered_map>
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -21,8 +25,13 @@ private:
     page_table_t pt_;
 public:
     OS(void) =default;
-    
+    /*
+     * `tick` needs to do nothing. This exists for compatibility.
+     * */ 
+    void tick(void) {}
+
     uint64_t translate_lineaddr(uint64_t, uint8_t coreid);
+    void print_stats(std::ostream&);
 };
 
 ////////////////////////////////////////////////////////////////////////////

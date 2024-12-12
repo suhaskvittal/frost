@@ -6,14 +6,12 @@
 #ifndef SIMPLE_MODEL_CORE_h
 #define SIMPLE_MODEL_CORE_h
 
-#include "core/instruction.h"
+#include "instruction.h"
+#include "trace/fmt.h"
+#include "trace/reader.h"
 
 #include <deque>
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-class TraceReader;
+#include <sstream>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -27,9 +25,10 @@ public:
     const uint8_t coreid_;
 private:
     using rob_t = std::deque<iptr_t>;
-    using tracereader_t = std::unique_ptr<TraceReader>;
+    using tracereader_t = TraceReader<MemsimTraceFormat>;
 
     rob_t rob_;
+    size_t rob_size_ =0;
 
     std::string   trace_file_;
     tracereader_t trace_reader_;
@@ -45,6 +44,9 @@ public:
 
     void tick_warmup(void);
     void tick(void);
+
+    void checkpoint_stats(void);
+    void print_stats(std::ostream&);
 private:
     void ifetch(void);
     void operate_rob(void);
