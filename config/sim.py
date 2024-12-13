@@ -12,11 +12,9 @@ BANK_TIMINGS = [
     'CL','CWL','tRCD','tRP','tRAS','tRTP','tWR'
 ]
 
-CHANNEL_SL_TIMINGS = [
-    'tCCD%s', 'tCCD%s_WR', 'tCCD%s_WTR', 'tCCD%s_RTW', 'tRRD%s'
-]
-
 CHANNEL_TIMINGS = [
+    'tCCD_S', 'tCCD_S_WR', 'tCCD_S_WTR', 'tCCD_S_RTW',
+    'tCCD_L', 'tCCD_L_WR', 'tCCD_L_WTR', 'tCCD_L_RTW',
     'tFAW', 'tRFC', 'tREFI'
 ]
 
@@ -61,11 +59,6 @@ def write(cfg, build):
     bank_timing_calls = '\n\t'.join(f'list_dram(out, \"{t}\", {t});' for t in BANK_TIMINGS)
     channel_timing_calls = '\n\t'.join(f'list_dram(out, \"{t}\", {t});' for t in CHANNEL_TIMINGS)
     # SL timings are a bit more complicated to implement
-    sl_timing_calls = []
-    for t in CHANNEL_SL_TIMINGS:
-        name, tS, tL = t % '_S(L)', t % '_S', t % '_L'
-        sl_timing_calls.append(f'list_dram_sl(out, \"{name}\", {tS}, {tL});')
-    sl_timing_calls = '\n\t'.join(sl_timing_calls)
     dram_page_policy = cfg['DRAM']['page_policy']
     dram_am = cfg['DRAM']['address_mapping']
 
@@ -88,16 +81,6 @@ def write(cfg, build):
         epoch_size = 5_000_000
     dot_size = epoch_size // 50
 
-    # System defines
-    custom_defines = ''
-    defined_values = cfg['SYSTEM']['defines'].split(',')
-    for v in defined_values:
-        dat = v.split('=')
-        if len(dat) == 1:
-            custom_defines += f'#define {dat[0]}\n'
-        else:
-            custom_defines += f'#define {dat[0]}\t{dat[1]}\n'
-
     with open(f'{GEN_DIR}/{build}/sim.h', 'w') as wr:
         wr.write(
 fr'''{AUTOGEN_HEADER}
@@ -115,11 +98,6 @@ fr'''{AUTOGEN_HEADER}
 #include "{sim_model}_model/os.h"
 #include "dram.h"
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-// CUSTOM DEFINE_START
-{custom_defines}
-// CUSTOM_DEFINE_END
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /*
@@ -224,22 +202,6 @@ list_dram(std::ostream& out, std::string_view stat, uint64_t ck)
 }}
 
 void
-list_dram_sl(std::ostream& out, std::string_view stat, uint64_t ckS, uint64_t ckL)
-{{
-    double time_ns_S = ckS * {tCK},
-           time_ns_L = ckL * {tCK};
-    std::stringstream ss;
-    ss << std::setprecision(3) << time_ns_S << "(" << std::setprecision(3) << time_ns_L << ")";
-    std::string nss = ss.str();
-    std::string cks = std::to_string(ckS) + "(" + std::to_string(ckL) + ")";
-
-    out << std::setw(24) << std::left << stat
-        << std::setw(12) << std::left << nss
-        << std::setw(12) << std::left << cks
-        << "\n";
-}}
-
-void
 print_config(std::ostream& out)
 {{
     out << "\n" << BAR << "\n";
@@ -255,7 +217,7 @@ print_config(std::ostream& out)
     // List cache parameters.
     out << BAR << "\n"
         << std::setw(12) << std::left << "CACHE"
-        << std::setw(12) << std::left << "SIZE (kB)"
+        << std::setw(12) << std::left << "SIZE_KB"
         << std::setw(8) << std::left << "SETS"
         << std::setw(8) << std::left << "WAYS"
         << std::setw(8) << std::left << "REPL"
@@ -269,18 +231,19 @@ print_config(std::ostream& out)
     list_cache_params(out, "L2$", {cache_params['L2']});
     list_cache_params(out, "LLC", {cache_params['LLC']});
 
-    out << BAR << "\n"
-        << "DRAM frequency = " << {dram_freq} << "GHz, tCK = " << {tCK:.5f} << "\n"
-        << "Page Policy = {dram_page_policy}, Address Mapping = {dram_am}\n";
+    out << BAR << "\n";
+    
+    list(out, "DRAM_FREQUENCY", "{dram_freq}");
+    list(out, "DRAM_tCK", "{tCK:.5f}");
+    list(out, "DRAM_PAGE_POLICY", "{dram_page_policy}");
+    list(out, "DRAM_ADDRESS_MAPPING", "{dram_am}");
     print_address_mapping(out);
     out << "\n"
-        << std::setw(24) << std::left << "DRAM TIMING"
+        << std::setw(24) << std::left << "DRAM_TIMING"
         << std::setw(12) << std::left << "ns"
         << std::setw(12) << std::left << "nCK"
         << "\n" << BAR << "\n";
     {bank_timing_calls}
-    out << "\n";
-    {sl_timing_calls}
     out << "\n";
     {channel_timing_calls}
     out << BAR << "\n\n";

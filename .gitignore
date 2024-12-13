@@ -14,3 +14,5 @@ TRACES/
 TRACES/*
 out
 out/*
+stats/__pycache__
+stats/__pycache__/*

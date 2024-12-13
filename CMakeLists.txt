@@ -51,11 +51,20 @@ set(COMPLEX_CORE_MODEL_FILES
     src/complex_model/os/ptw.cpp
     src/complex_model/os/vmem.cpp)
 
+file(READ _generated/${BUILD_ID}/core_model.txt CORE_MODEL)
+file(READ _generated/${BUILD_ID}/defines.txt CUSTOM_DEFINES)
+
 if (CORE_MODEL MATCHES "simple")
     set(CORE_MODEL_FILES ${SIMPLE_CORE_MODEL_FILES})
 else()
     set(CORE_MODEL_FILES ${COMPLEX_CORE_MODEL_FILES})
 endif()
+
+message("================== CONFIGURATION =======================")
+message("build id = ${BUILD_ID}")
+message("core model = ${CORE_MODEL}")
+message("defines = ${CUSTOM_DEFINES}")
+message("========================================================")
 
 ########################################################################
 ########################################################################
@@ -86,6 +95,7 @@ add_executable(sim src/main.cpp ${MAIN_SIM_FILES})
 target_compile_options(sim PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(sim PRIVATE "src" "_generated/${BUILD_ID}")
 target_link_libraries(sim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
+target_compile_definitions(sim PRIVATE ${CUSTOM_DEFINES})
 if (CMAKE_BUILD_TYPE MATCHES "Profile")
     target_link_libraries(sim PRIVATE -pg)
 endif()

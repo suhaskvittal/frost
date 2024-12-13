@@ -29,6 +29,10 @@ bool
 DRAM::IO::add_incoming(Transaction t)
 {
     size_t ch = dram_channel(t.address);
+#ifdef DRAM_DROP_WRITES
+    if (t.type == TransactionType::WRITE)
+        return true;
+#endif
     return dram->channels_[ch]->io_->add_incoming(t);
 }
 

@@ -3,6 +3,7 @@
  *  date:   11 December 2024
  * */
 
+#include "constants.h"
 #include "globals.h"
 #include "memsys.h"
 

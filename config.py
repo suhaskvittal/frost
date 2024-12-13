@@ -5,6 +5,7 @@
 
 from config.validate import *
 from config import constants, memsys, globs, sim, dram_timing
+from config.files import GEN_DIR
 
 import configparser
 import os
@@ -46,6 +47,39 @@ memsys.write(cfg, build_id)
 globs.write(cfg, build_id)
 sim.write(cfg, build_id)
 dram_timing.write(cfg, build_id)
+
+####################################################################
+####################################################################
+# Create files for use with CMAKE
+
+# Core model:
+with open(f'{GEN_DIR}/{build_id}/core_model.txt', 'w') as wr:
+    wr.write(cfg['SYSTEM']['model'])
+# Custom defines:
+custom_defines = ''
+defined_values = cfg['SYSTEM']['defines'].split(',')
+for v in defined_values:
+    if len(v) == 0:
+        continue
+    dat = v.split('=')
+    if len(dat) == 1:
+        custom_defines += f'-D{dat[0]}\n'
+    else:
+        custom_defines += f'-D{dat[0]}={dat[1]}\n'
+with open(f'{GEN_DIR}/{build_id}/defines.txt', 'w') as wr:
+    wr.write(custom_defines)
+
+
+####################################################################
+####################################################################
+
+if '--make-build-now' in argv:
+    cmake_build = build_id.upper()
+    if os.path.exists(f'builds/{cmake_build}'):
+        os.system(f'rm -rf builds/{cmake_build}')
+    os.system(f'''mkdir builds/{cmake_build} && cd builds/{cmake_build}
+cmake ../.. -DCMAKE_BUILD_TYPE=Release -DBUILD_ID={build_id}
+make -j8''')
 
 ####################################################################
 ####################################################################
