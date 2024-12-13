@@ -9,7 +9,18 @@
 def update_cfg_with_optionals(cfg, optionals: list[tuple[str,str]]):
     for (key, value) in optionals:
         if key not in cfg:
-            cfg[key] = value
+            cfg[key] = str(value)
+
+####################################################################
+####################################################################
+
+def validate_system_section(cfg) -> bool:
+    optionals = [
+        ('model', 'complex'),
+        ('defines', '')
+    ]
+    update_cfg_with_optionals(cfg, optionals)
+    return True
 
 ####################################################################
 ####################################################################
@@ -28,28 +39,23 @@ def validate_core_section(cfg) -> bool:
 ####################################################################
 
 def validate_cache_section(cfg) -> bool:
-    required = [
-        'ways',
-        'num_mshr',
-        'num_rw_ports',
-        'read_queue_size',
-        'write_queue_size',
-        'prefetch_queue_size',
-        'latency'
+    optionals = [
+        ('sets', 64),
+        ('ways', 8),
+        ('num_mshr', 8),
+        ('num_rw_ports', 2),
+        ('read_queue_size', 64),
+        ('write_queue_size', 64),
+        ('prefetch_queue_size', 32),
+        ('latency', 4),
+        ('mode', ''),
+        ('replacement_policy', 'LRU')
     ]
-    if not all(x in cfg for x in required):
-        return False
     # Now check if the number of sets or the size of the cache
     # is specified.
     if 'size_kb' in cfg:
         cfg['sets'] = str((int(cfg['size_kb']) * 1024) // (64*int(cfg['ways'])))
-    elif 'sets' not in cfg:
-        return False  # Have no way of determining number of cache sets
     # Now check optionals
-    optionals = [
-        ('mode', ''),
-        ('replacement_policy', 'LRU')
-    ]
     update_cfg_with_optionals(cfg, optionals)
     return True
 
@@ -57,19 +63,14 @@ def validate_cache_section(cfg) -> bool:
 ####################################################################
 
 def validate_dram_section(cfg) -> bool:
-    required = [
-        'channels',
-        'ranks',
-        'bankgroups',
-        'banks',
-        'rows',
-        'columns',
-        'read_queue_size',
-        'write_queue_size'
-    ]
-    if not all(x in cfg for x in required):
-        return False
     optionals = [
+        ('frequency_ghz', 2.4),
+        ('channels', 2),
+        ('ranks', 1),
+        ('bankgroups', 8),
+        ('banks', 4),
+        ('rows', 65536),
+        ('columns', 128),
         ('BL', '16'),
         ('cmd_queue_size', '16'),
         ('page_policy', 'OPEN'),
@@ -82,10 +83,15 @@ def validate_dram_section(cfg) -> bool:
 ####################################################################
 
 def validate_os_section(cfg) -> bool:
-    if 'levels' not in cfg:
-        return False
-    pt_levels = int(cfg['levels'])
-    return all(f'ptwc_{i}_sw' in cfg for i in range(1, pt_levels))
+    optionals = [
+        ('levels', 4),
+        ('ptwc_3_sw', '1:2'),
+        ('ptwc_2_sw', '1:4'),
+        ('ptwc_1_sw', '4:8')
+    ]
+    update_cfg_with_optionals(cfg, optionals)
+    num_levels = int(cfg['levels'])
+    return all(f'ptwc_{i}_sw' in cfg for i in range(1, num_levels))
 
 ####################################################################
 ####################################################################

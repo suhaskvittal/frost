@@ -88,6 +88,16 @@ def write(cfg, build):
         epoch_size = 5_000_000
     dot_size = epoch_size // 50
 
+    # System defines
+    custom_defines = ''
+    defined_values = cfg['SYSTEM']['defines'].split(',')
+    for v in defined_values:
+        dat = v.split('=')
+        if len(dat) == 1:
+            custom_defines += f'#define {dat[0]}\n'
+        else:
+            custom_defines += f'#define {dat[0]}\t{dat[1]}\n'
+
     with open(f'{GEN_DIR}/{build}/sim.h', 'w') as wr:
         wr.write(
 fr'''{AUTOGEN_HEADER}
@@ -105,6 +115,11 @@ fr'''{AUTOGEN_HEADER}
 #include "{sim_model}_model/os.h"
 #include "dram.h"
 
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+// CUSTOM DEFINE_START
+{custom_defines}
+// CUSTOM_DEFINE_END
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /*
