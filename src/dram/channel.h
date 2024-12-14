@@ -66,6 +66,8 @@ struct DRAMCommand
     DRAMCommandType type;
     bool is_row_buffer_hit =true;
 
+    uint64_t cycle_entered_cmd_queue;
+
     DRAMCommand(void);
     DRAMCommand(uint64_t addr, DRAMCommandType);
     DRAMCommand(Transaction, DRAMCommandType);
@@ -105,6 +107,11 @@ public:
     uint64_t s_pre_demand_ =0;
 
     uint64_t s_row_buffer_hits_ =0;
+    /**/
+    uint64_t s_tot_read_after_read_latency_  =0;
+    uint64_t s_tot_read_after_write_latency_ =0;
+    uint64_t s_num_read_after_read_  =0;
+    uint64_t s_num_read_after_write_ =0;
 
     io_ptr io_;
 
@@ -133,11 +140,14 @@ private:
      * */
     uint64_t next_ref_cycle_;
     uint64_t ref_done_cycle_ =0;
+
+    bool last_cmd_was_read_ =true;
 public:
     DRAMChannel(double freq_ghz);
     ~DRAMChannel(void);
     
-    void tick(void);
+    void tick_mc(void);
+    void tick_dram(void);
 private:
     using sel_cmd_t = std::optional<DRAMCommand>;
     /*

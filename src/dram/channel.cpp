@@ -56,7 +56,8 @@ DRAMCommand::DRAMCommand(uint64_t addr, DRAMCommandType t)
 
 DRAMCommand::DRAMCommand(Transaction trans, DRAMCommandType t)
     :trans(trans),
-    type(t)
+    type(t),
+    cycle_entered_cmd_queue(GL_DRAM_CYCLE)
 {}
 
 ////////////////////////////////////////////////////////////////////////////
@@ -74,7 +75,13 @@ DRAMChannel::~DRAMChannel() {}
 ////////////////////////////////////////////////////////////////////////////
 
 void
-DRAMChannel::tick()
+DRAMChannel::tick_mc()
+{
+    schedule_next_cmd();
+}
+
+void
+DRAMChannel::tick_dram()
 {
     // Update FAW:
     while (!faw_.empty() && GL_DRAM_CYCLE >= faw_.front() + tFAW)
@@ -103,7 +110,6 @@ DRAMChannel::tick()
         if (GL_DRAM_CYCLE >= ref_done_cycle_)
             issue_next_cmd();
     }
-    schedule_next_cmd();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -140,6 +146,18 @@ DRAMChannel::issue_next_cmd()
         if (cmd_is_read(ready_cmd.type)) {
             // Mark as outgoing.
             io_->add_outgoing(ready_cmd.trans, CL);
+            // Update stats.
+            uint64_t read_latency = GL_DRAM_CYCLE - ready_cmd.cycle_entered_cmd_queue; 
+            if (last_cmd_was_read_) {
+                s_tot_read_after_read_latency_ += read_latency;
+                ++s_num_read_after_read_;
+            } else {
+                s_tot_read_after_write_latency_ += read_latency;
+                ++s_num_read_after_write_;
+            }
+            last_cmd_was_read_ = true;
+        } else if (cmd_is_write(ready_cmd.type)) {
+            last_cmd_was_read_ = false;
         }
     }
 }

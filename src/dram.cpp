@@ -66,7 +66,8 @@ DRAM::tick()
             q.pop();
         }
         if (leap_ < 1.0)
-            ch->tick();
+            ch->tick_dram();
+        ch->tick_mc();
     }
 
     if (leap_ >= 1.0) {
@@ -96,13 +97,19 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(refreshes)
     CREATE_VEC_STAT(pre_demand)
     CREATE_VEC_STAT(row_buffer_hits)
+    CREATE_VEC_STAT(num_read_after_write)
 
     VecStat<double, DRAM_CHANNELS> rbhr;
     VecStat<uint64_t, DRAM_CHANNELS> write_blocked_cycles;
+    VecStat<double, DRAM_CHANNELS> rar_latency, raw_latency;
 
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {
+        auto& ch = channels_[i];
+
         rbhr[i] = mean(vec_row_buffer_hits[i], vec_reads[i]+vec_writes[i]);
-        write_blocked_cycles[i] = channels_[i]->io_->s_blocking_writes_;
+        write_blocked_cycles[i] = ch->io_->s_blocking_writes_;
+        rar_latency[i] = mean(ch->s_tot_read_after_read_latency_, ch->s_num_read_after_read_);
+        raw_latency[i] = mean(ch->s_tot_read_after_write_latency_, ch->s_num_read_after_write_);
     }
     VecStat<double, DRAM_CHANNELS> write_blocked_prop = mean(write_blocked_cycles, GL_DRAM_CYCLE);
 
@@ -117,8 +124,12 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "ROW_BUFFER_HITS", vec_row_buffer_hits);
 
     print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr, VecAccMode::HMEAN);
-    print_vecstat(out, "DRAM", "WRITE_BLOCKED_CYCLES", write_blocked_cycles, VecAccMode::AMEAN);
-    print_vecstat(out, "DRAM", "WRITE_BLOCKED_FRACTION", write_blocked_prop, VecAccMode::GMEAN);
+//  print_vecstat(out, "DRAM", "WRITE_BLOCKED_CYCLES", write_blocked_cycles, VecAccMode::AMEAN);
+//  print_vecstat(out, "DRAM", "WRITE_BLOCKED_FRACTION", write_blocked_prop, VecAccMode::GMEAN);
+
+    print_vecstat(out, "DRAM", "RD_AFTER_RD_LATENCY", rar_latency, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "RD_AFTER_WR_LATENCY", raw_latency, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "NUM_RD_AFTER_WR", vec_num_read_after_write);
 }
 
 ////////////////////////////////////////////////////////////////////////////
