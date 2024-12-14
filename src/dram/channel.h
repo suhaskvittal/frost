@@ -24,6 +24,7 @@ class IOBus;
 ////////////////////////////////////////////////////////////////////////////
 
 enum class DRAMPagePolicy { OPEN, CLOSE };
+enum class DRAMCmdQueuePolicy { FCFS, FRFCFS, FRRFCFS };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -150,6 +151,7 @@ public:
     void tick_dram(void);
 private:
     using sel_cmd_t = std::optional<DRAMCommand>;
+    using cmdq_iterator = DRAMBank::cmd_queue_t::iterator;
     /*
      * `schedule_next_cmd` moves a command from `io_`'s read/write queues to
      * some bank's command queues.
@@ -164,7 +166,10 @@ private:
     bool cmd_is_issuable(const DRAMCommand&);
     void update_timing(const DRAMCommand&);
 
-    sel_cmd_t frfcfs(void);
+    sel_cmd_t select_next_command(void);
+    sel_cmd_t fcfs(cmdq_iterator, DRAMBank&);
+    sel_cmd_t frfcfs(cmdq_iterator, DRAMBank&);
+    sel_cmd_t frrfcfs(cmdq_iterator, DRAMBank&);
 
     DRAMBank& get_bank(uint64_t);
 

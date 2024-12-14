@@ -73,7 +73,7 @@ with open(f'{GEN_DIR}/{build_id}/defines.txt', 'w') as wr:
 ####################################################################
 ####################################################################
 
-if '--make-build-now' in argv:
+if '-b' in argv or '--make-build-now' in argv:
     cmake_build = build_id.upper()
     if os.path.exists(f'builds/{cmake_build}'):
         os.system(f'rm -rf builds/{cmake_build}')

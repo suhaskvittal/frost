@@ -136,7 +136,7 @@ DRAMChannel::schedule_next_cmd()
 void
 DRAMChannel::issue_next_cmd()
 {
-    auto _ready_cmd = frfcfs();
+    auto _ready_cmd = select_next_command();
     if (!_ready_cmd.has_value())
         return;
     DRAMCommand& ready_cmd = _ready_cmd.value();
@@ -230,56 +230,138 @@ DRAMChannel::update_timing(const DRAMCommand& cmd)
 ////////////////////////////////////////////////////////////////////////////
 
 DRAMChannel::sel_cmd_t
-DRAMChannel::frfcfs()
+DRAMChannel::select_next_command()
 {
     sel_cmd_t out;
     for (size_t i = 0; i < banks_.size(); i++) {
         auto& b = banks_[next_bank_with_cmd_];
         fast_increment_and_mod_inplace<TOT_BANKS>(next_bank_with_cmd_);
 
-        // Search for first cmd queue entry with row buffer hit. 
         for (auto cmd_it = b.cmd_queue_.begin(); cmd_it != b.cmd_queue_.end(); cmd_it++) {
-            DRAMCommand ready_cmd;
-            // Get command that must be done to perform the R/W
-            uint64_t addr = cmd_it->trans.address;
-            size_t r = dram_row(addr);
-            if (b.open_row_.has_value()) {
-                if (r == b.open_row_) {
-                    ready_cmd = *cmd_it;
-                } else {
-                    // Row buffer miss: check precharge conditions.
-                    if (cmd_it != b.cmd_queue_.begin())
-                        continue;
-                    size_t num_pending = std::count_if(
-                                                std::next(cmd_it),
-                                                b.cmd_queue_.end(),
-                                                [b] (const DRAMCommand& c)
-                                                {
-                                                    return b.open_row_ == dram_row(c.trans.address);
-                                                });
-                    if (num_pending > 0 && b.num_cas_to_open_row_ < 4)
-                        continue;
-                    // Otherwise we are good:
-                    ready_cmd = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
-                }
-            } else {
-                ready_cmd = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
+            if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FCFS)
+                out = fcfs(cmd_it, b);
+            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRFCFS)
+                out = frfcfs(cmd_it, b);
+            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRRFCFS)
+                out = frrfcfs(cmd_it, b);
+            else {
+                std::cerr << "dram: unknown cmd queue scheduling policy.\n";
+                exit(1);
             }
-            if (cmd_is_issuable(ready_cmd)) {
-                // Success! return the command.
-                out = ready_cmd;
-                if (cmd_is_cas(ready_cmd.type)) {
+
+            if (out.has_value() && cmd_is_issuable(out.value())) {
+                if (cmd_is_cas(out.value().type)) {
                     if (cmd_it->is_row_buffer_hit)
                         ++s_row_buffer_hits_;
                     b.cmd_queue_.erase(cmd_it);
                 } else {
                     cmd_it->is_row_buffer_hit = false;
-                    if (ready_cmd.type == DRAMCommandType::PRECHARGE)
+                    if (out.value().type == DRAMCommandType::PRECHARGE)
                         ++s_pre_demand_;
                 }
                 return out;
             }
         }
+    }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+DRAMChannel::sel_cmd_t
+DRAMChannel::fcfs(DRAMChannel::cmdq_iterator cmd_it, DRAMBank& b)
+{
+    sel_cmd_t out;
+    uint64_t addr = cmd_it->trans.address;
+    size_t r = dram_row(addr);
+    if (b.open_row_.has_value()) {
+        if (r == b.open_row_)
+            out = *cmd_it;
+        else
+            out = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
+    } else {
+        out = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
+    }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+DRAMChannel::sel_cmd_t
+DRAMChannel::frfcfs(DRAMChannel::cmdq_iterator cmd_it, DRAMBank& b)
+{
+    sel_cmd_t out;
+    // Get command that must be done to perform the R/W
+    uint64_t addr = cmd_it->trans.address;
+    size_t r = dram_row(addr);
+    if (b.open_row_.has_value()) {
+        if (r == b.open_row_) {
+            out = *cmd_it;
+        } else {
+            // Row buffer miss: check precharge conditions.
+            if (cmd_it != b.cmd_queue_.begin())
+                return out;
+            bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
+                                            [b] (const DRAMCommand& c)
+                                            {
+                                                return b.open_row_ == dram_row(c.trans.address);
+                                            });
+            if (any_pending_hits && b.num_cas_to_open_row_ < 4)
+                return out;
+            // Otherwise we are good:
+            out = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
+        }
+    } else {
+        out = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
+    }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+DRAMChannel::sel_cmd_t
+DRAMChannel::frrfcfs(DRAMChannel::cmdq_iterator cmd_it, DRAMBank& b)
+{
+    sel_cmd_t out;
+    if (cmd_is_write(cmd_it->type)) {
+        bool any_pending_reads = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
+                                        [] (const DRAMCommand& c)
+                                        {
+                                            return cmd_is_read(c.type);
+                                        });
+        if (any_pending_reads)
+            return out;
+    }
+    // Get command that must be done to perform the R/W
+    uint64_t addr = cmd_it->trans.address;
+    size_t r = dram_row(addr);
+    if (b.open_row_.has_value()) {
+        if (r == b.open_row_) {
+            out = *cmd_it;
+        } else {
+            // Row buffer miss: check precharge conditions.
+            bool any_reads_before = std::any_of(b.cmd_queue_.begin(), cmd_it,
+                                        [] (const DRAMCommand& c)
+                                        {
+                                            return cmd_is_read(c.type);
+                                        });
+            if (any_reads_before)
+                return out;
+            bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
+                                            [b] (const DRAMCommand& c)
+                                            {
+                                                return b.open_row_ == dram_row(c.trans.address);
+                                            });
+            if (any_pending_hits && b.num_cas_to_open_row_ < 4)
+                return out;
+            // Otherwise we are good:
+            out = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
+        }
+    } else {
+        out = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
     }
     return out;
 }

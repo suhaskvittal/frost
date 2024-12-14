@@ -60,6 +60,7 @@ def write(cfg, build):
     channel_timing_calls = '\n\t'.join(f'list_dram(out, \"{t}\", {t});' for t in CHANNEL_TIMINGS)
     # SL timings are a bit more complicated to implement
     dram_page_policy = cfg['DRAM']['page_policy']
+    dram_cmdq_policy = cfg['DRAM']['cmdq_policy']
     dram_am = cfg['DRAM']['address_mapping']
 
     # OS params:
@@ -236,6 +237,7 @@ print_config(std::ostream& out)
     list(out, "DRAM_FREQUENCY", "{dram_freq}");
     list(out, "DRAM_tCK", "{tCK:.5f}");
     list(out, "DRAM_PAGE_POLICY", "{dram_page_policy}");
+    list(out, "DRAM_CMDQ_POLICY", "{dram_cmdq_policy}");
     list(out, "DRAM_ADDRESS_MAPPING", "{dram_am}");
     print_address_mapping(out);
     out << "\n"

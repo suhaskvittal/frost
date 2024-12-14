@@ -74,6 +74,7 @@ def validate_dram_section(cfg) -> bool:
         ('BL', '16'),
         ('cmd_queue_size', '16'),
         ('page_policy', 'OPEN'),
+        ('cmdq_policy', 'FRFCFS'),
         ('address_mapping', 'MOP4')
     ]
     update_cfg_with_optionals(cfg, optionals)
