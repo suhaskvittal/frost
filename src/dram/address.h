@@ -6,6 +6,7 @@
 #ifndef DRAM_ADDRESS_h
 #define DRAM_ADDRESS_h
 
+#include "constants.h"
 #include "util/numerics.h"
 
 ////////////////////////////////////////////////////////////////////////////

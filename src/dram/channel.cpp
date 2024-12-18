@@ -46,23 +46,6 @@ inline void update_SL(std::array<uint64_t,2>& t, uint64_t diff, uint64_t same)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAMCommand::DRAMCommand()
-    :DRAMCommand(0, DRAMCommandType::READ)
-{}
-
-DRAMCommand::DRAMCommand(uint64_t addr, DRAMCommandType t)
-    :DRAMCommand(Transaction(0, nullptr, TransactionType::READ, addr), t)
-{}
-
-DRAMCommand::DRAMCommand(Transaction trans, DRAMCommandType t)
-    :trans(trans),
-    type(t),
-    cycle_entered_cmd_queue(GL_DRAM_CYCLE)
-{}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 DRAMChannel::DRAMChannel(double freq_ghz)
     :io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
     freq_ghz_(freq_ghz),
@@ -127,6 +110,12 @@ DRAMChannel::schedule_next_cmd()
         Transaction& t = tt.value();
         auto& b = get_bank(t.address);
         b.cmd_queue_.emplace_back(t, trans_is_read(t.type) ? READ_CMD : WRITE_CMD);
+        if (trans_is_read(t.type)) {
+            b.cmd_queue_.emplace_back(t, READ_CMD);
+        } else {
+            b.cmd_queue_.emplace_back(t, WRITE_CMD);
+            ++b.num_writes_in_cmdq_;
+        }
     }
 }
 
@@ -140,25 +129,22 @@ DRAMChannel::issue_next_cmd()
     if (!_ready_cmd.has_value())
         return;
     DRAMCommand& ready_cmd = _ready_cmd.value();
-    // Check if the command is good.
-    if (cmd_is_issuable(ready_cmd)) {
-        update_timing(ready_cmd);
-        if (cmd_is_read(ready_cmd.type)) {
-            // Mark as outgoing.
-            io_->add_outgoing(ready_cmd.trans, CL);
-            // Update stats.
-            uint64_t read_latency = GL_DRAM_CYCLE - ready_cmd.cycle_entered_cmd_queue; 
-            if (last_cmd_was_read_) {
-                s_tot_read_after_read_latency_ += read_latency;
-                ++s_num_read_after_read_;
-            } else {
-                s_tot_read_after_write_latency_ += read_latency;
-                ++s_num_read_after_write_;
-            }
-            last_cmd_was_read_ = true;
-        } else if (cmd_is_write(ready_cmd.type)) {
-            last_cmd_was_read_ = false;
+    update_timing(ready_cmd);
+    if (cmd_is_read(ready_cmd.type)) {
+        // Mark as outgoing.
+        io_->add_outgoing(ready_cmd.trans, CL);
+        // Update stats.
+        uint64_t read_latency = GL_DRAM_CYCLE - ready_cmd.cycle_entered_cmd_queue; 
+        if (last_cmd_was_read_) {
+            s_tot_read_after_read_latency_ += read_latency;
+            ++s_num_read_after_read_;
+        } else {
+            s_tot_read_after_write_latency_ += read_latency;
+            ++s_num_read_after_write_;
         }
+        last_cmd_was_read_ = true;
+    } else if (cmd_is_write(ready_cmd.type)) {
+        last_cmd_was_read_ = false;
     }
 }
 
@@ -236,14 +222,21 @@ DRAMChannel::select_next_command()
     for (size_t i = 0; i < banks_.size(); i++) {
         auto& b = banks_[next_bank_with_cmd_];
         fast_increment_and_mod_inplace<TOT_BANKS>(next_bank_with_cmd_);
+        
+        if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS) {
+            if (b.write_draining_ == 0 && b.num_writes_in_cmdq_ == b.cmd_queue_.size())
+                b.write_draining_ = b.cmd_queue_.size();
+        }
 
         for (auto cmd_it = b.cmd_queue_.begin(); cmd_it != b.cmd_queue_.end(); cmd_it++) {
             if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FCFS)
-                out = fcfs(cmd_it, b);
+                out = FCFS(cmd_it, b);
             else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRFCFS)
-                out = frfcfs(cmd_it, b);
+                out = FRFCFS(cmd_it, b);
             else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRRFCFS)
-                out = frrfcfs(cmd_it, b);
+                out = FRRFCFS(cmd_it, b);
+            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS)
+                out = ARRFCFS(cmd_it, b);
             else {
                 std::cerr << "dram: unknown cmd queue scheduling policy.\n";
                 exit(1);
@@ -251,8 +244,14 @@ DRAMChannel::select_next_command()
 
             if (out.has_value() && cmd_is_issuable(out.value())) {
                 if (cmd_is_cas(out.value().type)) {
+                    if (cmd_is_write(cmd_it->type)) {
+                        --b.num_writes_in_cmdq_;
+                        --b.write_draining_;
+                    }
+
                     if (cmd_it->is_row_buffer_hit)
                         ++s_row_buffer_hits_;
+
                     b.cmd_queue_.erase(cmd_it);
                 } else {
                     cmd_it->is_row_buffer_hit = false;
@@ -262,106 +261,6 @@ DRAMChannel::select_next_command()
                 return out;
             }
         }
-    }
-    return out;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-DRAMChannel::sel_cmd_t
-DRAMChannel::fcfs(DRAMChannel::cmdq_iterator cmd_it, DRAMBank& b)
-{
-    sel_cmd_t out;
-    uint64_t addr = cmd_it->trans.address;
-    size_t r = dram_row(addr);
-    if (b.open_row_.has_value()) {
-        if (r == b.open_row_)
-            out = *cmd_it;
-        else
-            out = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
-    } else {
-        out = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
-    }
-    return out;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-DRAMChannel::sel_cmd_t
-DRAMChannel::frfcfs(DRAMChannel::cmdq_iterator cmd_it, DRAMBank& b)
-{
-    sel_cmd_t out;
-    // Get command that must be done to perform the R/W
-    uint64_t addr = cmd_it->trans.address;
-    size_t r = dram_row(addr);
-    if (b.open_row_.has_value()) {
-        if (r == b.open_row_) {
-            out = *cmd_it;
-        } else {
-            // Row buffer miss: check precharge conditions.
-            if (cmd_it != b.cmd_queue_.begin())
-                return out;
-            bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
-                                            [b] (const DRAMCommand& c)
-                                            {
-                                                return b.open_row_ == dram_row(c.trans.address);
-                                            });
-            if (any_pending_hits && b.num_cas_to_open_row_ < 4)
-                return out;
-            // Otherwise we are good:
-            out = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
-        }
-    } else {
-        out = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
-    }
-    return out;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-DRAMChannel::sel_cmd_t
-DRAMChannel::frrfcfs(DRAMChannel::cmdq_iterator cmd_it, DRAMBank& b)
-{
-    sel_cmd_t out;
-    if (cmd_is_write(cmd_it->type)) {
-        bool any_pending_reads = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
-                                        [] (const DRAMCommand& c)
-                                        {
-                                            return cmd_is_read(c.type);
-                                        });
-        if (any_pending_reads)
-            return out;
-    }
-    // Get command that must be done to perform the R/W
-    uint64_t addr = cmd_it->trans.address;
-    size_t r = dram_row(addr);
-    if (b.open_row_.has_value()) {
-        if (r == b.open_row_) {
-            out = *cmd_it;
-        } else {
-            // Row buffer miss: check precharge conditions.
-            bool any_reads_before = std::any_of(b.cmd_queue_.begin(), cmd_it,
-                                        [] (const DRAMCommand& c)
-                                        {
-                                            return cmd_is_read(c.type);
-                                        });
-            if (any_reads_before)
-                return out;
-            bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
-                                            [b] (const DRAMCommand& c)
-                                            {
-                                                return b.open_row_ == dram_row(c.trans.address);
-                                            });
-            if (any_pending_hits && b.num_cas_to_open_row_ < 4)
-                return out;
-            // Otherwise we are good:
-            out = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
-        }
-    } else {
-        out = DRAMCommand(addr, DRAMCommandType::ACTIVATE);
     }
     return out;
 }

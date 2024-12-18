@@ -71,7 +71,9 @@ message("========================================================")
 
 set(MAIN_SIM_FILES
     src/dram.cpp
+    src/dram/bank.cpp
     src/dram/channel.cpp
+    src/dram/command.cpp
     src/instruction.cpp
     src/io_bus.cpp
     src/os/free_list.cpp

@@ -83,8 +83,10 @@ def print_stats(build_data: dict, builds: list[str], stat: str, ref: str):
 
     for k in benchmarks:
         name = k[:k.find('.')]
-        print(f'{name:<32}', end='')
+        if mpki(build_data, ref, k) < 0.5:
+            continue
         x0 = func(build_data, ref, k)
+        print(f'{name:<32}', end='')
         for b in builds:
             if relative:
                 x = func(build_data, b, k, x0)

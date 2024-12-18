@@ -7,6 +7,8 @@
 #define DRAM_CHANNEL_h
 
 #include "constants.h"
+#include "dram/bank.h"
+#include "dram/command.h"
 #include "transaction.h"
 
 #include <array>
@@ -24,73 +26,6 @@ class IOBus;
 ////////////////////////////////////////////////////////////////////////////
 
 enum class DRAMPagePolicy { OPEN, CLOSE };
-enum class DRAMCmdQueuePolicy { FCFS, FRFCFS, FRRFCFS };
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-enum class DRAMCommandType {
-    READ,
-    READ_PRECHARGE,
-    WRITE,
-    WRITE_PRECHARGE,
-    ACTIVATE,
-    PRECHARGE
-};
-
-inline bool cmd_is_read(DRAMCommandType t)
-{
-    return t == DRAMCommandType::READ || t == DRAMCommandType::READ_PRECHARGE;
-}
-
-inline bool cmd_is_write(DRAMCommandType t)
-{
-    return t == DRAMCommandType::WRITE || t == DRAMCommandType::WRITE_PRECHARGE;
-}
-
-inline bool cmd_is_cas(DRAMCommandType t)
-{
-    return cmd_is_read(t) || cmd_is_write(t);
-}
-
-inline bool cmd_is_autopre(DRAMCommandType t)
-{
-    return t == DRAMCommandType::READ_PRECHARGE || t == DRAMCommandType::WRITE_PRECHARGE;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-struct DRAMCommand
-{
-    Transaction trans;
-    DRAMCommandType type;
-    bool is_row_buffer_hit =true;
-
-    uint64_t cycle_entered_cmd_queue;
-
-    DRAMCommand(void);
-    DRAMCommand(uint64_t addr, DRAMCommandType);
-    DRAMCommand(Transaction, DRAMCommandType);
-};
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-struct DRAMBank
-{
-    using row_t = std::optional<uint64_t>;
-    using cmd_queue_t = std::deque<DRAMCommand>;
-
-    row_t open_row_;
-    size_t num_cas_to_open_row_ =0;
-
-    cmd_queue_t cmd_queue_;
-
-    uint64_t act_ok_cycle_ =0;
-    uint64_t pre_ok_cycle_ =0;
-    uint64_t cas_ok_cycle_ =0;
-};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -144,6 +79,7 @@ private:
 
     bool last_cmd_was_read_ =true;
 public:
+
     DRAMChannel(double freq_ghz);
     ~DRAMChannel(void);
     
@@ -151,7 +87,6 @@ public:
     void tick_dram(void);
 private:
     using sel_cmd_t = std::optional<DRAMCommand>;
-    using cmdq_iterator = DRAMBank::cmd_queue_t::iterator;
     /*
      * `schedule_next_cmd` moves a command from `io_`'s read/write queues to
      * some bank's command queues.
@@ -167,9 +102,6 @@ private:
     void update_timing(const DRAMCommand&);
 
     sel_cmd_t select_next_command(void);
-    sel_cmd_t fcfs(cmdq_iterator, DRAMBank&);
-    sel_cmd_t frfcfs(cmdq_iterator, DRAMBank&);
-    sel_cmd_t frrfcfs(cmdq_iterator, DRAMBank&);
 
     DRAMBank& get_bank(uint64_t);
 
