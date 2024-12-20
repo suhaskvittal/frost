@@ -18,12 +18,28 @@
 struct DRAMBank
 {
     using row_t = std::optional<uint64_t>;
-    using cmd_queue_t = std::deque<DRAMCommand>;
+    using queue_t = std::deque<DRAMCommand>;
+    /*
+     * Different methods of implementing a command queue:
+     *  `unified` places reads and writes into the same queue
+     *  `split` separates reads and writes into two different queues.
+     * */
+    union cmd_queue_impl
+    {
+        queue_t unified;
+
+        struct
+        {
+            queue_t reads;
+            queue_t writes;
+            size_t writes_to_drain =0;
+        } split;
+    };
 
     row_t open_row_;
     size_t num_cas_to_open_row_ =0;
 
-    cmd_queue_t cmd_queue_;
+    cmd_queue_impl cmd_queue_;
 
     uint64_t act_ok_cycle_ =0;
     uint64_t pre_ok_cycle_ =0;
@@ -36,12 +52,12 @@ struct DRAMBank
 enum class DRAMCmdQueuePolicy { FCFS, FRFCFS, FRRFCFS, ARRFCFS };
 
 using sel_cmd_t = std::optional<DRAMCommand>;
-using cmdq_iterator = DRAMBank::cmd_queue_t::iterator;
+using cmdq_iterator = DRAMBank::cmd_queue_t::const_iterator;
 
 sel_cmd_t FCFS(cmdq_iterator, DRAMBank&);
-sel_cmd_t FRFCFS(cmdq_iterator, DRAMBank&);
-sel_cmd_t FRRFCFS(cmdq_iterator, DRAMBank&);
-sel_cmd_t ARRFCFS(cmdq_iterator, DRAMBank&, bool any_reads_in_queue, bool is_first_read);
+sel_cmd_t FRFCFS(const DRAMBank::queue_t&, cmdq_iterator, DRAMBank&);
+sel_cmd_t FRRFCFS(const DRAMBank::queue_t&, cmdq_iterator, DRAMBank&, bool any_read_hits_in_queue);
+sel_cmd_t ARRFCFS(const DRAMBank::queue_t&, cmdq_iterator, DRAMBank&, bool any_reads_in_queue, bool is_first_read);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

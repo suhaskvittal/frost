@@ -12,6 +12,11 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+using subqueue_t = DRAMBank::queue_t;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 sel_cmd_t
 FCFS(cmdq_iterator cmd_it, DRAMBank& b)
 {
@@ -33,7 +38,7 @@ FCFS(cmdq_iterator cmd_it, DRAMBank& b)
 ////////////////////////////////////////////////////////////////////////////
 
 sel_cmd_t
-FRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
+FRFCFS(const subqueue_t& q, cmdq_iterator cmd_it, DRAMBank& b)
 {
     sel_cmd_t out;
     // Get command that must be done to perform the R/W
@@ -44,9 +49,9 @@ FRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
             out = *cmd_it;
         } else {
             // Row buffer miss: check precharge conditions.
-            if (cmd_it != b.cmd_queue_.begin())
+            if (cmd_it != q.begin())
                 return out;
-            bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
+            bool any_pending_hits = std::any_of(std::next(cmd_it), q.end(),
                                             [b] (const DRAMCommand& c)
                                             {
                                                 return b.open_row_ == dram_row(c.trans.address);
@@ -66,27 +71,19 @@ FRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
 ////////////////////////////////////////////////////////////////////////////
 
 sel_cmd_t
-FRRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
+FRRFCFS(const subqueue_t& q, cmdq_iterator cmd_it, DRAMBank& b)
 {
     sel_cmd_t out;
-    if (cmd_is_write(cmd_it->type) && b.open_row_.has_value()) {
-        bool any_pending_read_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
-                                        [b] (const DRAMCommand& c)
-                                        {
-                                            return cmd_is_read(c.type) 
-                                                    && b.open_row_ == dram_row(c.trans.address);
-                                        });
-        if (any_pending_read_hits)
-            return out;
-    }
-    return FRFCFS(cmd_it, b);
+    if (cmd_is_write(cmd_it->type) && any_read_hits_in_queue)
+        return out;
+    return FRFCFS(q, cmd_it, b);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 sel_cmd_t
-ARRFCFS(cmdq_iterator cmd_it, DRAMBank& b, bool any_reads_in_queue, bool is_first_read)
+ARRFCFS(const subqueue_t& q, cmdq_iterator cmd_it, DRAMBank& b, bool any_reads_in_queue, bool is_first_read)
 {
     sel_cmd_t out;
     if (cmd_is_write(cmd_it->type) && any_reads_in_queue)
@@ -101,7 +98,7 @@ ARRFCFS(cmdq_iterator cmd_it, DRAMBank& b, bool any_reads_in_queue, bool is_firs
             // Precharge:
             if (!is_first_read)
                 return out;
-            bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
+            bool any_pending_hits = std::any_of(std::next(cmd_it), q.end(),
                                             [b] (const DRAMCommand& c)
                                             {
                                                 return b.open_row_ == dram_row(c.trans.address);

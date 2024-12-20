@@ -285,6 +285,18 @@ DRAMChannel::update_timing(const DRAMCommand& cmd)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+DRAMBank::queue_t&
+get_queue_ref(DRAMBank& b)
+{
+    if constexpr (DRAM_CMDQ_IMPL == DRAMCmdQueueImpl::UNIFIED) {
+        return b.cmd_queue_.unified;
+    } else {
+        return b.cmd_queue_.split.writes_to_drain > 0 
+                ? b.cmd_queue_.split.writes
+                : b.cmd_queue_.split.reads;
+    }
+}
+
 DRAMChannel::sel_cmd_t
 DRAMChannel::select_next_command()
 {
@@ -293,23 +305,43 @@ DRAMChannel::select_next_command()
         auto& b = banks_[next_bank_with_cmd_];
         fast_increment_and_mod_inplace<TOT_BANKS>(next_bank_with_cmd_);
 
+        auto& q = get_queue_ref(b);
+        // Set any metadata needed for command selection.
+        bool any_read_hits_in_queue = b.open_row_.has_value()
+                                    && std::any_of(q.begin(), q.end(),
+                                            [b] (const DRAMCommand& c)
+                                            {
+                                                return cmd_is_read(c.type) && 
+                                                        dram_row(c.trans.address) == b.open_row_;
+                                            });
         bool any_reads_in_queue = std::any_of(b.cmd_queue_.begin(), b.cmd_queue_.end(),
                                         [] (const DRAMCommand& c)
                                         {
                                             return cmd_is_read(c.type);
                                         });
         bool is_first_read = true;
-        for (auto cmd_it = b.cmd_queue_.begin(); cmd_it != b.cmd_queue_.end(); cmd_it++) {
-            if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FCFS) {
+
+        // Iterate over queue:
+        for (auto cmd_it = q.begin(); cmd_it != q.end(); cmd_it++) {
+            if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FCFS)
+            {
                 out = FCFS(cmd_it, b);
-            } else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRFCFS) {
-                out = FRFCFS(cmd_it, b);
-            } else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRRFCFS) {
-                out = FRRFCFS(cmd_it, b);
-            } else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS) {
-                out = ARRFCFS(cmd_it, b, any_reads_in_queue, is_first_read);
+            } 
+            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRFCFS) 
+            {
+                out = FRFCFS(q, cmd_it, b);
+            } 
+            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRRFCFS) 
+            {
+                out = FRRFCFS(q, cmd_it, b, any_read_hits_in_queue);
+            } 
+            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS)
+            {
+                out = ARRFCFS(q, cmd_it, b, any_reads_in_queue, is_first_read);
                 is_first_read &= !cmd_is_read(cmd_it->type);
-            } else {
+            } 
+            else
+            {
                 std::cerr << "dram: unknown cmd queue scheduling policy.\n";
                 exit(1);
             }
