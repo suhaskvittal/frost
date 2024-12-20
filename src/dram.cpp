@@ -28,12 +28,12 @@ DRAM::IO::IO(DRAM* d)
 bool
 DRAM::IO::add_incoming(Transaction t)
 {
-    size_t ch = dram_channel(t.address);
 #ifdef DRAM_DROP_WRITES
     if (t.type == TransactionType::WRITE)
         return true;
 #endif
-    return dram->channels_[ch]->io_->add_incoming(t);
+    size_t i = dram_channel(t.address);
+    return dram->channels_[i]->add_incoming(t);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -57,10 +57,10 @@ void
 DRAM::tick()
 {
     for (channel_ptr& ch : channels_) {
-        auto& q = ch->io_->outgoing_queue_;
+        auto& q = ch->outgoing_queue_;
         while (!q.empty()) {
             const auto& [t, cycle_done] = q.top();
-            if (GL_CYCLE < cycle_done)
+            if (GL_DRAM_CYCLE < cycle_done)
                 break;
             GL_LLC->mark_load_as_done(t.address);
             q.pop();
@@ -100,18 +100,15 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(num_read_after_write)
 
     VecStat<double, DRAM_CHANNELS> rbhr;
-    VecStat<uint64_t, DRAM_CHANNELS> write_blocked_cycles;
     VecStat<double, DRAM_CHANNELS> rar_latency, raw_latency;
 
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {
         auto& ch = channels_[i];
 
         rbhr[i] = mean(vec_row_buffer_hits[i], vec_reads[i]+vec_writes[i]);
-        write_blocked_cycles[i] = ch->io_->s_blocking_writes_;
         rar_latency[i] = mean(ch->s_tot_read_after_read_latency_, ch->s_num_read_after_read_);
         raw_latency[i] = mean(ch->s_tot_read_after_write_latency_, ch->s_num_read_after_write_);
     }
-    VecStat<double, DRAM_CHANNELS> write_blocked_prop = mean(write_blocked_cycles, GL_DRAM_CYCLE);
 
     out << BAR << "\n";
 
@@ -124,8 +121,6 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "ROW_BUFFER_HITS", vec_row_buffer_hits);
 
     print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr, VecAccMode::HMEAN);
-//  print_vecstat(out, "DRAM", "WRITE_BLOCKED_CYCLES", write_blocked_cycles, VecAccMode::AMEAN);
-//  print_vecstat(out, "DRAM", "WRITE_BLOCKED_FRACTION", write_blocked_prop, VecAccMode::GMEAN);
 
     print_vecstat(out, "DRAM", "RD_AFTER_RD_LATENCY", rar_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "RD_AFTER_WR_LATENCY", raw_latency, VecAccMode::GMEAN);

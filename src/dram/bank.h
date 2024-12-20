@@ -24,11 +24,6 @@ struct DRAMBank
     size_t num_cas_to_open_row_ =0;
 
     cmd_queue_t cmd_queue_;
-    /*
-     * command queue metadata (not used by all policies)
-     * */
-    size_t num_writes_in_cmdq_ =0;
-    size_t write_draining_ =0;
 
     uint64_t act_ok_cycle_ =0;
     uint64_t pre_ok_cycle_ =0;
@@ -46,7 +41,7 @@ using cmdq_iterator = DRAMBank::cmd_queue_t::iterator;
 sel_cmd_t FCFS(cmdq_iterator, DRAMBank&);
 sel_cmd_t FRFCFS(cmdq_iterator, DRAMBank&);
 sel_cmd_t FRRFCFS(cmdq_iterator, DRAMBank&);
-sel_cmd_t ARRFCFS(cmdq_iterator, DRAMBank&);
+sel_cmd_t ARRFCFS(cmdq_iterator, DRAMBank&, bool any_reads_in_queue, bool is_first_read);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

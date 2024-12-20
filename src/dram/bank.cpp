@@ -86,11 +86,10 @@ FRRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
 ////////////////////////////////////////////////////////////////////////////
 
 sel_cmd_t
-ARRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
+ARRFCFS(cmdq_iterator cmd_it, DRAMBank& b, bool any_reads_in_queue, bool is_first_read)
 {
     sel_cmd_t out;
-    // Only issue writes if we have switched modes.`
-    if (cmd_is_write(cmd_it->type) && b.write_draining_ == 0)
+    if (cmd_is_write(cmd_it->type) && any_reads_in_queue)
         return out;
 
     uint64_t addr = cmd_it->trans.address;
@@ -100,13 +99,12 @@ ARRFCFS(cmdq_iterator cmd_it, DRAMBank& b)
             out = *cmd_it;
         } else {
             // Precharge:
-            if (cmd_it != b.cmd_queue_.begin())
+            if (!is_first_read)
                 return out;
             bool any_pending_hits = std::any_of(std::next(cmd_it), b.cmd_queue_.end(),
-                                            [t=cmd_is_read(cmd_it->type), b] (const DRAMCommand& c)
+                                            [b] (const DRAMCommand& c)
                                             {
-                                                return (cmd_is_read(c.type) == t)
-                                                        && b.open_row_ == dram_row(c.trans.address);
+                                                return b.open_row_ == dram_row(c.trans.address);
                                             });
             if (any_pending_hits && b.num_cas_to_open_row_ < 4)
                 return out;

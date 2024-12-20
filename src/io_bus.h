@@ -1,4 +1,5 @@
-/* author: Suhas Vittal
+/* 
+ *  author: Suhas Vittal
  *  date:   3 December 2024
  * */
 
@@ -34,6 +35,9 @@ public:
             return std::get<1>(x) > std::get<1>(y);
         }
     };
+
+    using in_queue_t = std::deque<Transaction>;
+    using pending_t = std::unordered_map<uint64_t, size_t>;
     using out_queue_t = std::priority_queue<out_trans_t, 
                                             std::vector<out_trans_t>,
                                             out_queue_cmp>;
@@ -54,8 +58,6 @@ public:
     const size_t wq_size_;
     const size_t pq_size_;
 private:
-    using in_queue_t = std::deque<Transaction>;
-    using pending_t = std::unordered_map<uint64_t, size_t>;
     /*
      * These are all inputs:
      * */
@@ -112,7 +114,7 @@ IOBus::get_next_incoming(PRED pred)
     // Need to drain writes if the queue is full, or we can also
     // do it if there is nothing left to do.
     bool write_drain_cond = write_queue_.size() == wq_size_
-                            || (read_queue_.empty() && prefetch_queue_.empty() && write_queue_.size() > 8);
+                            || (read_queue_.empty() && prefetch_queue_.empty() && !write_queue_.empty());
     if (writes_to_drain_ == 0 && write_drain_cond)
         writes_to_drain_ = write_queue_.size();
 
@@ -126,13 +128,12 @@ IOBus::get_next_incoming(PRED pred)
         if (w_it != write_queue_.end()) {
             access_done = true;
             out = *w_it;
-
-            dec_pending(pending_writes_, w_it->address);
-            --writes_to_drain_;
-
+            
             if (!read_queue_.empty() || !prefetch_queue_.empty())
                 ++s_blocking_writes_;
 
+            dec_pending(pending_writes_, w_it->address);
+            --writes_to_drain_;
             write_queue_.erase(w_it);
         } else if (!write_queue_.empty()) {
             writes_to_drain_ = 0;  // Cannot proceed with writes -- might as well switch back to reads.
@@ -142,8 +143,8 @@ IOBus::get_next_incoming(PRED pred)
         in_queue_t& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
         auto r_it = std::find_if(q.begin(), q.end(), pred);
         if (r_it != q.end()) {
-            out = *r_it;
             dec_pending(pending_reads_, r_it->address);
+            out = *r_it;
             q.erase(r_it);
         }
     }

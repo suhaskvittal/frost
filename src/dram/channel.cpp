@@ -47,8 +47,7 @@ inline void update_SL(std::array<uint64_t,2>& t, uint64_t diff, uint64_t same)
 ////////////////////////////////////////////////////////////////////////////
 
 DRAMChannel::DRAMChannel(double freq_ghz)
-    :io_(new IOBus(DRAM_RQ_SIZE, DRAM_WQ_SIZE, 0)),
-    freq_ghz_(freq_ghz),
+    :freq_ghz_(freq_ghz),
     next_ref_cycle_(tREFI)
 {}
 
@@ -98,29 +97,97 @@ DRAMChannel::tick_dram()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+inline bool
+trans_add(DRAMChannel::in_queue_t& q, DRAMChannel::pending_t& p, Transaction t, size_t qsize)
+{
+    if (q.size() >= qsize)
+        return false;
+    q.push_back(t);
+    ++p[t.address];
+    return true;
+}
+
+bool
+DRAMChannel::add_incoming(Transaction t)
+{
+    // Check for forwarding
+    if (pending_writes_.count(t.address)) {
+        if (trans_is_read(t.type))
+            outgoing_queue_.emplace(t, GL_DRAM_CYCLE);
+        return true;
+    }
+    // Check for common reads.
+    if (trans_is_read(t.type) && pending_reads_.count(t.address)) {
+        auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
+                            [addr = t.address] (const Transaction& x)
+                            {
+                                return x.address == addr;
+                            });
+        if (rd_it == read_queue_.end()) {
+            rd_it->merge(t);
+            return true;
+        }
+    }
+    // Add to requisite queue
+    if (trans_is_read(t.type))
+        return trans_add(read_queue_, pending_reads_, t, DRAM_RQ_SIZE);
+    else
+        return trans_add(write_queue_, pending_writes_, t, DRAM_WQ_SIZE);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 void
 DRAMChannel::schedule_next_cmd()
 {
-    auto tt = io_->get_next_incoming(
-                    [this] (const Transaction& t)
-                    {
-                        return this->get_bank(t.address).cmd_queue_.size() < DRAM_CMDQ_SIZE;
-                    });
-    if (tt.has_value()) {
-        Transaction& t = tt.value();
-        auto& b = get_bank(t.address);
-        b.cmd_queue_.emplace_back(t, trans_is_read(t.type) ? READ_CMD : WRITE_CMD);
-        if (trans_is_read(t.type)) {
-            b.cmd_queue_.emplace_back(t, READ_CMD);
-        } else {
-            b.cmd_queue_.emplace_back(t, WRITE_CMD);
-            ++b.num_writes_in_cmdq_;
+    // Determine if we need to drain writes.
+    if (writes_to_drain_ == 0) {
+        if (write_queue_.size() == DRAM_WQ_SIZE) {
+            writes_to_drain_ = DRAM_WQ_SIZE;
+        } else if (read_queue_.empty() && write_queue_.size() > 8) {
+            bool no_pending_cmds = std::all_of(banks_.begin(), banks_.end(), 
+                                        [] (const auto& b)
+                                        {
+                                            return b.cmd_queue_.empty();
+                                        });
+            if (no_pending_cmds)
+                writes_to_drain_ = write_queue_.size();
         }
+    }
+
+    auto& q = writes_to_drain_ > 0 ? write_queue_ : read_queue_;
+    auto it = std::find_if(q.begin(), q.end(),
+                    [this, write_mode=(writes_to_drain_>0)] (const Transaction& t)
+                    {
+                        if (write_mode && this->pending_reads_.count(t.address))
+                            return false;
+                        const DRAMBank& b = this->get_bank(t.address);
+                        if (b.cmd_queue_.size() == DRAM_CMDQ_SIZE)
+                            return false;
+                        return true;
+                    });
+    if (it != q.end()) {
+        DRAMBank& b = this->get_bank(it->address);
+        if (writes_to_drain_ > 0) {
+            b.cmd_queue_.emplace_back(*it, WRITE_CMD);
+            --writes_to_drain_;
+        } else {
+            b.cmd_queue_.emplace_back(*it, READ_CMD);
+        }
+        q.erase(it);
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+inline void
+dec_pending(DRAMChannel::pending_t& m, uint64_t k)
+{
+    if ((--m[k]) == 0)
+        m.erase(k);
+}
 
 void
 DRAMChannel::issue_next_cmd()
@@ -132,10 +199,12 @@ DRAMChannel::issue_next_cmd()
     update_timing(ready_cmd);
     if (cmd_is_read(ready_cmd.type)) {
         // Mark as outgoing.
-        io_->add_outgoing(ready_cmd.trans, CL);
+        outgoing_queue_.emplace(ready_cmd.trans, GL_DRAM_CYCLE + CL);
+        dec_pending(pending_reads_, ready_cmd.trans.address);
         // Update stats.
         uint64_t read_latency = GL_DRAM_CYCLE - ready_cmd.cycle_entered_cmd_queue; 
         if (last_cmd_was_read_) {
+
             s_tot_read_after_read_latency_ += read_latency;
             ++s_num_read_after_read_;
         } else {
@@ -144,6 +213,7 @@ DRAMChannel::issue_next_cmd()
         }
         last_cmd_was_read_ = true;
     } else if (cmd_is_write(ready_cmd.type)) {
+        dec_pending(pending_writes_, ready_cmd.trans.address);
         last_cmd_was_read_ = false;
     }
 }
@@ -222,36 +292,32 @@ DRAMChannel::select_next_command()
     for (size_t i = 0; i < banks_.size(); i++) {
         auto& b = banks_[next_bank_with_cmd_];
         fast_increment_and_mod_inplace<TOT_BANKS>(next_bank_with_cmd_);
-        
-        if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS) {
-            if (b.write_draining_ == 0 && b.num_writes_in_cmdq_ == b.cmd_queue_.size())
-                b.write_draining_ = b.cmd_queue_.size();
-        }
 
+        bool any_reads_in_queue = std::any_of(b.cmd_queue_.begin(), b.cmd_queue_.end(),
+                                        [] (const DRAMCommand& c)
+                                        {
+                                            return cmd_is_read(c.type);
+                                        });
+        bool is_first_read = true;
         for (auto cmd_it = b.cmd_queue_.begin(); cmd_it != b.cmd_queue_.end(); cmd_it++) {
-            if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FCFS)
+            if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FCFS) {
                 out = FCFS(cmd_it, b);
-            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRFCFS)
+            } else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRFCFS) {
                 out = FRFCFS(cmd_it, b);
-            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRRFCFS)
+            } else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::FRRFCFS) {
                 out = FRRFCFS(cmd_it, b);
-            else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS)
-                out = ARRFCFS(cmd_it, b);
-            else {
+            } else if constexpr (DRAM_CMDQ_POLICY == DRAMCmdQueuePolicy::ARRFCFS) {
+                out = ARRFCFS(cmd_it, b, any_reads_in_queue, is_first_read);
+                is_first_read &= !cmd_is_read(cmd_it->type);
+            } else {
                 std::cerr << "dram: unknown cmd queue scheduling policy.\n";
                 exit(1);
             }
 
             if (out.has_value() && cmd_is_issuable(out.value())) {
                 if (cmd_is_cas(out.value().type)) {
-                    if (cmd_is_write(cmd_it->type)) {
-                        --b.num_writes_in_cmdq_;
-                        --b.write_draining_;
-                    }
-
                     if (cmd_it->is_row_buffer_hit)
                         ++s_row_buffer_hits_;
-
                     b.cmd_queue_.erase(cmd_it);
                 } else {
                     cmd_it->is_row_buffer_hit = false;
@@ -260,6 +326,7 @@ DRAMChannel::select_next_command()
                 }
                 return out;
             }
+            out.reset();
         }
     }
     return out;

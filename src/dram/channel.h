@@ -9,18 +9,12 @@
 #include "constants.h"
 #include "dram/bank.h"
 #include "dram/command.h"
+#include "io_bus.h"
 #include "transaction.h"
 
 #include <array>
 #include <deque>
 #include <optional>
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-/*
- * Defined in `io_bus.h`
- * */
-class IOBus;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -33,7 +27,11 @@ enum class DRAMPagePolicy { OPEN, CLOSE };
 class DRAMChannel
 {
 public:
-    using io_ptr = std::unique_ptr<IOBus>;
+    using in_queue_t = IOBus::in_queue_t;
+    using pending_t = IOBus::pending_t;
+    using out_queue_t = IOBus::out_queue_t;
+
+    out_queue_t outgoing_queue_;
 
     uint64_t s_reads_ =0;
     uint64_t s_writes_ =0;
@@ -43,13 +41,11 @@ public:
     uint64_t s_pre_demand_ =0;
 
     uint64_t s_row_buffer_hits_ =0;
-    /**/
+
     uint64_t s_tot_read_after_read_latency_  =0;
     uint64_t s_tot_read_after_write_latency_ =0;
     uint64_t s_num_read_after_read_  =0;
     uint64_t s_num_read_after_write_ =0;
-
-    io_ptr io_;
 
     const double freq_ghz_;
 private:
@@ -58,6 +54,14 @@ private:
     using bank_array_t = std::array<DRAMBank, TOT_BANKS>;
     using constraint_t = std::array<uint64_t, 2>;
     using faw_t = std::deque<uint64_t>;
+    /* 
+     * Custom IO implementation
+     * */
+    in_queue_t read_queue_;
+    in_queue_t write_queue_;
+    pending_t pending_reads_;
+    pending_t pending_writes_;
+    size_t writes_to_drain_ =0;
 
     bank_array_t banks_; 
     size_t next_bank_with_cmd_ =0;
@@ -85,6 +89,8 @@ public:
     
     void tick_mc(void);
     void tick_dram(void);
+
+    bool add_incoming(Transaction);
 private:
     using sel_cmd_t = std::optional<DRAMCommand>;
     /*
