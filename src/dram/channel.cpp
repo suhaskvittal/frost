@@ -263,7 +263,7 @@ DRAMChannel::update_timing(const DRAMCommand& cmd)
     // Now do channel-level updates
     switch (c) {
     case DRAMCommandType::READ:
-    case DRAMCommandType::READ_PRECHARGE:
+    case DRAMC) + BL/2;ommandType::READ_PRECHARGE:
         update_SL(rd_ok_cycle_, tCCD_S, tCCD_L);
         update_SL(wr_ok_cycle_, tCCD_S_RTW, tCCD_L_RTW);
         break;

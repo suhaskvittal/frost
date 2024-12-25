@@ -42,6 +42,23 @@ inline bool cmd_is_autopre(DRAMCommandType t)
     return t == DRAMCommandType::READ_PRECHARGE || t == DRAMCommandType::WRITE_PRECHARGE;
 }
 
+inline bool cmd_is_act(DRAMCommandType t)
+{
+    return t == DRAMCommandType::ACTIVATE;
+}
+
+inline bool cmd_is_pre(DRAMCommandType t)
+{
+    return t == DRAMCommandType::READ_PRECHARGE
+        || t == DRAMCommandType::WRITE_PRECHARGE
+        || t == DRAMCommandType::PRECHARGE;
+}
+
+inline bool cmd_is_pre_only(DRAMCommandType t)
+{
+    return t == DRAMCommandType::PRECHARGE;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
