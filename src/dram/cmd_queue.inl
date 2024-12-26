@@ -14,11 +14,8 @@ CommandScheduler::can_accept(uint64_t address, bool is_write)
     {
         size_t ii = get_bankgroup_idx(address);
         bool out = bg_write_queues_[ii].can_accept(true);
-        if (!out)
-        {
-            bg_drain_idx_ = ii;
-            bg_write_mode_ = true;
-        }
+        if (!bg_write_mode_ && !out)
+            bg_sync_init(ii);
         return out;
     }
 #endif
@@ -41,16 +38,22 @@ CommandScheduler::enqueue(DRAMCommand&& cmd)
     {
         size_t ii = get_bankgroup_idx(cmd.trans.address);
         bg_write_queues_[ii].enqueue(std::move(cmd));
-        if (!bg_write_mode_ && bg_write_queues_[ii].size() == CommandScheduler::BG_WRITE_QUEUE_SIZE)
-        {
-            bg_drain_idx_ = ii;
-            bg_write_mode_ = true;
-        }
         return;
     }
 #endif
     size_t ii = get_bank_idx(cmd.trans.address);
     per_bank_queues_[ii].enqueue(std::move(cmd));
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline void
+CommandScheduler::bg_sync_init(size_t start)
+{
+    bg_drain_idx_ = start;
+    bg_write_mode_ = true;
+    bg_num_writes_ = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////

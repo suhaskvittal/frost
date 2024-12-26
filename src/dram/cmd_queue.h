@@ -131,6 +131,7 @@ public:
     DRAMCommand select_command(void);
 private:
     DRAMCommand bg_sync_select_write(void);
+    void bg_sync_init(size_t);
 };
 
 ////////////////////////////////////////////////////////////////////////////

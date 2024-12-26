@@ -63,9 +63,9 @@ for v in defined_values:
         continue
     dat = v.split('=')
     if len(dat) == 1:
-        custom_defines += f'-D{dat[0]}\n'
+        custom_defines += f'-D{dat[0]} '
     else:
-        custom_defines += f'-D{dat[0]}={dat[1]}\n'
+        custom_defines += f'-D{dat[0]}={dat[1]} '
 with open(f'{GEN_DIR}/{build_id}/defines.txt', 'w') as wr:
     wr.write(custom_defines)
 
