@@ -27,6 +27,8 @@ size_t dram_row(uint64_t);
 #include "address/coffeelake.inl"
 #elif defined(DRAM_AM_SKYLAKE)
 #include "address/skylake.inl"
+#elif defined(DRAM_AM_ZEN)
+#include "address/zen.inl"
 #endif
 
 ////////////////////////////////////////////////////////////////////////////

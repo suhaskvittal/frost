@@ -45,6 +45,15 @@ public:
     uint64_t s_read_row_hits_ =0;
     uint64_t s_write_row_hits_ =0;
 
+    uint64_t s_tot_read_latency_ =0;
+    uint64_t s_tot_write_latency_ =0;
+    /*
+     * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
+     *  these are stats that are computationally intensive to compute, and thus can be disabled.
+     * */
+    uint64_t s_drain_bg_spread_ =0;
+    uint64_t s_num_drains_ =0;
+
     const double freq_ghz_;
 private:
     using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
@@ -59,6 +68,10 @@ private:
 
     DRAMChannelState  state_{};
     cmd_sch_ptr cmd_scheduler_;
+
+    bool c128_tracking_writes_ =false;
+    size_t c128_ctr_ =0;
+    uint64_t c128_start_cycle_ =0;
 public:
     DRAMChannel(double freq_ghz);
     

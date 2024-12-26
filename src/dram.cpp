@@ -79,11 +79,19 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(read_row_hits)
     CREATE_VEC_STAT(write_row_hits)
 
-    VecStat<double, DRAM_CHANNELS> rd_rbhr, wr_rbhr;
+    CREATE_VEC_STAT(tot_read_latency)
+    CREATE_VEC_STAT(tot_write_latency)
 
-    for (size_t i = 0; i < DRAM_CHANNELS; i++) {
+    VecStat<double, DRAM_CHANNELS> rd_rbhr, wr_rbhr;
+    VecStat<double, DRAM_CHANNELS> read_latency, write_latency;
+
+    for (size_t i = 0; i < DRAM_CHANNELS; i++)
+    {
         rd_rbhr[i] = mean(vec_read_row_hits[i], vec_reads[i]);
         wr_rbhr[i] = mean(vec_write_row_hits[i], vec_writes[i]);
+
+        read_latency[i] = mean(vec_tot_read_latency[i], vec_reads[i]);
+        write_latency[i] = mean(vec_tot_write_latency[i], vec_writes[i]);
     }
 
     out << BAR << "\n";
@@ -97,6 +105,22 @@ DRAM::print_stats(std::ostream& out)
 
     print_vecstat(out, "DRAM", "READ_ROW_BUFFER_HIT_RATE", rd_rbhr, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "WRITE_ROW_BUFFER_HIT_RATE", wr_rbhr, VecAccMode::HMEAN);
+
+    print_vecstat(out, "DRAM", "READ_LATENCY", read_latency, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
+#ifdef DRAM_TRACK_ADVANCED_STATS
+    CREATE_VEC_STAT(drain_bg_spread);
+    CREATE_VEC_STAT(num_drains);
+
+    VecStat<double, DRAM_CHANNELS> mean_drain_bg_spread;
+    for (size_t i = 0; i < DRAM_CHANNELS; i++)
+    {
+        mean_drain_bg_spread[i] = mean(vec_drain_bg_spread[i], vec_num_drains[i]);
+    }
+
+    print_vecstat(out, "DRAM", "MEAN_BANKGROUP_DRAIN_SPREAD", mean_drain_bg_spread, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", vec_num_drains);
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////

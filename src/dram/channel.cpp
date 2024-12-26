@@ -51,6 +51,22 @@ DRAMChannel::tick_mc()
                             && cmd_scheduler_->has_no_pending_reads();
         if (drain_cond_1 || drain_cond_2)
             writes_to_drain_ = write_queue_.size();
+#ifdef DRAM_TRACK_ADVANCED_STATS
+        if (drain_cond_1)
+        {
+            // Demand drain: we are interested in the spread of writes across bankgroups.
+            std::array<size_t, DRAM_RANKS*DRAM_BANKGROUPS> cnt{};
+            for (const Transaction& t : write_queue_)
+            {
+                size_t ii = dram_bankgroup(t.address) + dram_rank(t.address)*DRAM_BANKGROUPS;
+                ++cnt[ii];
+            }
+            // Compute spread.
+            const auto& [min_it, max_it] = std::minmax_element(cnt.begin(), cnt.end());
+            s_drain_bg_spread_ += (*max_it) - (*min_it);
+            ++s_num_drains_;
+        }
+#endif
     }
 
     auto& q = writes_to_drain_ > 0 ? write_queue_ : read_queue_;
@@ -157,6 +173,7 @@ DRAMChannel::issue_next_cmd()
 
     update_dram_state(state_, ready_cmd);
 
+    uint64_t latency = GL_DRAM_CYCLE - ready_cmd.cycle_entered_cmd_queue;
     if (cmd_is_read(ready_cmd.type))
     {
         // Mark as outgoing.
@@ -167,6 +184,7 @@ DRAMChannel::issue_next_cmd()
             ++s_read_row_hits_;
         if (cmd_is_autopre(ready_cmd.type))
             ++s_precharges_;
+        s_tot_read_latency_ += latency;
     } 
     else if (cmd_is_write(ready_cmd.type)) 
     {
@@ -177,6 +195,7 @@ DRAMChannel::issue_next_cmd()
             ++s_write_row_hits_;
         if (cmd_is_autopre(ready_cmd.type))
             ++s_precharges_;
+        s_tot_write_latency_ += latency;
     } 
     else 
     {
@@ -188,5 +207,6 @@ DRAMChannel::issue_next_cmd()
         }
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
