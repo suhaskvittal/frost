@@ -8,8 +8,8 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_HEADER__ template <DRAMSchedPolicy POL, bool ASSUME_BANK_SPECIFIC, bool QUEUE_IS_SPLIT>
-#define __TEMPLATE_CLASS__  CmdQueue<POL, ASSUME_BANK_SPECIFIC, QUEUE_IS_SPLIT>
+#define __TEMPLATE_HEADER__ template <DRAMSchedPolicy POL, size_t SIZE, bool ASSUME_BANK_SPECIFIC, bool QUEUE_IS_SPLIT>
+#define __TEMPLATE_CLASS__  CmdQueue<POL, SIZE, ASSUME_BANK_SPECIFIC, QUEUE_IS_SPLIT>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -20,7 +20,7 @@ __TEMPLATE_CLASS__::can_accept(bool write) const
     if constexpr (QUEUE_IS_SPLIT) 
         return write ? impl_.reads.size() < RQ_SIZE : impl_.writes.size() < WQ_SIZE;
     else
-        return impl_.size() < DRAM_CMDQ_SIZE;
+        return impl_.size() < SIZE;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -37,6 +37,18 @@ __TEMPLATE_CLASS__::has_no_pending_reads() const
                                     {
                                         return cmd_is_write(cmd.type);
                                     });
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline size_t
+__TEMPLATE_CLASS__::size() const
+{
+    if constexpr (QUEUE_IS_SPLIT)
+        return impl_.reads.size() + impl_.writes.size();
+    else
+        return impl_.size();
 }
 
 ////////////////////////////////////////////////////////////////////////////

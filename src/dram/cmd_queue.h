@@ -45,7 +45,7 @@ enum class DRAMSchedPolicy {
  * retrieve the appropriate bank-state during scheduling. The user should set
  * `bank_idx_` some time before the use of the queue.
  * */
-template <DRAMSchedPolicy POL, bool ASSUME_BANK_SPECIFIC, bool QUEUE_IS_SPLIT=false>
+template <DRAMSchedPolicy POL, size_t SIZE, bool ASSUME_BANK_SPECIFIC, bool QUEUE_IS_SPLIT=false>
 class CmdQueue
 {
 public:
@@ -53,8 +53,8 @@ public:
 
     const DRAMBankState* bank_p_ =nullptr;
 private:
-    constexpr static size_t RQ_SIZE = (DRAM_CMDQ_SIZE * 3)/4;
-    constexpr static size_t WQ_SIZE = DRAM_CMDQ_SIZE - RQ_SIZE;
+    constexpr static size_t RQ_SIZE = (SIZE * 3)/4;
+    constexpr static size_t WQ_SIZE = SIZE - RQ_SIZE;
 
     using unified_impl = queue_t;
     struct split_impl
@@ -70,6 +70,8 @@ private:
 public:
     bool can_accept(bool write) const;
     bool has_no_pending_reads(void) const;
+    size_t size(void) const;
+
     void enqueue(DRAMCommand&&);
 
     DRAMCommand select_command(const DRAMChannelState&);
@@ -90,24 +92,51 @@ class CommandScheduler
 public:
 private:
     constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
-
-    using per_bank_queue_t = CmdQueue<DRAMSchedPolicy::FRFCFS, true>;
+    /*
+     * Command queue definitions:
+     * */
+    using per_bank_queue_t = CmdQueue<DRAMSchedPolicy::FRFCFS, DRAM_CMDQ_SIZE, true>;
     using per_bank_array_t = std::array<per_bank_queue_t, TOT_BANKS>;
 
-    per_bank_array_t per_bank_queues_{};
     const DRAMChannelState& state_;
-
+    /*
+     * Command queues and pointer to next command queue to select from. Command queues
+     * are selected in a round robin.
+     * */
+    per_bank_array_t per_bank_queues_{};
     size_t next_cmd_queue_idx_ =0;
+    /*
+     * `bg_write_array_t` is only used if `DRAM_ENABLE_BG_WRITE_SYNC`. If it is used,
+     * then writes are redirected to `bg_write_queues`, and are completed when
+     * any of the queues become full.
+     * */
+    constexpr static size_t TOT_BANKGROUPS = DRAM_RANKS*DRAM_BANKGROUPS;
+    constexpr static size_t BG_WRITE_QUEUE_SIZE = (DRAM_CMDQ_SIZE / 3) * DRAM_BANKS;
+
+    using bg_write_queue_t = CmdQueue<DRAMSchedPolicy::FRFCFS, BG_WRITE_QUEUE_SIZE, false>;
+    using bg_write_array_t = std::array<bg_write_queue_t, TOT_BANKGROUPS>;
+
+    bg_write_array_t bg_write_queues_{};
+    size_t bg_drain_idx_ =0;
+    bool   bg_write_mode_ =false;
+    size_t bg_num_writes_ =0;
 public:
     CommandScheduler(const DRAMChannelState&);
 
-    bool can_accept(uint64_t address, bool is_write) const;
+    bool can_accept(uint64_t address, bool is_write);
     bool has_no_pending_reads(void) const;
 
     void enqueue(DRAMCommand&&);
 
     DRAMCommand select_command(void);
+private:
+    DRAMCommand bg_sync_select_write(void);
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+size_t get_bankgroup_idx(uint64_t address);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

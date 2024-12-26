@@ -51,7 +51,7 @@ DRAMChannel::tick_mc()
                             && cmd_scheduler_->has_no_pending_reads();
         if (drain_cond_1 || drain_cond_2)
             writes_to_drain_ = write_queue_.size();
-#ifdef DRAM_TRACK_ADVANCED_STATS
+#if defined(DRAM_TRACK_ADVANCED_STATS)
         if (drain_cond_1)
         {
             // Demand drain: we are interested in the spread of writes across bankgroups.
