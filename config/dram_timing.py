@@ -18,6 +18,8 @@ def write(cfg, build):
     def ckcast(t_ns: float) -> int:
         return int(math.ceil(t_ns*dram_freq))
 
+    tRTRS = 1
+
     if dram_type == '4800':
         CL = ckcast(16.0)
         CWL = CL-2
@@ -82,6 +84,8 @@ constexpr uint64_t tFAW = {tFAW};
 
 constexpr uint64_t tRFC = {tRFC};
 constexpr uint64_t tREFI = {tREFI};
+
+constexpr uint64_t tRTRS = {tRTRS};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

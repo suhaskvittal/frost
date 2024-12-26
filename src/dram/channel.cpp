@@ -47,7 +47,7 @@ void
 DRAMChannel::tick_dram()
 {
     // Update FAW:
-    while (!state_.faw.empty() && GL_DRAM_CYCLE >= state_.faw.front() + tFASW)
+    while (!state_.faw.empty() && GL_DRAM_CYCLE >= state_.faw.front() + tFAW)
         state_.faw.pop_front();
 
     // Handle refresh if any rank needs it.
@@ -56,10 +56,8 @@ DRAMChannel::tick_dram()
                         {
                             return GL_DRAM_CYCLE >= ra.next_ref_cycle;
                         });
-    if (ra_it != state_.end()) {
-        if (try_and_issue_ref(*ra_it, s_refreshes_, s_precharges_))
-            ++s_refreshes_;
-    }
+    if (ra_it != state_.end())
+        try_and_issue_ref(*ra_it, s_refreshes_, s_precharges_);
 
     // Issue commands from the cmd queue.
     issue_next_cmd();

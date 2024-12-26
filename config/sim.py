@@ -15,6 +15,7 @@ BANK_TIMINGS = [
 CHANNEL_TIMINGS = [
     'tCCD_S', 'tCCD_S_WR', 'tCCD_S_WTR', 'tCCD_S_RTW',
     'tCCD_L', 'tCCD_L_WR', 'tCCD_L_WTR', 'tCCD_L_RTW',
+    'tRRD_S', 'tRRD_L',
     'tFAW', 'tRFC', 'tREFI'
 ]
 

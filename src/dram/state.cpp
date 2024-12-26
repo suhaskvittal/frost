@@ -2,7 +2,11 @@
  *  date:   24 December 2024
  * */
 
+#include "dram/address.h"
+#include "dram/command.h"
 #include "dram/state.h"
+
+#include <algorithm>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -19,14 +23,14 @@ update(uint64_t& t, uint64_t by)
 ////////////////////////////////////////////////////////////////////////////
 
 bool
-cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd) const
+cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
 {
     DRAMCommandType c = cmd.type;
     if (cmd_is_act(c) && ch.faw.size() == 4)
         return false;
 
     const auto& ra = ch.at(dram_rank(cmd.trans.address));
-    if (GL_DRAM_CYCLE >= ra.next_ref_cycle || GL_DRAM_CYCLE < ra.next_cmd_post_ref_cyclE)
+    if (GL_DRAM_CYCLE >= ra.next_ref_cycle || GL_DRAM_CYCLE < ra.next_cmd_post_ref_cycle)
         return false;
     if (cmd_is_read(c) && GL_DRAM_CYCLE < ra.read_ok)
         return false;
@@ -56,7 +60,7 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd) const
 ////////////////////////////////////////////////////////////////////////////
 
 void
-update_dram_timing(DRAMChannelState& ch, const DRAMCommand& cmd)
+update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
 {
     DRAMCommandType c = cmd.type;
 
@@ -85,8 +89,10 @@ update_dram_timing(DRAMChannelState& ch, const DRAMCommand& cmd)
     } else if (cmd_is_act(c)) {
         update(ba.cas_ok, tRCD);
         update(ba.pre_ok, tRAS);
+        ba.open_row = dram_row(addr);
     } else { // Precharge
         update(ba.act_ok, tRP);
+        ba.open_row.reset();
     }
 }
 
@@ -97,9 +103,9 @@ template <class PRED> inline bool
 pred_all_banks(DRAMRankState& ra, const PRED& pred)
 {
     return std::all_of(ra.begin(), ra.end(),
-            [] (const auto& bg)
+            [pred] (const auto& bg)
             {
-                return std::all_of(bg.begin(), bg.end, pred);
+                return std::all_of(bg.begin(), bg.end(), pred);
             });
 }
 
@@ -107,9 +113,9 @@ template <class PRED> inline bool
 pred_any_bank(DRAMRankState& ra, const PRED& pred)
 {
     return std::any_of(ra.begin(), ra.end(),
-            [] (const auto& bg)
+            [pred] (const auto& bg)
             {
-                return std::any_of(bg.begin(), bg.end, pred);
+                return std::any_of(bg.begin(), bg.end(), pred);
             });
 }
 
@@ -169,7 +175,7 @@ update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
     
     for (size_t i = 0; i < ch.size(); i++) {
         if (i == raidx)
-            continue;, tREFI);
+            continue;
         ch[i].read_ok = cmd_is_read(c) ? OTHER_RANK_RTR : OTHER_RANK_WTR;
         ch[i].write_ok = cmd_is_read(c) ? OTHER_RANK_RTW : OTHER_RANK_WTW;
     }

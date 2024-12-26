@@ -9,7 +9,10 @@
 #include "globals.h"
 #include "dram_timing.h"
 
+#include <array>
 #include <cstdint>
+#include <cstddef>
+#include <deque>
 #include <optional>
 
 ////////////////////////////////////////////////////////////////////////////
@@ -53,6 +56,8 @@ struct DRAMChannelState : public std::array<DRAMRankState, DRAM_RANKS>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+struct DRAMCommand;
 /*
  * `cmd_is_issuable` and `update_dram_state` should be used to interact
  * with `DRAMChannelState`.
@@ -63,7 +68,7 @@ struct DRAMChannelState : public std::array<DRAMRankState, DRAM_RANKS>
  * */
 bool cmd_is_issuable(const DRAMChannelState&, const DRAMCommand&);
 void update_dram_state(DRAMChannelState&, const DRAMCommand&);
-void try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t s_pre&);
+void try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t& s_pre);
 /*
  * These are just helper functions.
  * */

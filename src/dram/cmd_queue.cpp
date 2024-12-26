@@ -4,6 +4,7 @@
  * */
 
 #include "dram/cmd_queue.h"
+#include "dram/state.h"
 
 #include <algorithm>
 
@@ -142,7 +143,7 @@ CommandScheduler::CommandScheduler(const DRAMChannelState& s)
 bool
 CommandScheduler::can_accept(uint64_t address, bool is_write) const
 {
-    size_t ii = get_bank_flat_idx(address);
+    size_t ii = get_bank_idx(address);
     return cmd_queues_[ii].can_accept(is_write);
 }
 
@@ -156,8 +157,8 @@ CommandScheduler::has_no_pending_reads() const
 void
 CommandScheduler::enqueue(DRAMCommand&& cmd)
 {
-    size_t ii = get_bank_flat_idx(cmd.trans.address);
-    return cmd_queues_[ii].enqueue(cmd);
+    size_t ii = get_bank_idx(cmd.trans.address);
+    return cmd_queues_[ii].enqueue(std::move(cmd));
 }
 
 DRAMCommand
@@ -204,15 +205,6 @@ get_bank_state(const DRAMChannelState& ch, uint64_t address)
            bg = dram_bankgroup(address),
            ba = dram_bank(address);
     return ch.at(ra).at(bg).at(ba);
-}
-
-size_t
-get_bank_idx(uint64_t address)
-{
-    size_t ra = dram_rank(address),
-           bg = dram_bankgroup(address),
-           ba = dram_bank(address);
-    return ba + DRAM_BANKS*(bg + DRAM_BANKGROUPS*ra);
 }
 
 ////////////////////////////////////////////////////////////////////////////

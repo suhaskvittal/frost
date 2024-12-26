@@ -96,18 +96,14 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(activates)
     CREATE_VEC_STAT(refreshes)
     CREATE_VEC_STAT(pre_demand)
-    CREATE_VEC_STAT(row_buffer_hits)
-    CREATE_VEC_STAT(num_read_after_write)
+    CREATE_VEC_STAT(read_row_hits)
+    CREATE_VEC_STAT(write_row_hits)
 
-    VecStat<double, DRAM_CHANNELS> rbhr;
-    VecStat<double, DRAM_CHANNELS> rar_latency, raw_latency;
+    VecStat<double, DRAM_CHANNELS> rd_rbhr, wr_rbhr;
 
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {
-        auto& ch = channels_[i];
-
-        rbhr[i] = mean(vec_row_buffer_hits[i], vec_reads[i]+vec_writes[i]);
-        rar_latency[i] = mean(ch->s_tot_read_after_read_latency_, ch->s_num_read_after_read_);
-        raw_latency[i] = mean(ch->s_tot_read_after_write_latency_, ch->s_num_read_after_write_);
+        rd_rbhr[i] = mean(vec_read_row_hits[i], vec_reads[i]);
+        wr_rbhr[i] = mean(vec_write_row_hits[i], vec_writes[i]);
     }
 
     out << BAR << "\n";
@@ -118,13 +114,9 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "NUM_ACTIVATE", vec_activates);
     print_vecstat(out, "DRAM", "NUM_REFRESH", vec_refreshes);
     print_vecstat(out, "DRAM", "NUM_PREDEMAND", vec_pre_demand);
-    print_vecstat(out, "DRAM", "ROW_BUFFER_HITS", vec_row_buffer_hits);
 
-    print_vecstat(out, "DRAM", "ROW_BUFFER_HIT_RATE", rbhr, VecAccMode::HMEAN);
-
-    print_vecstat(out, "DRAM", "RD_AFTER_RD_LATENCY", rar_latency, VecAccMode::GMEAN);
-    print_vecstat(out, "DRAM", "RD_AFTER_WR_LATENCY", raw_latency, VecAccMode::GMEAN);
-    print_vecstat(out, "DRAM", "NUM_RD_AFTER_WR", vec_num_read_after_write);
+    print_vecstat(out, "DRAM", "READ_ROW_BUFFER_HIT_RATE", rd_rbhr, VecAccMode::HMEAN);
+    print_vecstat(out, "DRAM", "WRITE_ROW_BUFFER_HIT_RATE", wr_rbhr, VecAccMode::HMEAN);
 }
 
 ////////////////////////////////////////////////////////////////////////////

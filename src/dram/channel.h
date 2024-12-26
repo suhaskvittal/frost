@@ -7,8 +7,9 @@
 #define DRAM_CHANNEL_h
 
 #include "constants.h"
-#include "dram/bank.h"
 #include "dram/command.h"
+#include "dram/cmd_queue.h"
+#include "dram/state.h"
 #include "io_bus.h"
 #include "transaction.h"
 
@@ -47,6 +48,14 @@ public:
     const double freq_ghz_;
 private:
     using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
+    /* 
+     * Custom IO implementation
+     * */
+    in_queue_t read_queue_;
+    in_queue_t write_queue_;
+    pending_t pending_reads_;
+    pending_t pending_writes_;
+    size_t writes_to_drain_ =0;
 
     DRAMChannelState  state_{};
     cmd_sch_ptr cmd_scheduler_;

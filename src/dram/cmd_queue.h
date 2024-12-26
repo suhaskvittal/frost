@@ -6,6 +6,9 @@
 #ifndef DRAM_CMD_QUEUE_h
 #define DRAM_CMD_QUEUE_h
 
+#include "globals.h"
+
+#include "dram/address.h"
 #include "dram/command.h"
 
 #include <cstdint>
@@ -17,6 +20,16 @@
 
 struct DRAMBankState;
 struct DRAMChannelState;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+enum class DRAMCmdQueuePolicy {
+    FCFS,       // first come first serve
+    FRFCFS,     // row-hits, then fcfs -- has demand precharge to ensure some fairness
+    FRRFCFS,    // FRFCFS, but write-hits are before read-hits
+    ARFCFS      // any read, first come first serve -- any read goes before any write (in FRFCFS order)
+};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -106,7 +119,6 @@ using cmdq_iterator = std::deque<DRAMCommand>::iterator;
 
 bool                 allow_precharge(const DRAMBankState&, bool is_first, cmdq_iterator next_begin, cmdq_iterator end);
 const DRAMBankState& get_bank_state(const DRAMChannelState&, uint64_t address);
-size_t               get_bank_flat_idx(uint64_t address);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
