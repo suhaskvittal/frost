@@ -1,3 +1,0 @@
-/Users/svittal/Documents/research/c/frost/BG_SYNC/CMakeFiles/sim.dir
-/Users/svittal/Documents/research/c/frost/BG_SYNC/CMakeFiles/edit_cache.dir
-/Users/svittal/Documents/research/c/frost/BG_SYNC/CMakeFiles/rebuild_cache.dir
