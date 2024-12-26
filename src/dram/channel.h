@@ -67,7 +67,6 @@ public:
 
     bool add_incoming(Transaction);
 private:
-    void schedule_next_cmd(void);
     void issue_next_cmd(void);
 };
 

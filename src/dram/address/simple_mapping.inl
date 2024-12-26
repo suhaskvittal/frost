@@ -54,12 +54,14 @@ print_address_mapping(std::ostream& out)
 {
     // First print out bit nums
     out << "Address Mapping:\n" << BAR << "\n";
-    for (size_t i = 0; i <= 48; i += 6) {
+    for (size_t i = 0; i <= 48; i += 6) 
+    {
         out << std::setw(18) << std::left << i;
     }
     out << "\n";
     // First print out indicators of page bits and line bits.
-    for (size_t i = 0; i < 48; i++) {
+    for (size_t i = 0; i < 48; i++)
+    {
         if (i < numeric_traits<LINESIZE>::log2)
             out << ".  ";
         else if (i < numeric_traits<PAGESIZE>::log2)
@@ -80,7 +82,8 @@ print_address_mapping(std::ostream& out)
 #define BETWEEN(x, A, B) ((x) >= (A) && (x) < (A) + numeric_traits<B>::log2)
     for (size_t i = 0; i < numeric_traits<LINESIZE>::log2; i++)
         out << ".  ";
-    for (size_t i = 0; i < 48 - numeric_traits<LINESIZE>::log2; i++) {
+    for (size_t i = 0; i < 48 - numeric_traits<LINESIZE>::log2; i++) 
+    {
         if (BETWEEN(i, CH_OFF, DRAM_CHANNELS))
             out << "ch ";
         else if (BETWEEN(i, RA_OFF, DRAM_RANKS))

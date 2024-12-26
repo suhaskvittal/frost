@@ -48,33 +48,47 @@ template <class T> void
 ArgParseResult::operator()(std::string_view argname, T& argout)
 {
     auto arg_it = parse_data.find(argname);
-    if (arg_it == parse_data.end()) {
+    if (arg_it == parse_data.end())
+    {
         std::cerr << "Unknown argument \"" << argname << "\"\n" << help;
         exit(1);
     }
 
     std::string value = arg_it->second;
     std::string typenamestr;
-    try {
-        if constexpr (std::is_integral<T>::value) {
-            if constexpr (std::is_same<T, bool>::value) {
+    try
+    {
+        if constexpr (std::is_integral<T>::value)
+        {
+            if constexpr (std::is_same<T, bool>::value)
+            {
                 typenamestr = "bool";
                 argout = value != "";
-            } else if constexpr (std::is_unsigned<T>::value) {
+            } 
+            else if constexpr (std::is_unsigned<T>::value)
+            {
                 typenamestr = "uint64_t";
                 argout = static_cast<T>(std::stoull(value));
-            } else {
+            } 
+            else
+            {
                 typenamestr = "int64_t";
                 argout = static_cast<T>(std::stoll(value));
             }
-        } else if constexpr (std::is_floating_point<T>::value) {
+        }
+        else if constexpr (std::is_floating_point<T>::value)
+        {
             typenamestr = "double";
             argout = static_cast<T>(std::stof(value));
-        } else {
+        } 
+        else
+        {
             typenamestr = "std::string";
             argout = value;
         }
-    } catch (...) {
+    } 
+    catch (...)
+    {
         std::cerr << "Could not parse data for " << argname << " as type \"" << typenamestr << "\"\n" << help;
         exit(1);
     }

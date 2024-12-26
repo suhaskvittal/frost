@@ -21,9 +21,11 @@ __TEMPLATE_CLASS__::TraceReader(std::string filename)
     :filename_(filename),
     type_( filename.find(".xz") != std::string::npos ? TraceType::XZ : TraceType::GZ )
 {
-    if (type_ == TraceType::XZ) {
+    if (type_ == TraceType::XZ)
+    {
         xz_strm_ = LZMA_STREAM_INIT;
-        if (lzma_stream_decoder(&xz_strm_, std::numeric_limits<uint64_t>::max(), LZMA_CONCATENATED) != LZMA_OK) {
+        if (lzma_stream_decoder(&xz_strm_, std::numeric_limits<uint64_t>::max(), LZMA_CONCATENATED) != LZMA_OK)
+        {
             std::cerr << "xz: failed to initialize decoder.\n";
             exit(1);
         }
@@ -33,21 +35,22 @@ __TEMPLATE_CLASS__::TraceReader(std::string filename)
         xz_get_next_chunk();
         xz_strm_.next_in = (uint8_t*)xz_buf_;
         xz_strm_.avail_in = CHUNK_SIZE;
-    } else {
+    } 
+    else
         gz_fin_ = gzopen(filename.c_str(), "r");
-    }
 }
 
 __TEMPLATE_HEADER__
 __TEMPLATE_CLASS__::~TraceReader()
 {
-    if (type_ == TraceType::XZ) {
+    if (type_ == TraceType::XZ)
+    {
         lzma_end(&xz_strm_);
         fclose(xz_fin_);
         delete[] xz_buf_;
-    } else {
-        gzclose(gz_fin_);
     }
+    else
+        gzclose(gz_fin_);
 }
 
 ////////////////////////////////////////////////////////////
@@ -110,11 +113,14 @@ __TEMPLATE_CLASS__::xz_read()
     xz_strm_.next_out = (uint8_t*)&blk_;
     xz_strm_.avail_out = sizeof(blk_);
 
-    while (xz_strm_.avail_out > 0) {
+    while (xz_strm_.avail_out > 0)
+    {
         if (xz_strm_.avail_in == 0 && !eof_)
             xz_get_next_chunk();
+
         lzma_ret r = lzma_code(&xz_strm_, eof_ ? LZMA_FINISH : LZMA_RUN);
-        if (r != LZMA_OK) {
+        if (r != LZMA_OK)
+        {
             if (r == LZMA_STREAM_END)
                 return;
             else
@@ -131,7 +137,8 @@ __TEMPLATE_CLASS__::xz_get_next_chunk()
 {
     // Read next 1K bytes from file. 
     size_t num_bytes_read = fread(xz_buf_, 1, CHUNK_SIZE, xz_fin_);
-    if (ferror(xz_fin_)) {
+    if (ferror(xz_fin_))
+    {
         std::cerr << "xz: read error " << strerror(errno) << "\n";
         exit(1);
     }

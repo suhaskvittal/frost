@@ -25,7 +25,8 @@ DRAMCommand
 CommandScheduler::select_command()
 {
     DRAMCommand cmd;
-    for (size_t i = 0; i < per_bank_queues_.size(); i++) {
+    for (size_t i = 0; i < per_bank_queues_.size(); i++)
+    {
         auto& q = per_bank_queues_[next_cmd_queue_idx_];
         fast_increment_and_mod_inplace<TOT_BANKS>(next_cmd_queue_idx_);
     

@@ -35,13 +35,20 @@ cmd_string(DRAMCommandType t)
 {
     switch (t)
     {
-    case DRAMCommandType::READ:             return "READ";
-    case DRAMCommandType::WRITE:            return "WRITE";
-    case DRAMCommandType::READ_PRECHARGE:   return "READp";
-    case DRAMCommandType::WRITE_PRECHARGE:  return "WRITEp";
-    case DRAMCommandType::ACTIVATE:         return "ACT";
-    case DRAMCommandType::PRECHARGE:        return "PRE";
-    default:                                return "INVALID";
+    case DRAMCommandType::READ:
+        return "READ";
+    case DRAMCommandType::WRITE:
+        return "WRITE";
+    case DRAMCommandType::READ_PRECHARGE:
+        return "READp";
+    case DRAMCommandType::WRITE_PRECHARGE:
+        return "WRITEp";
+    case DRAMCommandType::ACTIVATE: 
+        return "ACT";
+    case DRAMCommandType::PRECHARGE:
+        return "PRE";
+    default:
+        return "INVALID";
     }
 }
 
@@ -54,10 +61,10 @@ operator<<(std::ostream& out, const DRAMCommand& cmd)
            ba = dram_bank(cmd.trans.address),
            ro = dram_row(cmd.trans.address);
     out << cmd_string(cmd.type) << "("
-        << ch << ":"
-        << ra << ":"
-        << bg << ":"
-        << ba << ":"
+        << ch << "_"
+        << ra << "_"
+        << bg << "_"
+        << ba << "_"
         << ro << ")";
     return out;
 }

@@ -25,9 +25,10 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
                     {
                         return e.valid && e.address == addr;
                     });
-    if (it == s.end()) {
+    if (it == s.end())
         return false;
-    } else {
+    else
+    {
         update(*it);
         it->dirty = write;
         return true;
@@ -49,9 +50,10 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
                     {
                         return e.valid && e.address == addr;
                     });
-    if (it == s.end()) {
+    if (it == s.end())
         return false;
-    } else {
+    else
+    {
         it->dirty = true;
         return true;
     }
@@ -60,7 +62,7 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::fill_result_t
 __TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs)
 {
     return fill(entry_t(addr, num_refs));
@@ -79,7 +81,8 @@ __TEMPLATE_CLASS__::fill(entry_t&& e)
                         {
                             return e.valid;
                         });
-    if (it == s.end()) {
+    if (it == s.end())
+    {
         it = find_victim(s); 
         out = *it;
     }
@@ -90,7 +93,7 @@ __TEMPLATE_CLASS__::fill(entry_t&& e)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ void
+__TEMPLATE_HEADER__ inline void
 __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 {
     cset_t& s = get_set(addr);
@@ -106,7 +109,7 @@ __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__
-template <class PRED> size_t
+template <class PRED> inline size_t
 __TEMPLATE_CLASS__::get_occupancy(const PRED& pred)
 {
     size_t cnt = std::accumulate(csets_.begin(), csets_.end(), static_cast<size_t>(0),
@@ -126,30 +129,38 @@ __TEMPLATE_CLASS__::get_occupancy()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::cset_t::iterator
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_t::iterator
 __TEMPLATE_CLASS__::find_victim(cset_t& s)
 {
-    if constexpr (POL == CacheReplPolicy::LRU) {
+    if constexpr (POL == CacheReplPolicy::LRU)
+    {
         return std::min_element(s.begin(), s.end(),
                                 [] (const entry_t& x, const entry_t& y)
                                 {
                                     return x.timestamp < y.timestamp;
                                 });
-    } else if constexpr (POL == CacheReplPolicy::RAND) {
+    }
+    else if constexpr (POL == CacheReplPolicy::RAND)
+    {
         return std::next( s.begin(), fast_mod<WAYS>(rng_()) );
-    } else if constexpr (POL == CacheReplPolicy::SRRIP) {
+    } 
+    else if constexpr (POL == CacheReplPolicy::SRRIP)
+    {
         auto v_it = std::min_element(s.begin(), s.end(),
                                 [] (const entry_t& x, const entry_t& y)
                                 {
                                     return x.rrpv < y.rrpv;
                                 });
-        if (v_it->rrpv > 0) {
+        if (v_it->rrpv > 0)
+        {
             // Reduce all entries' rrpv values.
             for (entry_t& x : s)
                 x.rrpv -= v_it->rrpv;
         }
         return v_it;
-    } else {
+    } 
+    else 
+    {
         std::cerr << "unsupported cache replacement policy.\n";
         exit(1);
     }
@@ -158,7 +169,7 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ void
+__TEMPLATE_HEADER__ inline void
 __TEMPLATE_CLASS__::update(entry_t& e)
 {
     e.timestamp = GL_CYCLE;

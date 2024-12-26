@@ -88,10 +88,7 @@ struct Instruction
     size_t rob_refs =1;
     /*
      * We need to specify a constructor for each trace format.
-     * We also provide an additional constructor that only takes
-     * an instruction number for dummy instructions.
      * */
-    Instruction(uint64_t inst_num);
     Instruction(uint64_t inst_num, const ChampsimTraceFormat&);
     Instruction(const MemsimTraceFormat&);
 
@@ -134,6 +131,11 @@ inst_do_func_dependent_on_state(iptr_t& inst, const FUNC& func)
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_loads_in_state, inst->loads, func);
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_stores_in_state, inst->stores, func);
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#include "instruction.inl"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

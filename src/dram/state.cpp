@@ -75,22 +75,31 @@ update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
     // Both rank and bankgroup states need to be updated for "other" ranks/bankgroups.
     update_dram_rank_states(ch, cmd);
     update_dram_bankgroup_states(ra, cmd);
+    
     // Update bank state.
-    if (cmd_is_cas(c)) {
+    if (cmd_is_cas(c))
+    {
         uint64_t cas_to_pre = cmd_is_read(c) ? tRTP : (CWL + BL/2 + tWR);
-        if (cmd_is_autopre(c)) {
+        if (cmd_is_autopre(c)) 
+        {
             ba.open_row.reset();
             ba.num_cas_to_open_row = 0;
             update(ba.act_ok, cas_to_pre + tRP);
-        } else {
+        } 
+        else
+        {
             ++ba.num_cas_to_open_row;
             update(ba.pre_ok, cas_to_pre);
         }
-    } else if (cmd_is_act(c)) {
+    } 
+    else if (cmd_is_act(c))
+    {
         update(ba.cas_ok, tRCD);
         update(ba.pre_ok, tRAS);
         ba.open_row = dram_row(addr);
-    } else { // Precharge
+    }
+    else // Precharge
+    {
         update(ba.act_ok, tRP);
         ba.open_row.reset();
     }
@@ -127,29 +136,38 @@ try_and_issue_ref(DRAMRankState& ra, uint64_t& s_ref, uint64_t& s_pre)
                             {
                                 return ba.open_row.has_value();
                             });
-    if (preab_needed) {
+    if (preab_needed)
+    {
         bool all_ready = pred_all_banks(ra,
                             [] (const auto& ba)
                             {
                                 return GL_DRAM_CYCLE >= ba.pre_ok;
                             });
-        if (all_ready) {
-            for (auto& bg : ra) {
-                for (auto& ba : bg) {
-                    update(ba.act_ok, tRP);
-                    ba.open_row.reset();
-                    ++s_pre;
+        if (all_ready)
+        {
+            for (auto& bg : ra)
+            {
+                for (auto& ba : bg)
+                {
+                    if (ba.open_row.has_value())
+                    {
+                        update(ba.act_ok, tRP);
+                        ba.open_row.reset();
+                        ++s_pre;
+                    }
                 }
             }
         }
-    } else {
-        // Do refresh:
+    }
+    else  // Do refresh:
+    {
         bool all_ready = pred_all_banks(ra,
                             [] (const auto& ba)
                             {
                                 return GL_DRAM_CYCLE >= ba.act_ok;
                             });
-        if (all_ready) {
+        if (all_ready) 
+        {
             update(ra.next_ref_cycle, tREFI);
             update(ra.next_cmd_post_ref_cycle, tRFC);
             ++s_ref;
@@ -173,7 +191,8 @@ update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
         return;
     size_t raidx = dram_rank(cmd.trans.address);
     
-    for (size_t i = 0; i < ch.size(); i++) {
+    for (size_t i = 0; i < ch.size(); i++)
+    {
         if (i == raidx)
             continue;
         ch[i].read_ok = cmd_is_read(c) ? OTHER_RANK_RTR : OTHER_RANK_WTR;
@@ -192,15 +211,21 @@ update_dram_bankgroup_states(DRAMRankState& ra, const DRAMCommand& cmd)
     DRAMCommandType c = cmd.type;
 
     size_t bgidx = dram_bankgroup(cmd.trans.address);
-    for (size_t i = 0; i < ra.size(); i++) {
+    for (size_t i = 0; i < ra.size(); i++)
+    {
         auto& bg = ra[i];
 
-        if (cmd_is_act(c)) {
+        if (cmd_is_act(c))
+        {
             UPDATE_SL(bg.act_ok, tRRD_S, tRRD_L);
-        } else if (cmd_is_read(c)) {
+        }
+        else if (cmd_is_read(c))
+        {
             UPDATE_SL(bg.read_ok, tCCD_S, tCCD_L);
             UPDATE_SL(bg.write_ok, tCCD_S_RTW, tCCD_L_RTW);
-        } else if (cmd_is_write(c)) {
+        }
+        else if (cmd_is_write(c))
+        {
             UPDATE_SL(bg.read_ok, tCCD_S_WTR, tCCD_L_WTR);
             UPDATE_SL(bg.write_ok, tCCD_S_WR, tCCD_L_WR);
         }

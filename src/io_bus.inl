@@ -1,20 +1,18 @@
 /*
  *  author: Suhas Vittal
- *  date:   12 December 2024
+ *  date:   25 December 2024
  * */
 
-#include "simple_model/os.h"
-#include "util/stats.h"
+#include "globals.h"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-void
-OS::print_stats(std::ostream& out)
+inline void
+IOBus::add_outgoing(Transaction t, uint64_t latency)
 {
-    out << BAR << "\n";
-    print_stat(out, "OS", "PAGE_FAULTS", free_list_.s_page_faults_);
-    out << BAR << "\n";
+    if (t.type == TransactionType::READ || t.type == TransactionType::TRANSLATION)
+        outgoing_queue_.emplace(t, GL_CYCLE+latency);
 }
 
 ////////////////////////////////////////////////////////////////////////////

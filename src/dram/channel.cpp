@@ -40,7 +40,37 @@ DRAMChannel::DRAMChannel(double freq_ghz)
 void
 DRAMChannel::tick_mc()
 {
-    schedule_next_cmd();
+    // Here, we will just schedule the next command from the read/write queues.
+    //
+    // Determine if we need to drain writes.
+    if (writes_to_drain_ == 0)
+    {
+        bool drain_cond_1 = write_queue_.size() == DRAM_WQ_SIZE,
+             drain_cond_2 = read_queue_.empty()
+                            && write_queue_.size() > 8
+                            && cmd_scheduler_->has_no_pending_reads();
+        if (drain_cond_1 || drain_cond_2)
+            writes_to_drain_ = write_queue_.size();
+    }
+
+    auto& q = writes_to_drain_ > 0 ? write_queue_ : read_queue_;
+    auto it = std::find_if(q.begin(), q.end(),
+                    [this, write_mode=(writes_to_drain_>0)] (const Transaction& t)
+                    {
+                        if (write_mode && this->pending_reads_.count(t.address))
+                            return false;
+                        return this->cmd_scheduler_->can_accept(t.address, write_mode);
+                    });
+    if (it != q.end()) {
+        if (writes_to_drain_ > 0)
+        {
+            cmd_scheduler_->enqueue(DRAMCommand(*it, WRITE_CMD));
+            --writes_to_drain_;
+        } 
+        else
+            cmd_scheduler_->enqueue(DRAMCommand(*it, READ_CMD));
+        q.erase(it);
+    }
 }
 
 void
@@ -80,19 +110,22 @@ bool
 DRAMChannel::add_incoming(Transaction t)
 {
     // Check for forwarding
-    if (pending_writes_.count(t.address)) {
+    if (pending_writes_.count(t.address))
+    {
         if (trans_is_read(t.type))
             outgoing_queue_.emplace(t, GL_DRAM_CYCLE);
         return true;
     }
     // Check for common reads.
-    if (trans_is_read(t.type) && pending_reads_.count(t.address)) {
+    if (trans_is_read(t.type) && pending_reads_.count(t.address))
+    {
         auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
                             [addr = t.address] (const Transaction& x)
                             {
                                 return x.address == addr;
                             });
-        if (rd_it == read_queue_.end()) {
+        if (rd_it == read_queue_.end())
+        {
             rd_it->merge(t);
             return true;
         }
@@ -102,41 +135,6 @@ DRAMChannel::add_incoming(Transaction t)
         return trans_add(read_queue_, pending_reads_, t, DRAM_RQ_SIZE);
     else
         return trans_add(write_queue_, pending_writes_, t, DRAM_WQ_SIZE);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-DRAMChannel::schedule_next_cmd()
-{
-    // Determine if we need to drain writes.
-    if (writes_to_drain_ == 0) {
-        bool drain_cond_1 = write_queue_.size() == DRAM_WQ_SIZE,
-             drain_cond_2 = read_queue_.empty()
-                            && write_queue_.size() > 8
-                            && cmd_scheduler_->has_no_pending_reads();
-        if (drain_cond_1 || drain_cond_2)
-            writes_to_drain_ = write_queue_.size();
-    }
-
-    auto& q = writes_to_drain_ > 0 ? write_queue_ : read_queue_;
-    auto it = std::find_if(q.begin(), q.end(),
-                    [this, write_mode=(writes_to_drain_>0)] (const Transaction& t)
-                    {
-                        if (write_mode && this->pending_reads_.count(t.address))
-                            return false;
-                        return this->cmd_scheduler_->can_accept(t.address, write_mode);
-                    });
-    if (it != q.end()) {
-        if (writes_to_drain_ > 0) {
-            cmd_scheduler_->enqueue(DRAMCommand(*it, WRITE_CMD));
-            --writes_to_drain_;
-        } else {
-            cmd_scheduler_->enqueue(DRAMCommand(*it, READ_CMD));
-        }
-        q.erase(it);
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -159,7 +157,8 @@ DRAMChannel::issue_next_cmd()
 
     update_dram_state(state_, ready_cmd);
 
-    if (cmd_is_read(ready_cmd.type)) {
+    if (cmd_is_read(ready_cmd.type))
+    {
         // Mark as outgoing.
         outgoing_queue_.emplace(ready_cmd.trans, GL_DRAM_CYCLE + CL);
         dec_pending(pending_reads_, ready_cmd.trans.address);
@@ -168,7 +167,9 @@ DRAMChannel::issue_next_cmd()
             ++s_read_row_hits_;
         if (cmd_is_autopre(ready_cmd.type))
             ++s_precharges_;
-    } else if (cmd_is_write(ready_cmd.type)) {
+    } 
+    else if (cmd_is_write(ready_cmd.type)) 
+    {
         dec_pending(pending_writes_, ready_cmd.trans.address);
         // Update stats.
         ++s_writes_;
@@ -176,7 +177,9 @@ DRAMChannel::issue_next_cmd()
             ++s_write_row_hits_;
         if (cmd_is_autopre(ready_cmd.type))
             ++s_precharges_;
-    } else {
+    } 
+    else 
+    {
         if (cmd_is_act(ready_cmd.type))
             ++s_activates_;
         else {

@@ -119,13 +119,15 @@ IOBus::get_next_incoming(PRED pred)
         writes_to_drain_ = write_queue_.size();
 
     bool access_done = false;
-    if (writes_to_drain_ > 0) {
+    if (writes_to_drain_ > 0)
+    {
         auto w_it = std::find_if(write_queue_.begin(), write_queue_.end(),
                             [this, pred] (const Transaction& t)
                             {
                                 return this->pending_reads_.count(t.address) == 0 && pred(t);
                             });
-        if (w_it != write_queue_.end()) {
+        if (w_it != write_queue_.end())
+        {
             access_done = true;
             out = *w_it;
             
@@ -135,14 +137,17 @@ IOBus::get_next_incoming(PRED pred)
             dec_pending(pending_writes_, w_it->address);
             --writes_to_drain_;
             write_queue_.erase(w_it);
-        } else if (!write_queue_.empty()) {
+        } 
+        else if (!write_queue_.empty())
             writes_to_drain_ = 0;  // Cannot proceed with writes -- might as well switch back to reads.
-        }
     }
-    if (!access_done) {
+
+    if (!access_done)
+    {
         in_queue_t& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
         auto r_it = std::find_if(q.begin(), q.end(), pred);
-        if (r_it != q.end()) {
+        if (r_it != q.end())
+        {
             dec_pending(pending_reads_, r_it->address);
             out = *r_it;
             q.erase(r_it);
@@ -150,6 +155,11 @@ IOBus::get_next_incoming(PRED pred)
     }
     return out;
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#include "io_bus.inl"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

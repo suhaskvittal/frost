@@ -1,0 +1,55 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   25 December 2024
+ * */
+
+#include "globals.h"
+#include "memsys.h"
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline void
+Core::tick_warmup()
+{
+    iptr_t inst = next_inst();
+    ++inst_warmup_;
+
+    if (inst != nullptr)
+    {
+        for (Memop& x : inst->loads)
+            GL_LLC->warmup_access(x.p_lineaddr, false);
+        for (Memop& x : inst->stores)
+            GL_LLC->warmup_access(x.p_lineaddr, true);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline void
+Core::tick()
+{
+    operate_rob();
+    ifetch();
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline void
+drain_llc_outgoing_queue()
+{
+    drain_cache_outgoing_queue(GL_LLC,
+            [] (const Transaction& t)
+            {
+                for (auto& inst : t.inst_list) {
+                    ++inst->num_loads_in_state[static_cast<int>(AccessState::DONE)];
+                    if (inst->is_done())
+                        inst->cycle_done = GL_CYCLE;
+                }
+            });
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////

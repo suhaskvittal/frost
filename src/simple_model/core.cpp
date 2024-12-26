@@ -22,35 +22,6 @@ Core::Core(uint8_t coreid, std::string trace_file)
     trace_reader_(trace_file)
 {}
 
-Core::~Core(void) {}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-Core::tick_warmup()
-{
-    iptr_t inst = next_inst();
-    ++inst_warmup_;
-
-    if (inst != nullptr) {
-        for (Memop& x : inst->loads)
-            GL_LLC->warmup_access(x.p_lineaddr, false);
-        for (Memop& x : inst->stores)
-            GL_LLC->warmup_access(x.p_lineaddr, true);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-Core::tick()
-{
-    operate_rob();
-    ifetch();
-}
-
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -84,18 +55,24 @@ Core::print_stats(std::ostream& out)
 void
 Core::ifetch()
 {
-    for (size_t i = 0; i < CORE_FETCH_WIDTH; i++) {
+    for (size_t i = 0; i < CORE_FETCH_WIDTH; i++)
+    {
         if (rob_size_ == CORE_ROB_SIZE)
             return;
         iptr_t inst = next_inst();
-        if (inst != nullptr) {
+        if (inst != nullptr)
+        {
             do_llc_access(inst);
             // Install inst into the ROB.
             rob_.push_back(inst);
             ++rob_size_;
-        } else if (rob_.empty()) {
+        }
+        else if (rob_.empty())
+        {
             ++finished_inst_num_;
-        } else {
+        }
+        else
+        {
             ++rob_.back()->rob_refs;
             ++rob_size_;
         }
@@ -109,7 +86,8 @@ Core::ifetch()
 void
 Core::operate_rob()
 {
-    for (size_t i = 0; i < CORE_FETCH_WIDTH && !rob_.empty(); ) {
+    for (size_t i = 0; i < CORE_FETCH_WIDTH && !rob_.empty(); )
+    {
         iptr_t& inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done)
             break;
@@ -129,7 +107,8 @@ Core::operate_rob()
     if (rob_.empty())
         return;
     // Check if any entries failed to access the LLC in ifetch.
-    for (iptr_t& inst : rob_) {
+    for (iptr_t& inst : rob_)
+    {
         if (GL_CYCLE >= inst->cycle_done)
             continue;
         do_llc_access(inst);
@@ -149,7 +128,8 @@ do_ldst(iptr_t& inst, uint8_t coreid)
             [inst, coreid] (Instruction::memop_list_t& v)
             {
                 for (Memop& x : v) {
-                    if (x.state == AccessState::NOT_READY) {
+                    if (x.state == AccessState::NOT_READY)
+                    {
                         Transaction trans(coreid, inst, T, x.p_lineaddr);
                         if (GL_LLC->io_->add_incoming(trans))
                             x.state = AccessState::IN_CACHE;
@@ -174,11 +154,12 @@ Core::do_llc_access(iptr_t& inst)
 iptr_t
 Core::next_inst()
 {
-    if (next_mem_inst_ == nullptr) {
-        // Fetch from trace reader.
+    // Fetch from trace reader.
+    if (next_mem_inst_ == nullptr)
         next_mem_inst_ = iptr_t(new Instruction(trace_reader_()));
-    }
-    if (next_mem_inst_->inst_num <= curr_inst_num_ + inst_warmup_ ) {
+
+    if (next_mem_inst_->inst_num <= curr_inst_num_ + inst_warmup_ )
+    {
         iptr_t out = std::move(next_mem_inst_);
         next_mem_inst_ = nullptr;
         // Translate all addresses now.
@@ -187,26 +168,9 @@ Core::next_inst()
         for (Memop& x : out->stores)
             x.p_lineaddr = GL_OS->translate_lineaddr(x.v_lineaddr, coreid_);
         return out;
-    } else {
+    } 
+    else
         return nullptr;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-drain_llc_outgoing_queue()
-{
-    drain_cache_outgoing_queue(GL_LLC,
-            [] (const Transaction& t)
-            {
-                for (auto& inst : t.inst_list) {
-                    ++inst->num_loads_in_state[static_cast<int>(AccessState::DONE)];
-                    if (inst->is_done())
-                        inst->cycle_done = GL_CYCLE;
-                }
-            });
 }
 
 ////////////////////////////////////////////////////////////////////////////

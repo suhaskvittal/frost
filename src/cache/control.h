@@ -102,19 +102,8 @@ private:
     void handle_hit(const Transaction&);
     void handle_miss(const Transaction&, bool write_miss=false);
 
-    inline bool do_writeback(uint64_t addr)
-    {
-        Transaction t(0, nullptr, TransactionType::WRITE, addr);
-        if (next_->io_->add_incoming(t))
-            return true;
-        else
-            return false;
-    }
-
-    inline size_t curr_mshr_size(void)
-    {
-        return mshr_.size() + writeback_queue_.size();
-    }
+    bool do_writeback(uint64_t addr);
+    size_t curr_mshr_size(void) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////

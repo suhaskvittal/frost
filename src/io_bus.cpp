@@ -29,13 +29,16 @@ bool
 IOBus::add_incoming(Transaction t)
 {
     // Check for forwarding.
-    if (pending_writes_.count(t.address)) {
+    if (pending_writes_.count(t.address))
+    {
         if (trans_is_read(t.type))
             add_outgoing(t, 1);
         return true;
     }
+
     // Same thing for reads: merge if there is an existing read already.
-    if (trans_is_read(t.type) && pending_reads_.count(t.address)) {
+    if (trans_is_read(t.type) && pending_reads_.count(t.address))
+    {
         auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
                             [addr = t.address] (const Transaction& x)
                             {
@@ -44,8 +47,10 @@ IOBus::add_incoming(Transaction t)
         rd_it->merge(t);
         return true;
     }
+
     // Add to requisite queue.
-    if (trans_is_read(t.type)) {
+    if (trans_is_read(t.type))
+    {
         size_t s = (t.type == TransactionType::PREFETCH) ? pq_size_ : rq_size_;
         in_queue_t& q = (t.type == TransactionType::PREFETCH) ? prefetch_queue_ : read_queue_;
         if (q.size() == s)
@@ -53,7 +58,9 @@ IOBus::add_incoming(Transaction t)
         else
             q.push_back(t);
         ++pending_reads_[t.address];
-    } else {
+    } 
+    else
+    {
         if (write_queue_.size() == wq_size_)
             return false;
         else
@@ -61,18 +68,6 @@ IOBus::add_incoming(Transaction t)
         ++pending_writes_[t.address];
     }
     return true;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-IOBus::add_outgoing(Transaction t, uint64_t latency)
-{
-    if (trans_is_read(t.type)) {
-        if (t.type == TransactionType::READ || t.type == TransactionType::TRANSLATION)
-            outgoing_queue_.emplace(t, GL_CYCLE+latency);
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -107,15 +102,15 @@ IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transac
                             {
                                 return t.contains_inst(inst);
                             });
-    if (q_it != q.end()) {
+    if (q_it != q.end())
+    {
         size_t dist = std::distance(q.begin(), q_it);
         std::cerr << "\tfound in " << qname << ", entry #" << dist << "\n";
         return true;
-    } else {
-        return false;
     }
+    else
+        return false;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -78,7 +78,6 @@ set(MAIN_SIM_FILES
     src/instruction.cpp
     src/io_bus.cpp
     src/os/free_list.cpp
-    src/transaction.cpp
     src/util/argparse.cpp
     # Generated files
     _generated/${BUILD_ID}/sim.cpp
