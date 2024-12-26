@@ -11,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 DRAMCommand::DRAMCommand()
-    :DRAMCommand(0, DRAMCommandType::READ)
+    :DRAMCommand(0, DRAMCommandType::INVALID)
 {}
 
 DRAMCommand::DRAMCommand(uint64_t addr, DRAMCommandType t)

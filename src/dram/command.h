@@ -19,8 +19,14 @@ enum class DRAMCommandType {
     WRITE,
     WRITE_PRECHARGE,
     ACTIVATE,
-    PRECHARGE
+    PRECHARGE,
+    INVALID
 };
+
+inline bool cmd_is_invalid(DRAMCommandType t)
+{
+    return t == DRAMCommandType::INVALID;
+}
 
 inline bool cmd_is_read(DRAMCommandType t)
 {
@@ -73,6 +79,8 @@ struct DRAMCommand
     DRAMCommand(void);
     DRAMCommand(uint64_t addr, DRAMCommandType);
     DRAMCommand(Transaction, DRAMCommandType);
+
+    DRAMCommand(const DRAMCommand&) =default;
 };
 
 ////////////////////////////////////////////////////////////////////////////

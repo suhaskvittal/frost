@@ -114,7 +114,7 @@ pred_any_bank(DRAMRankState& ra, const PRED& pred)
 }
 
 void
-try_and_issue_ref(DRAMRankState& ra)
+try_and_issue_ref(DRAMRankState& ra, uint64_t& s_ref, uint64_t& s_pre)
 {
     bool preab_needed = pred_any_bank(ra, 
                             [] (const auto& ba) 
@@ -132,6 +132,7 @@ try_and_issue_ref(DRAMRankState& ra)
                 for (auto& ba : bg) {
                     update(ba.act_ok, tRP);
                     ba.open_row.reset();
+                    ++s_pre;
                 }
             }
         }
@@ -145,6 +146,7 @@ try_and_issue_ref(DRAMRankState& ra)
         if (all_ready) {
             update(ra.next_ref_cycle, tREFI);
             update(ra.next_cmd_post_ref_cycle, tRFC);
+            ++s_ref;
         }
     }
 }

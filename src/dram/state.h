@@ -63,7 +63,7 @@ struct DRAMChannelState : public std::array<DRAMRankState, DRAM_RANKS>
  * */
 bool cmd_is_issuable(const DRAMChannelState&, const DRAMCommand&);
 void update_dram_state(DRAMChannelState&, const DRAMCommand&);
-void try_and_issue_ref(DRAMRankState&);
+void try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t s_pre&);
 /*
  * These are just helper functions.
  * */
