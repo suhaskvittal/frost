@@ -52,7 +52,6 @@ public:
     using queue_t = std::deque<DRAMCommand>;
 
     const DRAMBankState* bank_p_ =nullptr;
-private:
     constexpr static size_t RQ_SIZE = (SIZE * 3)/4;
     constexpr static size_t WQ_SIZE = SIZE - RQ_SIZE;
 
@@ -90,6 +89,12 @@ private:
 class CommandScheduler
 {
 public:
+    /*
+     * ONLY PRINTED IF `DRAM_ENABLE_BG_WRITE_SYNC` ENABLED
+     * */
+    uint64_t s_tot_bg_sync_writes_ =0;
+    uint64_t s_tot_bg_sync_drain_spread_ =0;
+    uint64_t s_bg_sync_drains_ =0;
 private:
     constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
     /*
@@ -137,7 +142,8 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-size_t get_bankgroup_idx(uint64_t address);
+const DRAMBankState& get_bank_state(const DRAMChannelState&, uint64_t address);
+size_t               get_bankgroup_idx(uint64_t address);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

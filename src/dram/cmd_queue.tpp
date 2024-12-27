@@ -142,12 +142,7 @@ __TEMPLATE_CLASS__::get_bank_ref(const DRAMChannelState& ch, uint64_t address)
     if constexpr (ASSUME_BANK_SPECIFIC)
         return *bank_p_;
     else
-    {
-        size_t ra = dram_rank(address),
-               bg = dram_bankgroup(address),
-               ba = dram_bank(address);
-        return ch.at(ra).at(bg).at(ba);
-    }
+        return get_bank_state(ch, address);
 }
 
 ////////////////////////////////////////////////////////////////////////////

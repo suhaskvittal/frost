@@ -10,6 +10,11 @@ from collections import defaultdict
 ####################################################################
 ####################################################################
 
+MPKI_LIMIT = 1.0
+
+####################################################################
+####################################################################
+
 def gmean(arr: list[float]):
     s = sum(math.log(x) for x in arr)
     return math.exp(s/len(arr))
@@ -83,7 +88,7 @@ def print_stats(build_data: dict, builds: list[str], stat: str, ref: str):
 
     for k in benchmarks:
         name = k[:k.find('.')]
-        if mpki(build_data, ref, k) < 0.5:
+        if mpki(build_data, ref, k) < MPKI_LIMIT:
             continue
         x0 = func(build_data, ref, k)
         print(f'{name:<32}', end='')

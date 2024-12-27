@@ -12,7 +12,7 @@ import os
 ####################################################################
 ####################################################################
 
-CURR_BUILDS = ['BASELINE', 'NO_WRITES']
+CURR_BUILDS = ['BASELINE']
 CURR_REFERENCE = 'BASELINE'
 CURR_SUITE = None
 

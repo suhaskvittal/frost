@@ -100,8 +100,9 @@ update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
     }
     else // Precharge
     {
-        update(ba.act_ok, tRP);
         ba.open_row.reset();
+        ba.num_cas_to_open_row = 0;
+        update(ba.act_ok, tRP);
     }
 }
 

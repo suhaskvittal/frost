@@ -59,6 +59,15 @@ CommandScheduler::bg_sync_init(size_t start)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+inline const DRAMBankState&
+get_bank_state(const DRAMChannelState& ch, uint64_t address)
+{
+    size_t ra = dram_rank(address),
+           bg = dram_bankgroup(address),
+           ba = dram_bank(address);
+    return ch.at(ra).at(bg).at(ba);
+}
+
 inline size_t
 get_bankgroup_idx(uint64_t address)
 {
