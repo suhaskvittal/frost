@@ -77,6 +77,21 @@ vec_hmean(const VecStat<T,N>& arr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+template <class T, size_t N> inline VecStat<double, N>
+vec_elwise_mean(const VecStat<T,N>& x, const VecStat<T,N>& y)
+{
+    VecStat<double, N> out;
+    std::transform(x.begin(), x.end(), y.begin(), out.begin(), 
+                [] (const T& a, const T& b)
+                {
+                    return mean(a,b);
+                });
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 constexpr size_t HEADER_WIDTH = 12;
 constexpr size_t STAT_NAME_WIDTH = 32;
 constexpr size_t STAT_WIDTH = 16;

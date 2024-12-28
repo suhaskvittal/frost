@@ -50,17 +50,46 @@ CommandScheduler::select_command()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+void
+CommandScheduler::bg_sync_init(size_t start)
+{
+    bg_drain_idx_ = start;
+    bg_write_mode_ = true;
+    bg_writes_done_ = (1L << TOT_BANKGROUPS)-1;
+
+    ++s_num_bg_sync_drains_;
+    s_mean_bg_sync_queue_size_ += std::transform_reduce(bg_write_queues_.begin(), bg_write_queues_.end(), 
+                                    0.0,
+                                    std::plus<double>{},
+                                    [] (const auto& x)
+                                    { 
+                                        return static_cast<double>(x.size());
+                                    }) / static_cast<double>(DRAM_BANKGROUPS);
+    const auto& [min_it, max_it] = std::minmax_element(bg_write_queues_.begin(), bg_write_queues_.end(),
+                                    [] (const auto& x, const auto& y)
+                                    {
+                                        return x.size() < y.size();
+                                    });
+    s_tot_bg_sync_drain_spread_ += max_it->size() - min_it->size();
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 DRAMCommand
 CommandScheduler::bg_sync_select_write()
 {
     DRAMCommand cmd;
     for (size_t i = 0; i < bg_write_queues_.size(); i++)
     {
-        auto& q = bg_write_queues_[bg_drain_idx_];
+        size_t ii = bg_drain_idx_;
+        auto& q = bg_write_queues_[ii];
         fast_increment_and_mod_inplace<TOT_BANKGROUPS>(bg_drain_idx_);
+
         if (q.size() == 0)
         {
-            if (bg_num_writes_ > DRAM_BANKGROUPS)
+            bg_writes_done_ &= ~(1L << ii);
+            if (bg_writes_done_ == 0)
             {
                 bg_write_mode_ = false;
                 break;
@@ -73,7 +102,10 @@ CommandScheduler::bg_sync_select_write()
         if (!cmd_is_invalid(cmd.type))
         {
             if (cmd_is_write(cmd.type))
-                ++bg_num_writes_;
+            {
+                bg_writes_done_ &= ~(1L << ii);
+                ++s_tot_bg_sync_writes_;
+            }
             break;
         }
     }

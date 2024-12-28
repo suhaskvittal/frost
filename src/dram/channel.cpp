@@ -61,9 +61,10 @@ DRAMChannel::tick_mc()
                 size_t ii = dram_bankgroup(t.address) + dram_rank(t.address)*DRAM_BANKGROUPS;
                 ++cnt[ii];
             }
-            // Compute spread.
+            // Update stats
             const auto& [min_it, max_it] = std::minmax_element(cnt.begin(), cnt.end());
-            s_drain_bg_spread_ += (*max_it) - (*min_it);
+            s_tot_drain_bg_spread_ += (*max_it) - (*min_it);
+
             ++s_num_drains_;
         }
 #endif

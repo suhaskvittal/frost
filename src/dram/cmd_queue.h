@@ -93,8 +93,9 @@ public:
      * ONLY PRINTED IF `DRAM_ENABLE_BG_WRITE_SYNC` ENABLED
      * */
     uint64_t s_tot_bg_sync_writes_ =0;
+    double s_mean_bg_sync_queue_size_ =0.0; // Averaged per bankgroup.
     uint64_t s_tot_bg_sync_drain_spread_ =0;
-    uint64_t s_bg_sync_drains_ =0;
+    uint64_t s_num_bg_sync_drains_ =0;
 private:
     constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
     /*
@@ -124,7 +125,7 @@ private:
     bg_write_array_t bg_write_queues_{};
     size_t bg_drain_idx_ =0;
     bool   bg_write_mode_ =false;
-    size_t bg_num_writes_ =0;
+    uint64_t bg_writes_done_ =0;  // This is a bitvector which indicates which bankgroups have issued a write.
 public:
     CommandScheduler(const DRAMChannelState&);
 
