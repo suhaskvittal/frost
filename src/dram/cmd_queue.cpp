@@ -27,6 +27,54 @@ CommandScheduler::CommandScheduler(const DRAMChannelState& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+bool
+CommandScheduler::can_accept(uint64_t address, bool is_write)
+{
+#if defined(DRAM_ENABLE_BG_WRITE_SYNC)
+    if (is_write)
+    {
+        size_t ii = get_bankgroup_idx(address);
+        bool out = bg_write_queues_[ii].can_accept(true);
+        if (!bg_write_mode_ && !out)
+            bg_sync_init(ii);
+        return out;
+    }
+#endif
+    size_t ii = get_bank_idx(address);
+    return per_bank_queues_[ii].can_accept(is_write);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+bool
+CommandScheduler::has_no_pending_reads() const
+{
+    return std::all_of(per_bank_queues_.begin(), per_bank_queues_.end(),
+                [] (const auto& q) { return q.has_no_pending_reads(); });
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+CommandScheduler::enqueue(DRAMCommand&& cmd)
+{
+#if defined(DRAM_ENABLE_BG_WRITE_SYNC)
+    if (cmd_is_write(cmd.type))
+    {
+        size_t ii = get_bankgroup_idx(cmd.trans.address);
+        bg_write_queues_[ii].enqueue(std::move(cmd));
+        return;
+    }
+#endif
+    size_t ii = get_bank_idx(cmd.trans.address);
+    per_bank_queues_[ii].enqueue(std::move(cmd));
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 DRAMCommand
 CommandScheduler::select_command()
 {
@@ -64,7 +112,7 @@ CommandScheduler::bg_sync_init(size_t start)
                                     [] (const auto& x)
                                     { 
                                         return static_cast<double>(x.size());
-                                    }) / static_cast<double>(DRAM_BANKGROUPS);
+                                    }) / static_cast<double>(TOT_BANKGROUPS);
     const auto& [min_it, max_it] = std::minmax_element(bg_write_queues_.begin(), bg_write_queues_.end(),
                                     [] (const auto& x, const auto& y)
                                     {

@@ -26,6 +26,34 @@ Core::Core(uint8_t coreid, std::string trace_file)
 ////////////////////////////////////////////////////////////////////////////
 
 void
+Core::tick_warmup()
+{
+    iptr_t inst = next_inst();
+    ++inst_warmup_;
+
+    if (inst != nullptr)
+    {
+        for (Memop& x : inst->loads)
+            GL_LLC->warmup_access(x.p_lineaddr, false);
+        for (Memop& x : inst->stores)
+            GL_LLC->warmup_access(x.p_lineaddr, true);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+Core::tick()
+{
+    operate_rob();
+    ifetch();
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
 Core::checkpoint_stats()
 {
     double ipc = mean(finished_inst_num_, GL_CYCLE);
@@ -171,6 +199,22 @@ Core::next_inst()
     } 
     else
         return nullptr;
+}
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+drain_llc_outgoing_queue()
+{
+    drain_cache_outgoing_queue(GL_LLC,
+            [] (const Transaction& t)
+            {
+                for (auto& inst : t.inst_list) {
+                    ++inst->num_loads_in_state[static_cast<int>(AccessState::DONE)];
+                    if (inst->is_done())
+                        inst->cycle_done = GL_CYCLE;
+                }
+            });
 }
 
 ////////////////////////////////////////////////////////////////////////////

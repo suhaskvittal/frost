@@ -5,6 +5,7 @@
 
 #ifndef DRAM_CMD_QUEUE_h
 #define DRAM_CMD_QUEUE_h
+
 #include "globals.h"
 
 #include "dram/address.h"
@@ -22,8 +23,6 @@
 enum class DRAMSchedPolicy {
     FCFS,       // first come first serve
     FRFCFS,     // row-hits, then fcfs -- has demand precharge to ensure some fairness
-    FRRFCFS,    // FRFCFS, but write-hits are before read-hits
-    ARFCFS      // any read, first come first serve -- any read goes before any write (in FRFCFS order)
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -143,14 +142,25 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-const DRAMBankState& get_bank_state(const DRAMChannelState&, uint64_t address);
-size_t               get_bankgroup_idx(uint64_t address);
+inline const DRAMBankState&
+get_bank_state(const DRAMChannelState& ch, uint64_t address)
+{
+    size_t ra = dram_rank(address),
+           bg = dram_bankgroup(address),
+           ba = dram_bank(address);
+    return ch.at(ra).at(bg).at(ba);
+}
+
+inline size_t 
+get_bankgroup_idx(uint64_t address)
+{
+    return dram_bankgroup(address) + dram_rank(address)*DRAM_BANKGROUPS;
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 #include "cmd_queue.tpp"
-#include "cmd_queue.inl"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

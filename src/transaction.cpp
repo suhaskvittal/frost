@@ -10,7 +10,7 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline bool
+bool
 trans_is_read(TransactionType t)
 {
     return t != TransactionType::WRITE;
@@ -19,7 +19,6 @@ trans_is_read(TransactionType t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline
 Transaction::Transaction(uint8_t cid, iptr_t inst, TransactionType t, uint64_t addr, bool addr_is_ip)
     :coreid(cid),
     inst_list({inst}),
@@ -31,13 +30,13 @@ Transaction::Transaction(uint8_t cid, iptr_t inst, TransactionType t, uint64_t a
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline bool
+bool
 Transaction::contains_inst(iptr_t inst) const
 {
     return std::find(inst_list.begin(), inst_list.end(), inst) != inst_list.end();
 }
 
-inline void
+void
 Transaction::merge(Transaction& y)
 {
     std::move(y.inst_list.begin(), y.inst_list.end(), std::back_inserter(inst_list));
