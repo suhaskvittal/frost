@@ -24,7 +24,7 @@ public:
 
     const uint8_t coreid_;
 private:
-    using rob_t = std::deque<iptr_t>;
+    using rob_t = std::deque<inst_ptr>;
     using tracereader_t = TraceReader<MemsimTraceFormat>;
 
     rob_t rob_;
@@ -32,7 +32,7 @@ private:
 
     std::string   trace_file_;
     tracereader_t trace_reader_;
-    iptr_t        next_mem_inst_ =nullptr;
+    inst_ptr      next_mem_inst_ =nullptr;
 
     uint64_t curr_inst_num_ =0;
     uint64_t inst_warmup_ =0;
@@ -50,9 +50,9 @@ private:
     void ifetch(void);
     void operate_rob(void);
 
-    void do_llc_access(iptr_t&);
+    void do_llc_access(inst_ptr&);
 
-    iptr_t next_inst(void);
+    inst_ptr next_inst(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

@@ -20,7 +20,8 @@ bool trans_is_read(TransactionType);
 ////////////////////////////////////////////////////////////////////////////
 
 struct Instruction;
-using iptr_t = std::shared_ptr<Instruction>;
+using inst_ptr = std::unique_ptr<Instruction>;
+using raw_inst_ptr = Instruction*;
 /*
  * This struct should have all information for routing cache/memory requests
  * through the memory hierarchy.
@@ -31,7 +32,7 @@ using iptr_t = std::shared_ptr<Instruction>;
  * */
 struct Transaction
 {
-    using inst_list_t = std::vector<iptr_t>;
+    using inst_list_t = std::vector<raw_inst_ptr>;
 
     uint8_t         coreid;
     inst_list_t     inst_list;
@@ -40,10 +41,12 @@ struct Transaction
     uint64_t address;
     bool     address_is_ip;
 
-    Transaction(uint8_t cid, iptr_t, TransactionType, uint64_t addr, bool addr_is_ip=false);
+    Transaction(uint8_t cid, const inst_ptr&, TransactionType, uint64_t addr, bool addr_is_ip=false);
+    Transaction(uint8_t cid, raw_inst_ptr, TransactionType, uint64_t addr, bool addr_is_ip=false);
     Transaction(const Transaction&) =default;
 
-    bool contains_inst(iptr_t) const;
+    bool contains_inst(const inst_ptr&) const;
+    bool contains_inst(raw_inst_ptr) const;
     void merge(Transaction&);
 };
 

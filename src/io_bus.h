@@ -93,9 +93,9 @@ public:
      * Searches for references to the instruction in the queues. 
      * Returns true if found and writes to stderr.
      * */
-    bool deadlock_find_inst(const iptr_t&);
+    bool deadlock_find_inst(const inst_ptr&);
 private:
-    bool deadlock_search_in_queue(std::string_view qname, const in_queue_t&, const iptr_t&);
+    bool deadlock_search_in_queue(std::string_view qname, const in_queue_t&, const inst_ptr&);
 
     inline void dec_pending(pending_t& p, uint64_t addr)
     {

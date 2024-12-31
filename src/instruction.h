@@ -99,7 +99,7 @@ struct Instruction
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-using iptr_t = std::shared_ptr<Instruction>;
+using inst_ptr = std::unique_ptr<Instruction>;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -126,7 +126,7 @@ inst_do_func_dependent_on_state(Instruction::memop_state_array_t& st, Instructio
 }
 
 template <AccessState STATE, class FUNC> void
-inst_do_func_dependent_on_state(iptr_t& inst, const FUNC& func)
+inst_do_func_dependent_on_state(inst_ptr& inst, const FUNC& func)
 {
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_loads_in_state, inst->loads, func);
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_stores_in_state, inst->stores, func);

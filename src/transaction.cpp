@@ -19,7 +19,11 @@ trans_is_read(TransactionType t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-Transaction::Transaction(uint8_t cid, iptr_t inst, TransactionType t, uint64_t addr, bool addr_is_ip)
+Transaction::Transaction(uint8_t cid, const inst_ptr& inst, TransactionType t, uint64_t addr, bool addr_is_ip)
+    :Transaction(cid, inst.get(), t, addr, addr_is_ip)
+{}
+
+Transaction::Transaction(uint8_t cid, raw_inst_ptr inst, TransactionType t, uint64_t addr, bool addr_is_ip)
     :coreid(cid),
     inst_list({inst}),
     type(t),
@@ -31,7 +35,13 @@ Transaction::Transaction(uint8_t cid, iptr_t inst, TransactionType t, uint64_t a
 ////////////////////////////////////////////////////////////////////////////
 
 bool
-Transaction::contains_inst(iptr_t inst) const
+Transaction::contains_inst(const inst_ptr& inst) const
+{
+    return contains_inst(inst.get());
+}
+
+bool
+Transaction::contains_inst(raw_inst_ptr inst) const
 {
     return std::find(inst_list.begin(), inst_list.end(), inst) != inst_list.end();
 }

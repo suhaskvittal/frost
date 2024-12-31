@@ -62,7 +62,7 @@ __TEMPLATE_CLASS__::select_command(const DRAMChannelState& ch, bool force_write)
         if (b.open_row.has_value())
         {
             if (b.open_row == dram_row(addr))
-                ready_cmd = *cmd_it;
+                ready_cmd = std::move(*cmd_it);
             else if (allow_demand_precharge(b, first, cmd_it, impl_.end()))
                 ready_cmd = DRAMCommand(addr, DRAMCommandType::PRECHARGE);
         }
@@ -85,6 +85,8 @@ __TEMPLATE_CLASS__::select_command(const DRAMChannelState& ch, bool force_write)
                 cmd_it->is_row_buffer_hit = false;
             return ready_cmd;
         }
+        else if (cmd_is_cas(ready_cmd.type))
+            *cmd_it = std::move(ready_cmd);
 
         first = false;
     }
