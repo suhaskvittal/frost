@@ -3,7 +3,7 @@
  *  date:   24 December 2024
  * */
 
-#include "dram/cmd_queue.h"
+#include "dram/scheduler.h"
 #include "util/numerics.h"
 
 #include <limits>
@@ -54,16 +54,16 @@ CommandScheduler::has_no_pending_reads() const
 ////////////////////////////////////////////////////////////////////////////
 
 void
-CommandScheduler::enqueue(DRAMCommand&& cmd)
+CommandScheduler::enqueue(Transaction&& trans, DRAMCommandType t)
 {
-    size_t ii = get_bank_idx(cmd.trans.address);
-    cmd_queues_[ii].enqueue(std::move(cmd));
+    size_t ii = get_bank_idx(trans.address);
+    cmd_queues_[ii].enqueue(std::move(trans), t);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAMCommand
+typename CommandScheduler::cmd_queue_t::cmd_output_t
 CommandScheduler::select_command()
 {
     if (alap_sync_in_write_mode_)
@@ -73,7 +73,8 @@ CommandScheduler::select_command()
         alap_sync_in_write_mode_ = !all_done;
     }
 
-    DRAMCommand cmd;
+    cmd_queue_t::cmd_output_t out;
+
     for (size_t i = 0; i < cmd_queues_.size(); i++)
     {
         auto& q = cmd_queues_[next_cmd_queue_idx_];
@@ -85,19 +86,19 @@ CommandScheduler::select_command()
                 write_cnt = 0;
             else if (write_cnt > 0)
             {
-                cmd = q.select_command(state_, true);
-                if (cmd_is_write(cmd.type))
+                out = q.select_command(state_, true);
+                if (cmd_is_write(std::get<0>(out).type))
                     --write_cnt;
             }
         }
         else
-            cmd = q.select_command(state_);
+            out = q.select_command(state_);
 
         fast_increment_and_mod_inplace<TOT_BANKS>(next_cmd_queue_idx_);
-        if (!cmd_is_invalid(cmd.type))
+        if (!cmd_is_invalid(std::get<0>(out).type))
             break;
     }
-    return cmd;
+    return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////

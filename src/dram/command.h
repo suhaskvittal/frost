@@ -72,16 +72,11 @@ inline bool cmd_is_pre_only(DRAMCommandType t)
 
 struct DRAMCommand
 {
-    Transaction trans;
+    uint64_t address;
     DRAMCommandType type;
-    bool is_row_buffer_hit =true;
-
-    uint64_t cycle_entered_cmd_queue;
 
     DRAMCommand(void);
-    DRAMCommand(uint64_t addr, DRAMCommandType);
-    DRAMCommand(Transaction, DRAMCommandType);
-
+    DRAMCommand(uint64_t, DRAMCommandType);
     DRAMCommand(const DRAMCommand&) =default;
 };
 

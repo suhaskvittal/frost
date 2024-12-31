@@ -84,7 +84,7 @@ IOBus::add_outgoing(Transaction t, uint64_t latency)
 ////////////////////////////////////////////////////////////////////////////
 
 bool
-IOBus::deadlock_find_inst(const inst_ptr& inst)
+IOBus::deadlock_find_inst(const inst_ptr inst)
 {
     std::cerr << "\tio status: writes_to_drain = " << writes_to_drain_ 
                 << ", RQ = " << read_queue_.size()
@@ -105,12 +105,12 @@ IOBus::deadlock_find_inst(const inst_ptr& inst)
 }
 
 bool
-IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transaction>& q, const inst_ptr& inst)
+IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transaction>& q, const inst_ptr inst)
 {
     auto q_it = std::find_if(q.cbegin(), q.cend(),
-                            [i_p=inst.get()] (const Transaction& t)
+                            [inst] (const Transaction& t)
                             {
-                                return t.contains_inst(i_p);
+                                return t.contains_inst(inst);
                             });
     if (q_it != q.end())
     {

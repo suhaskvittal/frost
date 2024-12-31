@@ -29,7 +29,7 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
     if (cmd_is_act(c) && ch.faw.size() == 4)
         return false;
 
-    const auto& ra = ch.at(dram_rank(cmd.trans.address));
+    const auto& ra = ch.at(dram_rank(cmd.address));
     if (GL_DRAM_CYCLE >= ra.next_ref_cycle || GL_DRAM_CYCLE < ra.next_cmd_post_ref_cycle)
         return false;
     if (cmd_is_read(c) && GL_DRAM_CYCLE < ra.read_ok)
@@ -37,7 +37,7 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
     if (cmd_is_write(c) && GL_DRAM_CYCLE < ra.write_ok)
         return false;
 
-    const auto& bg = ra.at(dram_bankgroup(cmd.trans.address));
+    const auto& bg = ra.at(dram_bankgroup(cmd.address));
     if (cmd_is_read(c) && GL_DRAM_CYCLE < bg.read_ok)
         return false;
     if (cmd_is_write(c) && GL_DRAM_CYCLE < bg.write_ok)
@@ -45,7 +45,7 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
     if (c == DRAMCommandType::ACTIVATE && GL_DRAM_CYCLE < bg.act_ok)
         return false;
     
-    const auto& ba = bg.at(dram_bank(cmd.trans.address));
+    const auto& ba = bg.at(dram_bank(cmd.address));
     if (cmd_is_act(c) && GL_DRAM_CYCLE < ba.act_ok)
         return false;
     if (cmd_is_cas(c) && GL_DRAM_CYCLE < ba.cas_ok)
@@ -64,7 +64,7 @@ update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
 {
     DRAMCommandType c = cmd.type;
 
-    uint64_t addr = cmd.trans.address;
+    uint64_t addr = cmd.address;
 
     auto& ra = ch.at(dram_rank(addr));
     auto& bg = ra.at(dram_bankgroup(addr));
@@ -190,7 +190,7 @@ update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
     DRAMCommandType c = cmd.type;
     if (!cmd_is_cas(c))
         return;
-    size_t raidx = dram_rank(cmd.trans.address);
+    size_t raidx = dram_rank(cmd.address);
     
     for (size_t i = 0; i < ch.size(); i++)
     {
@@ -211,7 +211,7 @@ update_dram_bankgroup_states(DRAMRankState& ra, const DRAMCommand& cmd)
 {
     DRAMCommandType c = cmd.type;
 
-    size_t bgidx = dram_bankgroup(cmd.trans.address);
+    size_t bgidx = dram_bankgroup(cmd.address);
     for (size_t i = 0; i < ra.size(); i++)
     {
         auto& bg = ra[i];

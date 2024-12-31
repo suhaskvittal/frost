@@ -3,8 +3,6 @@
  *  date:   15 December 2024
  * */
 
-#include "globals.h"
-
 #include "dram/address.h"
 #include "dram/command.h"
 
@@ -14,17 +12,12 @@
 ////////////////////////////////////////////////////////////////////////////
 
 DRAMCommand::DRAMCommand()
-    :DRAMCommand(0, DRAMCommandType::INVALID)
+    :type(DRAMCommandType::INVALID)
 {}
 
 DRAMCommand::DRAMCommand(uint64_t addr, DRAMCommandType t)
-    :DRAMCommand(Transaction(0, nullptr, TransactionType::READ, addr), t)
-{}
-
-DRAMCommand::DRAMCommand(Transaction trans, DRAMCommandType t)
-    :trans(trans),
-    type(t),
-    cycle_entered_cmd_queue(GL_DRAM_CYCLE)
+    :address(addr),
+    type(t)
 {}
 
 ////////////////////////////////////////////////////////////////////////////
@@ -55,11 +48,11 @@ cmd_string(DRAMCommandType t)
 std::ostream&
 operator<<(std::ostream& out, const DRAMCommand& cmd)
 {
-    size_t ch = dram_channel(cmd.trans.address),
-           ra = dram_rank(cmd.trans.address),
-           bg = dram_bankgroup(cmd.trans.address),
-           ba = dram_bank(cmd.trans.address),
-           ro = dram_row(cmd.trans.address);
+    size_t ch = dram_channel(cmd.address),
+           ra = dram_rank(cmd.address),
+           bg = dram_bankgroup(cmd.address),
+           ba = dram_bank(cmd.address),
+           ro = dram_row(cmd.address);
     out << cmd_string(cmd.type) << "("
         << ch << "_"
         << ra << "_"

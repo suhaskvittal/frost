@@ -98,8 +98,14 @@ struct Instruction
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-using inst_ptr = std::unique_ptr<Instruction>;
+/*
+ * While using a raw pointer is not ideal, we find that it yields the best performance. We
+ * always know where to delete `inst_ptr` (after it is retired from the ROB).
+ *
+ * Using a unique_ptr causes overheads in lambdas.
+ * Using a shared_ptr has too many overheads due to ownership tracking.
+ * */
+using inst_ptr = Instruction*;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -126,7 +132,7 @@ inst_do_func_dependent_on_state(Instruction::memop_state_array_t& st, Instructio
 }
 
 template <AccessState STATE, class FUNC> void
-inst_do_func_dependent_on_state(inst_ptr& inst, const FUNC& func)
+inst_do_func_dependent_on_state(inst_ptr inst, const FUNC& func)
 {
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_loads_in_state, inst->loads, func);
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_stores_in_state, inst->stores, func);

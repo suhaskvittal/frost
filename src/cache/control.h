@@ -96,7 +96,7 @@ public:
      * Searches for an instruction in this cache. If it is found, a message
      * is printed to `stderr` and this function returns true.
      * */
-    bool deadlock_find_inst(const inst_ptr& inst);
+    bool deadlock_find_inst(const inst_ptr);
 private:
     void next_access(void);
     void handle_hit(const Transaction&);

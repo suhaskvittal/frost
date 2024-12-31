@@ -50,7 +50,7 @@ private:
     void ifetch(void);
     void operate_rob(void);
 
-    void do_llc_access(inst_ptr&);
+    void do_llc_access(inst_ptr);
 
     inst_ptr next_inst(void);
 };

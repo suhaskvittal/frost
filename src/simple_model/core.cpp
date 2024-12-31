@@ -38,6 +38,8 @@ Core::tick_warmup()
         for (Memop& x : inst->stores)
             GL_LLC->warmup_access(x.p_lineaddr, true);
     }
+
+    delete inst;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -92,7 +94,7 @@ Core::ifetch()
         {
             do_llc_access(inst);
             // Install inst into the ROB.
-            rob_.push_back(std::move(inst));
+            rob_.push_back(inst);
             ++rob_size_;
         }
         else if (rob_.empty())
@@ -114,7 +116,7 @@ Core::operate_rob()
 {
     for (size_t i = 0; i < CORE_FETCH_WIDTH && !rob_.empty(); )
     {
-        inst_ptr& inst = rob_.front();
+        inst_ptr inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done)
             break;
         inst->retired = true;
@@ -126,14 +128,17 @@ Core::operate_rob()
         finished_inst_num_ += rob_ref_updates;
 
         if (inst->rob_refs == 0)
+        {
             rob_.pop_front();
+            delete inst;
+        }
 
         i += rob_ref_updates;
     }
     if (rob_.empty())
         return;
     // Check if any entries failed to access the LLC in ifetch.
-    for (inst_ptr& inst : rob_)
+    for (inst_ptr inst : rob_)
     {
         if (GL_CYCLE >= inst->cycle_done)
             continue;
@@ -145,18 +150,18 @@ Core::operate_rob()
 ////////////////////////////////////////////////////////////////////////////
 
 template <TransactionType T> void
-do_ldst(inst_ptr& inst, uint8_t coreid)
+do_ldst(inst_ptr inst, uint8_t coreid)
 {
     auto& st = (T == TransactionType::READ) ? inst->num_loads_in_state : inst->num_stores_in_state;
     auto& v = (T == TransactionType::READ) ? inst->loads : inst->stores;
 
     inst_do_func_dependent_on_state<AccessState::IN_CACHE>(st, v,
-            [i_p=inst.get(), coreid] (Instruction::memop_list_t& v)
+            [inst, coreid] (Instruction::memop_list_t& v)
             {
                 for (Memop& x : v) {
                     if (x.state == AccessState::NOT_READY)
                     {
-                        Transaction trans(coreid, i_p, T, x.p_lineaddr);
+                        Transaction trans(coreid, inst, T, x.p_lineaddr);
                         if (GL_LLC->io_->add_incoming(trans))
                             x.state = AccessState::IN_CACHE;
                     }
@@ -165,7 +170,7 @@ do_ldst(inst_ptr& inst, uint8_t coreid)
 }
 
 void
-Core::do_llc_access(inst_ptr& inst)
+Core::do_llc_access(inst_ptr inst)
 {
     do_ldst<TransactionType::READ>(inst, coreid_);
     do_ldst<TransactionType::WRITE>(inst, coreid_);
@@ -182,11 +187,11 @@ Core::next_inst()
 {
     // Fetch from trace reader.
     if (next_mem_inst_ == nullptr)
-        next_mem_inst_ = inst_ptr(new Instruction(trace_reader_()));
+        next_mem_inst_ = new Instruction(trace_reader_());
 
     if (next_mem_inst_->inst_num <= curr_inst_num_ + inst_warmup_ )
     {
-        inst_ptr out = std::move(next_mem_inst_);
+        inst_ptr out = next_mem_inst_;
         next_mem_inst_ = nullptr;
         // Translate all addresses now.
         for (Memop& x : out->loads)

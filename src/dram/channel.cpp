@@ -87,13 +87,13 @@ DRAMChannel::tick_mc()
                         return this->cmd_scheduler_->can_accept(t.address, write_mode);
                     });
     if (it != q.end()) {
+        DRAMCommandType cmd_type = READ_CMD;
         if (writes_to_drain_ > 0)
         {
-            cmd_scheduler_->enqueue(DRAMCommand(*it, WRITE_CMD));
+            cmd_type = WRITE_CMD;
             --writes_to_drain_;
         } 
-        else
-            cmd_scheduler_->enqueue(DRAMCommand(*it, READ_CMD));
+        cmd_scheduler_->enqueue(std::move(*it), cmd_type);
         q.erase(it);
     }
 }
@@ -204,37 +204,43 @@ DRAMChannel::issue_next_cmd()
     cmd_scheduler_->print_queue_state(tmp_logger_local_);
 #endif
 
-    DRAMCommand ready_cmd = cmd_scheduler_->select_command();
+    auto [ready_cmd, opt_q_entry] = cmd_scheduler_->select_command();
 
     if (cmd_is_invalid(ready_cmd.type))
         return;
 
     update_dram_state(state_, ready_cmd);
 
-    uint64_t latency = GL_DRAM_CYCLE - ready_cmd.cycle_entered_cmd_queue;
-    if (cmd_is_read(ready_cmd.type))
+    if (cmd_is_cas(ready_cmd.type))
     {
-        // Mark as outgoing.
-        outgoing_queue_.emplace(ready_cmd.trans, GL_DRAM_CYCLE + CL);
-        dec_pending(pending_reads_, ready_cmd.trans.address);
-        ++s_reads_;
-        if (ready_cmd.is_row_buffer_hit)
-            ++s_read_row_hits_;
-        if (cmd_is_autopre(ready_cmd.type))
-            ++s_precharges_;
-        s_tot_read_latency_ += latency;
-    } 
-    else if (cmd_is_write(ready_cmd.type)) 
-    {
-        dec_pending(pending_writes_, ready_cmd.trans.address);
-        // Update stats.
-        ++s_writes_;
-        if (ready_cmd.is_row_buffer_hit)
-            ++s_write_row_hits_;
-        if (cmd_is_autopre(ready_cmd.type))
-            ++s_precharges_;
-        s_tot_write_latency_ += latency;
-    } 
+        auto q_entry = opt_q_entry.value();
+        Transaction& trans = q_entry.trans;
+
+        uint64_t latency = GL_DRAM_CYCLE - q_entry.cycle_entered_queue;
+        if (cmd_is_read(ready_cmd.type))
+        {
+            dec_pending(pending_reads_, trans.address);
+            ++s_reads_;
+            if (q_entry.is_row_buffer_hit)
+                ++s_read_row_hits_;
+            if (cmd_is_autopre(ready_cmd.type))
+                ++s_precharges_;
+            s_tot_read_latency_ += latency;
+            // Mark as outgoing.
+            outgoing_queue_.emplace(std::move(trans), GL_DRAM_CYCLE + CL);
+        } 
+        else
+        {
+            dec_pending(pending_writes_, trans.address);
+            // Update stats.
+            ++s_writes_;
+            if (q_entry.is_row_buffer_hit)
+                ++s_write_row_hits_;
+            if (cmd_is_autopre(ready_cmd.type))
+                ++s_precharges_;
+            s_tot_write_latency_ += latency;
+        } 
+    }
     else 
     {
         if (cmd_is_act(ready_cmd.type))

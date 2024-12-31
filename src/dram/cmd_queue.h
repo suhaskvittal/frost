@@ -6,7 +6,7 @@
 #ifndef DRAM_CMD_QUEUE_h
 #define DRAM_CMD_QUEUE_h
 
-#include "globals.h"
+#include "constants.h"
 
 #include "dram/address.h"
 #include "dram/command.h"
@@ -32,6 +32,24 @@ enum class DRAMWritePolicy
     ASAP,       // Writes are finished in their command queue order.
     ALAP,       // Writes are only issued if `MAX_WRITES` is reached
     ALAP_SYNC   // Writes are issued if any command queue reaches `MAX_WRITES`
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+struct CmdQueueEntry
+{
+    Transaction     trans;
+    DRAMCommandType type;
+    bool is_row_buffer_hit =true;
+
+    uint64_t cycle_entered_queue;
+
+    CmdQueueEntry(Transaction t, DRAMCommandType c)
+        :trans(t),
+        type(c),
+        cycle_entered_queue(GL_DRAM_CYCLE)
+    {}
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -63,19 +81,21 @@ class CmdQueue
 public:
     constexpr static size_t ALAP_MAX_WRITES = SIZE / 4;
 
-    using queue_t = std::deque<DRAMCommand>;
-
     const DRAMBankState* bank_p_ =nullptr;
 private:
+    using queue_t = std::deque<CmdQueueEntry>;
 
     queue_t impl_;
     size_t  writes_in_queue_ =0;
     size_t  writes_to_drain_ =0;
 public:
-    void enqueue(DRAMCommand&&);
+    /*
+     * If the first entry (the command) is a CAS command, then the second entry has a value.
+     * */
+    using cmd_output_t = std::tuple<DRAMCommand, std::optional<CmdQueueEntry>>;
 
-    DRAMCommand select_command(const DRAMChannelState&, bool force_select_write=false);
-
+    void enqueue(Transaction&&, DRAMCommandType);
+    cmd_output_t select_command(const DRAMChannelState&, bool force_select_write=false);
     void print_queue_contents(std::ostream&);
     /*
      * Simple inline functions:
@@ -91,62 +111,6 @@ private:
     const DRAMBankState& get_bank_ref(const DRAMChannelState&, uint64_t address);
 
     bool allow_demand_precharge(const DRAMBankState&, bool is_first, queue_t::iterator, queue_t::iterator end);
-};
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-/*
- * This is just a wrapper for the entire command queueing structure.
- * */
-class CommandScheduler
-{
-public:
-private:
-    constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
-    constexpr static DRAMSchedPolicy SCHED_POLICY = DRAMSchedPolicy::FRFCFS;
-#if defined(DRAM_USE_ALAP_SYNC)
-    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ALAP_SYNC;
-#elif defined(DRAM_USE_ALAP)
-    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ALAP;
-#else
-    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ASAP;
-#endif
-    /*
-     * Command queue definitions:
-     * */
-    using cmd_queue_t = CmdQueue<
-                                SCHED_POLICY,
-                                DRAM_CMDQ_SIZE,
-                                true,
-                                WRITE_POLICY>;
-    using cmd_array_t = std::array<cmd_queue_t, TOT_BANKS>;
-
-    const DRAMChannelState& state_;
-    /*
-     * Command queues and pointer to next command queue to select from. Command queues
-     * are selected in a round robin.
-     * */
-    cmd_array_t cmd_queues_{};
-    size_t next_cmd_queue_idx_ =0;
-    /*
-     * Used if write policy is ALAP_SYNC.
-     * */
-    using alap_sync_write_tracker_t = std::array<size_t, TOT_BANKS>;
-
-    bool                      alap_sync_in_write_mode_ =false;
-    alap_sync_write_tracker_t alap_sync_write_tracker_{};
-public:
-    CommandScheduler(const DRAMChannelState&);
-
-    bool can_accept(uint64_t address, bool is_write);
-    bool has_no_pending_reads(void) const;
-    void enqueue(DRAMCommand&&);
-
-    DRAMCommand select_command(void);
-
-    void print_queue_state(std::ostream&);
-private:
-    void alap_sync_enter_write_mode(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

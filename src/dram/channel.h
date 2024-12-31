@@ -7,8 +7,10 @@
 #define DRAM_CHANNEL_h
 
 #include "constants.h"
+
 #include "dram/command.h"
 #include "dram/cmd_queue.h"
+#include "dram/scheduler.h"
 #include "dram/state.h"
 #include "io_bus.h"
 #include "transaction.h"
