@@ -14,15 +14,24 @@
 
 #include <cstdint>
 #include <deque>
+#include <iosfwd>
 #include <memory>
 #include <type_traits>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-enum class DRAMSchedPolicy {
+enum class DRAMSchedPolicy
+{
     FCFS,       // first come first serve
     FRFCFS,     // row-hits, then fcfs -- has demand precharge to ensure some fairness
+};
+
+enum class DRAMWritePolicy
+{
+    ASAP,       // Writes are finished in their command queue order.
+    ALAP,       // Writes are only issued if `MAX_WRITES` is reached
+    ALAP_SYNC   // Writes are issued if any command queue reaches `MAX_WRITES`
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -44,37 +53,41 @@ enum class DRAMSchedPolicy {
  * retrieve the appropriate bank-state during scheduling. The user should set
  * `bank_idx_` some time before the use of the queue.
  * */
-template <DRAMSchedPolicy POL, size_t SIZE, bool ASSUME_BANK_SPECIFIC, bool QUEUE_IS_SPLIT=false>
+template <DRAMSchedPolicy SCHED_POL,
+            size_t SIZE,
+            bool ASSUME_BANK_SPECIFIC,
+            // Optionals:
+            DRAMWritePolicy WPOL=DRAMWritePolicy::ASAP>
 class CmdQueue
 {
 public:
+    constexpr static size_t ALAP_MAX_WRITES = SIZE / 4;
+
     using queue_t = std::deque<DRAMCommand>;
 
     const DRAMBankState* bank_p_ =nullptr;
-    constexpr static size_t RQ_SIZE = (SIZE * 3)/4;
-    constexpr static size_t WQ_SIZE = SIZE - RQ_SIZE;
+private:
 
-    using unified_impl = queue_t;
-    struct split_impl
-    {
-        queue_t reads;
-        queue_t writes;
-        size_t writes_to_drain =0;
-    };
-
-    using queue_impl = typename std::conditional<QUEUE_IS_SPLIT, split_impl, unified_impl>::type;
-
-    queue_impl impl_;
+    queue_t impl_;
+    size_t  writes_in_queue_ =0;
+    size_t  writes_to_drain_ =0;
 public:
-    bool can_accept(bool write) const;
-    bool has_no_pending_reads(void) const;
-    size_t size(void) const;
-
     void enqueue(DRAMCommand&&);
 
-    DRAMCommand select_command(const DRAMChannelState&);
+    DRAMCommand select_command(const DRAMChannelState&, bool force_select_write=false);
+
+    void print_queue_contents(std::ostream&);
+    /*
+     * Simple inline functions:
+     * */
+    inline bool can_accept(bool write) const { return impl_.size() < SIZE; }
+    inline bool has_no_pending_reads(void) const { return num_reads() == 0; }
+    inline size_t size(void) const { return impl_.size(); }
+    inline size_t num_reads(void) const { return impl_.size() - writes_in_queue_; }
+    inline size_t num_writes(void) const { return writes_in_queue_; }
+
+    inline void set_write_drain_count(size_t d) { writes_to_drain_ = d; }
 private:
-    queue_t&             get_queue_ref(void);
     const DRAMBankState& get_bank_ref(const DRAMChannelState&, uint64_t address);
 
     bool allow_demand_precharge(const DRAMBankState&, bool is_first, queue_t::iterator, queue_t::iterator end);
@@ -88,55 +101,46 @@ private:
 class CommandScheduler
 {
 public:
-    /*
-     * ONLY PRINTED IF `DRAM_ENABLE_BG_WRITE_SYNC` ENABLED
-     * */
-    uint64_t s_tot_bg_sync_writes_ =0;
-    double s_mean_bg_sync_queue_size_ =0.0; // Averaged per bankgroup.
-    uint64_t s_tot_bg_sync_drain_spread_ =0;
-    uint64_t s_num_bg_sync_drains_ =0;
 private:
     constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
+    constexpr static DRAMSchedPolicy SCHED_POLICY = DRAMSchedPolicy::FRFCFS;
+    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ALAP_SYNC;
     /*
      * Command queue definitions:
      * */
-    using per_bank_queue_t = CmdQueue<DRAMSchedPolicy::FRFCFS, DRAM_CMDQ_SIZE, true>;
-    using per_bank_array_t = std::array<per_bank_queue_t, TOT_BANKS>;
+    using cmd_queue_t = CmdQueue<
+                                SCHED_POLICY,
+                                DRAM_CMDQ_SIZE,
+                                true,
+                                WRITE_POLICY>;
+    using cmd_array_t = std::array<cmd_queue_t, TOT_BANKS>;
 
     const DRAMChannelState& state_;
     /*
      * Command queues and pointer to next command queue to select from. Command queues
      * are selected in a round robin.
      * */
-    per_bank_array_t per_bank_queues_{};
+    cmd_array_t cmd_queues_{};
     size_t next_cmd_queue_idx_ =0;
     /*
-     * `bg_write_array_t` is only used if `DRAM_ENABLE_BG_WRITE_SYNC`. If it is used,
-     * then writes are redirected to `bg_write_queues`, and are completed when
-     * any of the queues become full.
+     * Used if write policy is ALAP_SYNC.
      * */
-    constexpr static size_t TOT_BANKGROUPS = DRAM_RANKS*DRAM_BANKGROUPS;
-    constexpr static size_t BG_WRITE_QUEUE_SIZE = (DRAM_CMDQ_SIZE / 3) * DRAM_BANKS;
+    using alap_sync_write_tracker_t = std::array<size_t, TOT_BANKS>;
 
-    using bg_write_queue_t = CmdQueue<DRAMSchedPolicy::FRFCFS, BG_WRITE_QUEUE_SIZE, false>;
-    using bg_write_array_t = std::array<bg_write_queue_t, TOT_BANKGROUPS>;
-
-    bg_write_array_t bg_write_queues_{};
-    size_t bg_drain_idx_ =0;
-    bool   bg_write_mode_ =false;
-    uint64_t bg_writes_done_ =0;  // This is a bitvector which indicates which bankgroups have issued a write.
+    bool                      alap_sync_in_write_mode_ =false;
+    alap_sync_write_tracker_t alap_sync_write_tracker_{};
 public:
     CommandScheduler(const DRAMChannelState&);
 
     bool can_accept(uint64_t address, bool is_write);
     bool has_no_pending_reads(void) const;
-
     void enqueue(DRAMCommand&&);
 
     DRAMCommand select_command(void);
+
+    void print_queue_state(std::ostream&);
 private:
-    DRAMCommand bg_sync_select_write(void);
-    void bg_sync_init(size_t);
+    void alap_sync_enter_write_mode(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

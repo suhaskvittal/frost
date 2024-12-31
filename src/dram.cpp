@@ -28,7 +28,7 @@ DRAM::IO::IO(DRAM* d)
 bool
 DRAM::IO::add_incoming(Transaction t)
 {
-#ifdef DRAM_DROP_WRITES
+#if defined(DRAM_DROP_WRITES)
     if (t.type == TransactionType::WRITE)
         return true;
 #endif
@@ -39,16 +39,13 @@ DRAM::IO::add_incoming(Transaction t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
     :io_(new DRAM::IO(this)),
     freq_ghz_(freq_ghz),
     clock_scale_(cpu_freq_ghz/freq_ghz - 1.0)
 {
     for (size_t i = 0; i < DRAM_CHANNELS; i++)
-        channels_[i] = channel_ptr(new DRAMChannel(freq_ghz));
+        channels_[i] = channel_ptr(new DRAMChannel(i, freq_ghz));
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -20,7 +20,7 @@ CommandScheduler::CommandScheduler(const DRAMChannelState& s)
         size_t ba = fast_mod<DRAM_BANKS>(i),
                bg = fast_mod<DRAM_BANKGROUPS>(i >> numeric_traits<DRAM_BANKS>::log2),
                ra = fast_mod<DRAM_RANKS>(i >> numeric_traits<DRAM_BANKGROUPS*DRAM_BANKS>::log2);
-        per_bank_queues_[i].bank_p_ = &s.at(ra).at(bg).at(ba);
+        cmd_queues_[i].bank_p_ = &s.at(ra).at(bg).at(ba);
     }
 }
 
@@ -30,18 +30,14 @@ CommandScheduler::CommandScheduler(const DRAMChannelState& s)
 bool
 CommandScheduler::can_accept(uint64_t address, bool is_write)
 {
-#if defined(DRAM_ENABLE_BG_WRITE_SYNC)
-    if (is_write)
-    {
-        size_t ii = get_bankgroup_idx(address);
-        bool out = bg_write_queues_[ii].can_accept(true);
-        if (!bg_write_mode_ && !out)
-            bg_sync_init(ii);
-        return out;
-    }
-#endif
     size_t ii = get_bank_idx(address);
-    return per_bank_queues_[ii].can_accept(is_write);
+    bool out = cmd_queues_[ii].can_accept(is_write);
+    if constexpr (WRITE_POLICY == DRAMWritePolicy::ALAP_SYNC)
+    {
+        if (!out && !alap_sync_in_write_mode_ && cmd_queues_[ii].num_writes() > cmd_queue_t::ALAP_MAX_WRITES)
+            alap_sync_enter_write_mode();
+    }
+    return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -50,7 +46,7 @@ CommandScheduler::can_accept(uint64_t address, bool is_write)
 bool
 CommandScheduler::has_no_pending_reads() const
 {
-    return std::all_of(per_bank_queues_.begin(), per_bank_queues_.end(),
+    return std::all_of(cmd_queues_.begin(), cmd_queues_.end(),
                 [] (const auto& q) { return q.has_no_pending_reads(); });
 }
 
@@ -60,16 +56,8 @@ CommandScheduler::has_no_pending_reads() const
 void
 CommandScheduler::enqueue(DRAMCommand&& cmd)
 {
-#if defined(DRAM_ENABLE_BG_WRITE_SYNC)
-    if (cmd_is_write(cmd.type))
-    {
-        size_t ii = get_bankgroup_idx(cmd.trans.address);
-        bg_write_queues_[ii].enqueue(std::move(cmd));
-        return;
-    }
-#endif
     size_t ii = get_bank_idx(cmd.trans.address);
-    per_bank_queues_[ii].enqueue(std::move(cmd));
+    cmd_queues_[ii].enqueue(std::move(cmd));
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -78,17 +66,34 @@ CommandScheduler::enqueue(DRAMCommand&& cmd)
 DRAMCommand
 CommandScheduler::select_command()
 {
-    DRAMCommand cmd;
-#if defined(DRAM_ENABLE_BG_WRITE_SYNC)
-    if (bg_write_mode_)
-        return bg_sync_select_write();
-#endif
-    for (size_t i = 0; i < per_bank_queues_.size(); i++)
+    if (alap_sync_in_write_mode_)
     {
-        auto& q = per_bank_queues_[next_cmd_queue_idx_];
+        bool all_done = std::all_of(alap_sync_write_tracker_.begin(), alap_sync_write_tracker_.end(),
+                                    [] (size_t x) { return x == 0; });
+        alap_sync_in_write_mode_ = !all_done;
+    }
+
+    DRAMCommand cmd;
+    for (size_t i = 0; i < cmd_queues_.size(); i++)
+    {
+        auto& q = cmd_queues_[next_cmd_queue_idx_];
+
+        size_t& write_cnt = alap_sync_write_tracker_[next_cmd_queue_idx_];
+        if (alap_sync_in_write_mode_)
+        {
+            if (q.num_writes() == 0)
+                write_cnt = 0;
+            else if (write_cnt > 0)
+            {
+                cmd = q.select_command(state_, true);
+                if (cmd_is_write(cmd.type))
+                    --write_cnt;
+            }
+        }
+        else
+            cmd = q.select_command(state_);
+
         fast_increment_and_mod_inplace<TOT_BANKS>(next_cmd_queue_idx_);
-    
-        cmd = q.select_command(state_);
         if (!cmd_is_invalid(cmd.type))
             break;
     }
@@ -99,65 +104,40 @@ CommandScheduler::select_command()
 ////////////////////////////////////////////////////////////////////////////
 
 void
-CommandScheduler::bg_sync_init(size_t start)
+CommandScheduler::print_queue_state(std::ostream& out)
 {
-    bg_drain_idx_ = start;
-    bg_write_mode_ = true;
-    bg_writes_done_ = (1L << TOT_BANKGROUPS)-1;
-
-    ++s_num_bg_sync_drains_;
-    s_mean_bg_sync_queue_size_ += std::transform_reduce(bg_write_queues_.begin(), bg_write_queues_.end(), 
-                                    0.0,
-                                    std::plus<double>{},
-                                    [] (const auto& x)
-                                    { 
-                                        return static_cast<double>(x.size());
-                                    }) / static_cast<double>(TOT_BANKGROUPS);
-    const auto& [min_it, max_it] = std::minmax_element(bg_write_queues_.begin(), bg_write_queues_.end(),
-                                    [] (const auto& x, const auto& y)
-                                    {
-                                        return x.size() < y.size();
-                                    });
-    s_tot_bg_sync_drain_spread_ += max_it->size() - min_it->size();
+    out << "CMDQ_START -------\n\n";
+    for (size_t i = 0; i < TOT_BANKS; i++)
+    {
+        if (i == next_cmd_queue_idx_)
+            out << "--> ";
+        else
+            out << "    ";
+        out << "BA" << std::setw(2) << std::left << i << "  : ";
+        cmd_queues_.at(i).print_queue_contents(out);
+        out << "\n";
+    }
+    out << "\nCMDQ_END -------\n";
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAMCommand
-CommandScheduler::bg_sync_select_write()
+void
+CommandScheduler::alap_sync_enter_write_mode()
 {
-    DRAMCommand cmd;
-    for (size_t i = 0; i < bg_write_queues_.size(); i++)
-    {
-        size_t ii = bg_drain_idx_;
-        auto& q = bg_write_queues_[ii];
-        fast_increment_and_mod_inplace<TOT_BANKGROUPS>(bg_drain_idx_);
-
-        if (q.size() == 0)
-        {
-            bg_writes_done_ &= ~(1L << ii);
-            if (bg_writes_done_ == 0)
-            {
-                bg_write_mode_ = false;
-                break;
-            } 
-            else
-                continue;
-        }
-
-        cmd = q.select_command(state_);
-        if (!cmd_is_invalid(cmd.type))
-        {
-            if (cmd_is_write(cmd.type))
-            {
-                bg_writes_done_ &= ~(1L << ii);
-                ++s_tot_bg_sync_writes_;
-            }
-            break;
-        }
-    }
-    return cmd;
+    size_t min_writes = std::transform_reduce(cmd_queues_.begin(), cmd_queues_.end(),
+                                    std::numeric_limits<size_t>::max(),
+                                    [] (size_t x, size_t y) { return std::min(x,y); },
+                                    [] (const auto& q)
+                                    {
+                                        return q.num_writes();
+                                    });
+    if (min_writes == 0)
+        min_writes = 1;
+    // Setup state for write moder:
+    alap_sync_in_write_mode_ = true;
+    alap_sync_write_tracker_.fill(min_writes);
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -15,6 +15,9 @@
 
 #include <array>
 #include <deque>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <optional>
 
 ////////////////////////////////////////////////////////////////////////////
@@ -55,6 +58,7 @@ public:
     uint64_t s_num_drains_ =0;
 
     const double freq_ghz_;
+    const size_t channel_id_;
 private:
     using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
     /* 
@@ -72,8 +76,25 @@ private:
     bool c128_tracking_writes_ =false;
     size_t c128_ctr_ =0;
     uint64_t c128_start_cycle_ =0;
+    /*
+     * All variables below are used if `DRAM_ENABLE_LOGGER` is defined.
+     * 
+     * `dram_logger_` is used to log information and write to a file. File is default: `dram_channel.<id>.log`.
+     *
+     * `tmp_logger_` is used to buffer log info. `tmp_logger_` is only used to write to `dram_logger_` if a
+     * command is issued.
+     *
+     * `last_two_cmds_` tracks the last two commands. Useful for logging dependent on commands.
+     * */
+    enum class LoggerCmdState { NEED_WRITE, NEED_READ, IN_READS };
+
+    std::ofstream     dram_logger_{};
+    std::stringstream tmp_logger_local_;
+    std::stringstream tmp_logger_global_;
+    LoggerCmdState    logger_state_ =LoggerCmdState::NEED_WRITE;
+    uint64_t          logger_first_write_cycle_ =0;
 public:
-    DRAMChannel(double freq_ghz);
+    DRAMChannel(size_t channel_id, double freq_ghz);
     
     void tick_mc(void);
     void tick_dram(void);
