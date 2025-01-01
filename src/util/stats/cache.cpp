@@ -1,0 +1,23 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   31 December 2024
+ * */
+
+#include "memsys.h"
+
+#include "util/stats/cache.h"
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+print_llc_stats(std::ostream& out)
+{
+    out << BAR << "\n";
+    print_stat(out, "LLC", "WRITEBACKS", GL_LLC->s_writebacks_);
+    print_stat(out, "LLC", "WB_NEXT_LINE_IN_$", GL_LLC->s_dirty_victim_next_lines_);
+    print_stat(out, "LLC", "WB_NEXT_LINE_IN_$_DIRTY", GL_LLC->s_dirty_victim_next_lines_also_dirty_);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////

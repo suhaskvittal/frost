@@ -7,8 +7,26 @@
 #include <iostream>
 #include <numeric>
 
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 #define __TEMPLATE_HEADER__ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 #define __TEMPLATE_CLASS__  Cache<SETS,WAYS,POL>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::find_result_t
+__TEMPLATE_CLASS__::find(uint64_t addr)
+{
+    cset_t& s = get_set(addr);
+    auto it = std::find_if(s.begin(), s.end(),
+                    [addr] (const entry_t& e)
+                    {
+                        return e.valid && e.address == addr;
+                    });
+    return std::make_tuple(&s, it);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -19,13 +37,8 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return true;
 
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (entry_t& e)
-                    {
-                        return e.valid && e.address == addr;
-                    });
-    if (it == s.end())
+    auto [s_p, it] = find(addr);
+    if (it == s_p->end())
         return false;
     else
     {
@@ -44,13 +57,8 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return true;
 
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (entry_t& e)
-                    {
-                        return e.valid && e.address == addr;
-                    });
-    if (it == s.end())
+    auto [s_p, it] = find(addr);
+    if (it == s_p->end())
         return false;
     else
     {
@@ -93,16 +101,12 @@ __TEMPLATE_CLASS__::fill(entry_t&& e)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline void
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 {
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (entry_t& e)
-                    {
-                        return e.address == addr;
-                    });
-    it->valid = false;
+    auto [s_p, it] = find(addr);
+    if (it != s_p->end)
+        it->valid = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -112,10 +116,12 @@ __TEMPLATE_HEADER__
 template <class PRED> inline size_t
 __TEMPLATE_CLASS__::get_occupancy(const PRED& pred)
 {
-    size_t cnt = std::accumulate(csets_.begin(), csets_.end(), static_cast<size_t>(0),
-                        [pred] (size_t tot, const cset_t& s)
+    size_t cnt = std::transform_reduce(csets_.begin(), csets_.end(), 
+                        static_cast<size_t>(0),
+                        std::plus<size_t>{},
+                        [pred] (const cset_t& s)
                         {
-                            return tot + std::count_if(s.begin(), s.end(), pred);
+                            return std::count_if(s.begin(), s.end(), pred);
                         });
     return cnt;
 }

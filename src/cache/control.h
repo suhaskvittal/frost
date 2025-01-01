@@ -68,6 +68,8 @@ public:
     stat_t s_write_alloc_{};
 
     uint64_t s_writebacks_ =0;
+    uint64_t s_dirty_victim_next_lines_ =0;
+    uint64_t s_dirty_victim_next_lines_also_dirty_ =0;
 
     const std::string cache_name_;
 private:

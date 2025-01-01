@@ -152,7 +152,16 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
         // Then we evicted some line.
         CacheEntry& e = fill_res.value();
         if (e.dirty)
+        {
             ++s_writebacks_;
+            const auto [s_p, it] = cache_->find(e.address+1);
+            if (it != s_p->end())
+            {
+                ++s_dirty_victim_next_lines_;
+                if (it->dirty)
+                    ++s_dirty_victim_next_lines_also_dirty_;
+            }
+        }
         // Install into the next level of the cache.
         if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
             next_->demand_fill(e.address, 1, e.dirty);

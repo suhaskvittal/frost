@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <tuple>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -67,9 +68,15 @@ private:
     cset_array_t csets_{};
     std::mt19937_64 rng_{0};
 public:
+    using find_result_t = std::tuple<cset_t*, typename cset_t::iterator>;
     using fill_result_t = std::optional<CacheEntry>;
 
     Cache(void) =default;
+    /*
+     * Searches for the given line. Does not update any metadata. This is
+     * like peeking into the cache.
+     * */
+    find_result_t find(uint64_t);
 
     bool probe(uint64_t, bool write=false);
     bool mark_dirty(uint64_t);
