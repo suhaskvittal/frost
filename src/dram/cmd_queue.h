@@ -41,7 +41,7 @@ struct CmdQueueEntry
 {
     Transaction     trans;
     DRAMCommandType type;
-    bool is_row_buffer_hit =true;
+    bool is_row_buffer_hit =false;
 
     uint64_t cycle_entered_queue;
 

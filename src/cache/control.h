@@ -37,6 +37,20 @@ struct MSHREntry
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /*
+ * Different cache writeback policies:
+ * */
+enum class CacheWBMode
+{
+    FORCED,                 // standard writeback -- only writeback when dirty line is evicted
+    EAGER,                  // FORCED + writeback whenever dirty line reaches LRU position.
+    NEXT_LINE,              // FORCED + writeback if a dirty line's neighboring line is in the same set,
+                            // also needs `INDEX_OFFSET` of cache to be 1 or higher.
+    VIRTUAL_WRITE_QUEUE     // Performs writebacks according to the virtual write queue implementation.
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
  * `IMPL` operates as a traits class that defines
  *      (1) `NUM_MSHR`,
  *      (2) `WRITE_ALLOCATE` (whether or not to handle write misses)
@@ -44,6 +58,12 @@ struct MSHREntry
  *      (4) `NEXT_IS_INVALIDATE_ON_HIT`
  *      (5) `NUM_RW_PORTS`
  *      (6) `CACHE_LATENCY`
+ *  DEFINED BY USER:
+ *      (1) `WRITEBACK_MODE` -- by default, this should be `FORCED`
+ *      (2) `LAZY_EARLY_WRITEBACK` -- if using any other policy than `FORCED`, then if a early writeback
+ *                                      cannot be issued, the line remains dirty and writeback does not
+ *                                      take up an MSHR.
+ *
  *  Each setting determines how `CacheControl` operates `CACHE`
  *  and `NEXT_CONTROL`.
  * */
@@ -68,8 +88,10 @@ public:
     stat_t s_write_alloc_{};
 
     uint64_t s_writebacks_ =0;
-    uint64_t s_dirty_victim_next_lines_ =0;
-    uint64_t s_dirty_victim_next_lines_also_dirty_ =0;
+    uint64_t s_dirty_victim_adj_lines_ =0;
+    uint64_t s_dirty_victim_adj_lines_also_dirty_ =0;
+
+    uint64_t s_eager_writebacks_ =0;
 
     const std::string cache_name_;
 private:
@@ -103,6 +125,8 @@ private:
     void next_access(void);
     void handle_hit(const Transaction&);
     void handle_miss(const Transaction&, bool write_miss=false);
+
+    void handle_eager_writeback(CACHE::entry_t&);
 
     bool do_writeback(uint64_t addr);
     size_t curr_mshr_size(void) const;

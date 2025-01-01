@@ -144,7 +144,16 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
 {
-    auto fill_res = cache_->fill(address, refcnt);
+    CACHE::fill_result_t v, w;
+
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
+        std::tie(v,w) = cache_->fill_with_eager_writeback(address, refcnt);
+    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
+        std::tie(v,w) = cache_->fill_with_next_line_writeback(address, refcnt);
+    else
+        v = cache_->fill(address, refcnt);
+
+     fill_res = cache_->fill(address, refcnt);
     if (dirty)
         cache_->mark_dirty(address);
     if (fill_res.has_value()) 
@@ -154,12 +163,12 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
         if (e.dirty)
         {
             ++s_writebacks_;
-            const auto [s_p, it] = cache_->find(e.address+1);
+            const auto [s_p, it] = (e.address & 1) ? cache_->find(e.address-1) : cache_->find(e.address+1);
             if (it != s_p->end())
             {
-                ++s_dirty_victim_next_lines_;
+                ++s_dirty_victim_adj_lines_;
                 if (it->dirty)
-                    ++s_dirty_victim_next_lines_also_dirty_;
+                    ++s_dirty_victim_adj_lines_also_dirty_;
             }
         }
         // Install into the next level of the cache.
@@ -167,6 +176,9 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
             next_->demand_fill(e.address, 1, e.dirty);
         else if (e.dirty && !do_writeback(e.address))
             writeback_queue_.push_back(e.address);
+        // Also writeback `w` if it has a value.
+        if (w.has_value())
+            handle_eager_writeback(w.value());
     }
 }
 
@@ -268,6 +280,26 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
         e.trans.type = TransactionType::READ;
     e.is_fired = mshr_.count(t.address) > 0 || next_->io_->add_incoming(e.trans);
     mshr_.insert({t.address, e});
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::handle_eager_writeback(CACHE::entry_t& e)
+{
+    ++s_eager_writebacks_;
+    if constexpr (IMPL::LAZY_EARLY_WRITEBACK)
+    {
+        if (do_writeback(e.address))
+            e.dirty = false;
+    }
+    else
+    {
+        e.dirty = false;
+        if (!do_writeback(e.address))
+            writeback_queue_.push_back(e.address);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -13,9 +13,16 @@ def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
     num_mshr, num_rw_ports, latency = cfg['num_mshr'], cfg['num_rw_ports'], cfg['latency']
     rq_size, wq_size, pq_size = cfg['read_queue_size'], cfg['write_queue_size'], cfg['prefetch_queue_size']
     
-    write_allocate = 'true' if (cfg['mode'] == 'WRITE_ALLOCATE') else 'false'
-    invalidate_on_hit = 'true' if (cfg['mode'] == 'INVALIDATE_ON_HIT') else 'false'
-    next_is_invalidate_on_hit = 'true' if (cfg['mode'] == 'NEXT_IS_INVALIDATE_ON_HIT') else 'false'
+    write_allocate = 'true' if (cfg['operate_mode'] == 'WRITE_ALLOCATE') else 'false'
+    invalidate_on_hit = 'true' if (cfg['operate_mode'] == 'INVALIDATE_ON_HIT') else 'false'
+    next_is_invalidate_on_hit = 'true' if (cfg['operate_mode'] == 'NEXT_IS_INVALIDATE_ON_HIT') else 'false'
+
+    wb_mode = cfg['writeback_mode']
+    early_wb_is_lazy = False
+    if wb_mode.endswith('_L'):
+        early_wb_is_lazy = True
+        # remove `_L` from the string.
+        wb_mode = wb_mode[:wb_mode.find('_L')]
 
     cache_decl =\
 f'''
@@ -32,6 +39,9 @@ struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheRep
     constexpr static bool WRITE_ALLOCATE = {write_allocate};
     constexpr static bool INVALIDATE_ON_HIT = {invalidate_on_hit};
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = {next_is_invalidate_on_hit};
+
+    constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
+    constexpr static bool        LAZY_EARLY_WRITEBACK = {early_wb_is_lazy};
 
     {typename}(std::string name, CacheControl::next_ptr& n)
         :CacheControl(name, n)
@@ -94,8 +104,8 @@ f'''{AUTOGEN_HEADER}
             next_typename = ii
         else:
             next_typename = cache_typenames[caches[ii]]
-            if cfg[caches[ii]]['mode'] == 'INVALIDATE_ON_HIT':
-                cfg[c]['mode'] = 'NEXT_IS_INVALIDATE_ON_HIT'
+            if cfg[caches[ii]]['operate_mode'] == 'INVALIDATE_ON_HIT':
+                cfg[c]['operate_mode'] = 'NEXT_IS_INVALIDATE_ON_HIT'
         wr.write(declare_cache_type(cfg[c], typename, next_typename))
     wr.write(
 '''
