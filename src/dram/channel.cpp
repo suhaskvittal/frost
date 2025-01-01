@@ -253,7 +253,7 @@ DRAMChannel::issue_next_cmd()
 
 #if defined(DRAM_ENABLE_LOGGER)
     tmp_logger_local_ << "selected command: " << ready_cmd << "\n";
-
+#if defined(DRAM_LOG_WRW_SEQUENCES)
     if (cmd_is_cas(ready_cmd.type))
     {
         // Current logger setup: we only write to `dram_logger_` if the sequence is of the form:
@@ -307,6 +307,10 @@ DRAMChannel::issue_next_cmd()
             break;
         }
     }
+#else
+    if (cmd_is_cas(ready_cmd.type))
+        dram_logger_ << tmp_logger_local_.str();
+#endif
 #endif
 }
 

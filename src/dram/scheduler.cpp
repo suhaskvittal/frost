@@ -32,11 +32,13 @@ CommandScheduler::can_accept(uint64_t address, bool is_write)
 {
     size_t ii = get_bank_idx(address);
     bool out = cmd_queues_[ii].can_accept(is_write);
+    /*
     if constexpr (WRITE_POLICY == DRAMWritePolicy::ALAP_SYNC)
     {
         if (!out && !alap_sync_in_write_mode_ && cmd_queues_[ii].num_writes() > cmd_queue_t::ALAP_MAX_WRITES)
             alap_sync_enter_write_mode();
     }
+    */
     return out;
 }
 
@@ -66,12 +68,8 @@ CommandScheduler::enqueue(Transaction&& trans, DRAMCommandType t)
 typename CommandScheduler::cmd_queue_t::cmd_output_t
 CommandScheduler::select_command()
 {
-    if (alap_sync_in_write_mode_)
-    {
-        bool all_done = std::all_of(alap_sync_write_tracker_.begin(), alap_sync_write_tracker_.end(),
-                                    [] (size_t x) { return x == 0; });
-        alap_sync_in_write_mode_ = !all_done;
-    }
+    if constexpr (WRITE_POLICY == DRAMWritePolicy::ALAP_SYNC)
+        alap_sync_update_write_mode();
 
     cmd_queue_t::cmd_output_t out;
 
@@ -123,6 +121,33 @@ CommandScheduler::print_queue_state(std::ostream& out)
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+void
+CommandScheduler::alap_sync_update_write_mode()
+{
+    if (alap_sync_in_write_mode_)
+    {
+        bool all_done = std::all_of(alap_sync_write_tracker_.begin(), alap_sync_write_tracker_.end(),
+                                    [] (size_t x) { return x == 0; });
+        alap_sync_in_write_mode_ = !all_done;
+    }
+    else
+    {
+        bool drain_cond_1 = has_no_pending_reads()
+                        && std::any_of(cmd_queues_.begin(), cmd_queues_.end(),
+                                [] (const auto& q)
+                                {
+                                    return q.num_writes() > cmd_queue_t::ALAP_MAX_WRITES;
+                                });
+        bool drain_cond_2 = std::any_of(cmd_queues_.begin(), cmd_queues_.end(),
+                                [] (const auto& q)
+                                {
+                                    return !q.can_accept(true) && q.num_writes() > cmd_queue_t::ALAP_MAX_WRITES;
+                                });
+        if (drain_cond_1 || drain_cond_2)
+            alap_sync_enter_write_mode();
+    }
+}
 
 void
 CommandScheduler::alap_sync_enter_write_mode()

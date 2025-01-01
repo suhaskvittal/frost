@@ -12,6 +12,7 @@
 
 #define __TEMPLATE_HEADER__ template <DRAMSchedPolicy SPOL, size_t SIZE, bool ASSUME_BANK_SPECIFIC, DRAMWritePolicy WPOL>
 #define __TEMPLATE_CLASS__  CmdQueue<SPOL, SIZE, ASSUME_BANK_SPECIFIC, WPOL>
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -37,6 +38,9 @@ __TEMPLATE_CLASS__::enqueue(Transaction&& trans, DRAMCommandType type)
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::cmd_output_t
 __TEMPLATE_CLASS__::select_command(const DRAMChannelState& ch, bool force_write)
 {
+    if constexpr (WPOL == DRAMWritePolicy::ALAP)
+        alap_update_write_mode();
+
     DRAMCommand ready_cmd;
     std::optional<CmdQueueEntry> opt_e; // Should only have a value if we are doing a R/W
 
@@ -114,21 +118,10 @@ __TEMPLATE_CLASS__::print_queue_contents(std::ostream& out)
         else
             cmd_string += " WR";
     }
-    
-    size_t num_reads = std::count_if(impl_.begin(), impl_.end(),    
-                            [] (const auto& cmd)
-                            {
-                                return cmd_is_read(cmd.type);
-                            }),
-           num_writes = std::count_if(impl_.begin(), impl_.end(),
-                            [] (const auto& cmd)
-                            {
-                                return cmd_is_write(cmd.type);
-                            });
 
     out << std::setw(3*SIZE) << std::left << cmd_string 
         << "size: " << std::setw(2) << std::right << size()
-        << " of " << SIZE << "(R:W = " << num_reads << ":" << num_writes << ")";
+        << " of " << SIZE << "(R:W = " << num_reads() << ":" << num_writes() << ")";
     if constexpr (ASSUME_BANK_SPECIFIC)
     {
         out << std::setw(16) << std::right << "bankstate:"
@@ -150,6 +143,18 @@ __TEMPLATE_CLASS__::get_bank_ref(const DRAMChannelState& ch, uint64_t address)
         return *bank_p_;
     else
         return get_bank_state(ch, address);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::alap_update_write_mode()
+{
+    bool drain_cond_1 = num_reads() == 0 && num_writes() > ALAP_MAX_WRITES,
+         drain_cond_2 = size() == SIZE && num_writes() > ALAP_MAX_WRITES;
+    if (drain_cond_1 || drain_cond_2)
+        writes_to_drain_ = num_writes();
 }
 
 ////////////////////////////////////////////////////////////////////////////

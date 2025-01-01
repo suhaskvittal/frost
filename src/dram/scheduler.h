@@ -61,6 +61,7 @@ public:
 
     void print_queue_state(std::ostream&);
 private:
+    void alap_sync_update_write_mode(void);
     void alap_sync_enter_write_mode(void);
 };
 

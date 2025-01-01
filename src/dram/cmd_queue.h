@@ -67,9 +67,9 @@ struct CmdQueueEntry
  *      is used to implement a scheduling algorithm.
  * 
  * We offer a parameter `ASSUME_BANK_SPECIFIC` to help streamline the common case
- * of command queues being per-bank. In this case, `bank_idx` will be used to
+ * of command queues being per-bank. In this case, `bank_p_` will be used to
  * retrieve the appropriate bank-state during scheduling. The user should set
- * `bank_idx_` some time before the use of the queue.
+ * `bank_p_` some time before the use of the queue.
  * */
 template <DRAMSchedPolicy SCHED_POL,
             size_t SIZE,
@@ -100,7 +100,7 @@ public:
     /*
      * Simple inline functions:
      * */
-    inline bool can_accept(bool write) const { return impl_.size() < SIZE; }
+    inline bool can_accept(bool) const { return impl_.size() < SIZE; }
     inline bool has_no_pending_reads(void) const { return num_reads() == 0; }
     inline size_t size(void) const { return impl_.size(); }
     inline size_t num_reads(void) const { return impl_.size() - writes_in_queue_; }
@@ -109,7 +109,13 @@ public:
     inline void set_write_drain_count(size_t d) { writes_to_drain_ = d; }
 private:
     const DRAMBankState& get_bank_ref(const DRAMChannelState&, uint64_t address);
-
+    /*
+     * Checks if the queue should switch to write mode. Used by WPOL = `ALAP` only.
+     * */
+    void alap_update_write_mode(void);
+    /*
+     * Bulk of scheduling policy implementation.
+     * */
     bool allow_demand_precharge(const DRAMBankState&, bool is_first, queue_t::iterator, queue_t::iterator end);
 };
 
