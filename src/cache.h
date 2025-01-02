@@ -62,7 +62,8 @@ template <
     size_t WAYS,
     CacheReplPolicy POL,
     // Optionals:
-    size_t INDEX_OFFSET=0>
+    size_t INDEX_OFFSET=0,      // index will be shifted by the given offset
+    >
 class Cache 
 {
 private:
@@ -84,8 +85,7 @@ public:
     find_result_t find(uint64_t);
 
     bool probe(uint64_t, bool write=false);
-    bool mark_dirty(uint64_t);
-    bool mark_clean(uint64_t);
+    bool mark(uint64_t, bool as_dirty);
     /*
      * `num_refs` here corresponds to the number of MSHR/instruction references
      * at the time of install. Necessary for SRRIP, for example.
@@ -111,10 +111,11 @@ public:
     /*
      * Returns number of entries in the cache.
      * */
-    inline size_t size(void)
-    {
-        return WAYS*SETS;
-    }
+    inline constexpr size_t num_ways(void) const { return WAYS; }
+    inline constexpr size_t num_sets(void) const { return SETS; }
+    inline constexpr size_t size(void) const { return WAYS*SETS; }
+
+    inline size_t get_set_idx(uint64_t x) const { return fast_mod<SETS>(x >> INDEX_OFFSET); }
 private:
     typename cset_t::iterator find_victim(cset_t&);
     /*
@@ -122,14 +123,16 @@ private:
      * */
     void update(CacheEntry&);
     /*
-     * Retrieves the respective entry at the `k`-th LRU position.
+     * Gets way in the given LRU position.
      * */
-    CacheEntry& get_way_in_lru_pos(cset_t&, size_t k=0);
+    CacheEntry& get_way_in_lru_pos(cset_t&);
 
-    inline cset_t& get_set(uint64_t x)
-    {
-        return csets_.at(fast_mod<SETS>(x >> INDEX_OFFSET));
-    }
+    inline cset_t& get_set(uint64_t x) { return csets_.at(get_set_idx(x)); }
+    /*
+     * Any non-standard implementations that extend the cache implementation should
+     * be given friend access.
+     * */
+    friend class VirtualWriteQueue<Cache>;
 };
 
 ////////////////////////////////////////////////////////////////////////////

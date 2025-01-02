@@ -105,6 +105,14 @@ private:
      * */
     mshr_t     mshr_;
     wb_queue_t writeback_queue_;
+    /*
+     * Specific implementations that are nonstandard:
+     * */
+    using vwq_ptr = std::unique_ptr<VirtualWriteQueue<CACHE>>;
+    /*
+     * `vwq_` operates as a wrapper for some of `cache_`'s functionality.
+     * */
+    vwq_ptr vwq_ =nullptr;
 public:
     CacheControl(std::string cache_name, next_ptr&);
 
@@ -121,6 +129,8 @@ public:
      * is printed to `stderr` and this function returns true.
      * */
     bool deadlock_find_inst(const inst_ptr);
+
+    inline size_t curr_mshr_size(void) const { return mshr_.size() + writeback_queue_.size(); }
 private:
     void next_access(void);
     void handle_hit(const Transaction&);
@@ -129,7 +139,17 @@ private:
     void handle_eager_writeback(CACHE::entry_t&);
 
     bool do_writeback(uint64_t addr);
-    size_t curr_mshr_size(void) const;
+    /*
+     * Since `probe` and `mark` may require different functionality (i.e.,
+     * if `VIRTUAL_WRITE_QUEUE` is enabled), we have a simple wrapper here.
+     * */
+    bool cache_probe(uint64_t address, bool write=false);
+    bool cache_mark(uint64_t address, bool dirty);
+    /*
+     * Virtual write queue implementation:
+     * */ 
+    void vwq_try_switch_write_mode(void);
+    void vwq_schedule_writebacks(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

@@ -52,7 +52,7 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
+__TEMPLATE_CLASS__::mark(uint64_t addr, bool as_dirty)
 {
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return true;
@@ -62,23 +62,7 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
         return false;
     else
     {
-        it->dirty = true;
-        return true;
-    }
-}
-
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::mark_clean(uint64_t addr)
-{
-    if constexpr (POL == CacheReplPolicy::PERFECT)
-        return true;
-
-    auto [s_p, it] = find(addr);
-    if (it == s_p->end())
-        return false;
-    else
-    {
-        it->dirty = false;
+        it->dirty = as_dirty;
         return true;
     }
 }
@@ -223,6 +207,20 @@ __TEMPLATE_CLASS__::update(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = SRRIP_MAX;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline cset_t::iterator
+__TEMPLATE_CLASS__::get_way_in_lru_pos(cset_t& s)
+{
+    auto it = std::min_element(s.begin(), s.end(),
+                [] (const auto& x, const auto& y)
+                {
+                    return x.timestamp < y.timestamp;
+                });
+    return *it;
 }
 
 ////////////////////////////////////////////////////////////////////////////
