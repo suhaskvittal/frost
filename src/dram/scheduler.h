@@ -18,22 +18,14 @@ class CommandScheduler
 public:
 private:
     constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
-    constexpr static DRAMSchedPolicy SCHED_POLICY = DRAMSchedPolicy::FRFCFS;
-#if defined(DRAM_USE_ALAP_SYNC)
-    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ALAP_SYNC;
-#elif defined(DRAM_USE_ALAP)
-    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ALAP;
-#else
-    constexpr static DRAMWritePolicy WRITE_POLICY = DRAMWritePolicy::ASAP;
-#endif
     /*
      * Command queue definitions:
      * */
     using cmd_queue_t = CmdQueue<
-                                SCHED_POLICY,
+                                DRAM_SCHED_POLICY,
                                 DRAM_CMDQ_SIZE,
                                 true,
-                                WRITE_POLICY>;
+                                DRAM_WRITE_POLICY>;
     using cmd_array_t = std::array<cmd_queue_t, TOT_BANKS>;
 
     const DRAMChannelState& state_;

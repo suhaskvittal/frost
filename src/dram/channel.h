@@ -56,8 +56,6 @@ public:
      * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
      *  these are stats that are computationally intensive to compute, and thus can be disabled.
      * */
-    uint64_t s_tot_drain_bg_spread_ =0;
-    uint64_t s_num_drains_ =0;
 
     const double freq_ghz_;
     const size_t channel_id_;

@@ -32,13 +32,6 @@ CommandScheduler::can_accept(uint64_t address, bool is_write)
 {
     size_t ii = get_bank_idx(address);
     bool out = cmd_queues_[ii].can_accept(is_write);
-    /*
-    if constexpr (WRITE_POLICY == DRAMWritePolicy::ALAP_SYNC)
-    {
-        if (!out && !alap_sync_in_write_mode_ && cmd_queues_[ii].num_writes() > cmd_queue_t::ALAP_MAX_WRITES)
-            alap_sync_enter_write_mode();
-    }
-    */
     return out;
 }
 
@@ -68,7 +61,7 @@ CommandScheduler::enqueue(Transaction&& trans, DRAMCommandType t)
 typename CommandScheduler::cmd_queue_t::cmd_output_t
 CommandScheduler::select_command()
 {
-    if constexpr (WRITE_POLICY == DRAMWritePolicy::ALAP_SYNC)
+    if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::ALAP_SYNC)
         alap_sync_update_write_mode();
 
     cmd_queue_t::cmd_output_t out;

@@ -61,8 +61,11 @@ def write(cfg, build):
     channel_timing_calls = '\n\t'.join(f'list_dram(out, \"{t}\", {t});' for t in CHANNEL_TIMINGS)
     # SL timings are a bit more complicated to implement
     dram_page_policy = cfg['DRAM']['page_policy']
-    dram_cmdq_policy = cfg['DRAM']['cmdq_policy']
+    dram_sched_policy = cfg['DRAM']['sched_policy']
+    dram_write_policy = cfg['DRAM']['write_policy']
     dram_am = cfg['DRAM']['address_mapping']
+    dram_rq_size = cfg['DRAM']['read_queue_size']
+    dram_wq_size = cfg['DRAM']['write_queue_size']
 
     # OS params:
     ptwc_params = ''
@@ -238,8 +241,11 @@ print_config(std::ostream& out)
     list(out, "DRAM_FREQUENCY", "{dram_freq}");
     list(out, "DRAM_tCK", "{tCK:.5f}");
     list(out, "DRAM_PAGE_POLICY", "{dram_page_policy}");
-    list(out, "DRAM_CMDQ_POLICY", "{dram_cmdq_policy}");
+    list(out, "DRAM_SCHED_POLICY", "{dram_sched_policy}");
+    list(out, "DRAM_WRITE_POLICY", "{dram_write_policy}");
+    list(out, "DRAM_QUEUE_SIZE", "{dram_rq_size}:{dram_wq_size}");
     list(out, "DRAM_ADDRESS_MAPPING", "{dram_am}");
+
     print_address_mapping(out);
     out << "\n"
         << std::setw(24) << std::left << "DRAM_TIMING"

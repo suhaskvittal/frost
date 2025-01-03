@@ -26,6 +26,8 @@ def write(cfg, build):
     BL = dram_cfg['BL']
     rq_size, wq_size, cmdq_size = dram_cfg['read_queue_size'], dram_cfg['write_queue_size'], dram_cfg['cmd_queue_size']
     page_policy = dram_cfg['page_policy']
+    sched_policy = dram_cfg['sched_policy']
+    write_policy = dram_cfg['write_policy']
     # Address mapping is a little less straightforward
     am = dram_cfg['address_mapping']
     if am[:3] == 'MOP':
@@ -84,7 +86,9 @@ constexpr size_t DRAM_CMDQ_SIZE = {cmdq_size};
 constexpr size_t DRAM_SIZE_MB = DRAM_CHANNELS * DRAM_RANKS * DRAM_BANKGROUPS * DRAM_BANKS
                                 * DRAM_ROWS * DRAM_COLUMNS * LINESIZE / (1024*1024);
 
-#define DRAM_PAGE_POLICY DRAMPagePolicy::{page_policy}
+#define DRAM_PAGE_POLICY  DRAMPagePolicy::{page_policy}
+#define DRAM_SCHED_POLICY DRAMSchedPolicy::{sched_policy}
+#define DRAM_WRITE_POLICY DRAMWritePolicy::{write_policy}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
