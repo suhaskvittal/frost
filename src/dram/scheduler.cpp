@@ -152,6 +152,13 @@ CommandScheduler::alap_sync_update_write_mode()
 void
 CommandScheduler::alap_sync_enter_write_mode()
 {
+    size_t max_writes = std::transform_reduce(cmd_queues_.begin(), cmd_queues_.end(),
+                                    0,
+                                    [] (size_t x, size_t y) { return std::max(x,y); },
+                                    [] (const auto& q)
+                                    {
+                                        return q.num_writes();
+                                    });
     size_t min_writes = std::transform_reduce(cmd_queues_.begin(), cmd_queues_.end(),
                                     std::numeric_limits<size_t>::max(),
                                     [] (size_t x, size_t y) { return std::min(x,y); },
@@ -159,11 +166,14 @@ CommandScheduler::alap_sync_enter_write_mode()
                                     {
                                         return q.num_writes();
                                     });
-    if (min_writes == 0)
-        min_writes = 1;
+    size_t writes;
+    if (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
+        writes = max_writes;
+    else
+        writes = std::max(min_writes, static_cast<size_t>(1));
     // Setup state for write moder:
     alap_sync_in_write_mode_ = true;
-    alap_sync_write_tracker_.fill(min_writes);
+    alap_sync_write_tracker_.fill(writes);
 }
 
 ////////////////////////////////////////////////////////////////////////////
