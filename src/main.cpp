@@ -9,6 +9,7 @@
 #include "sim.h"
 
 #include "util/argparse.h"
+#include "util/stats/cache.h"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -97,6 +98,7 @@ int main(int argc, char* argv[])
     std::cout << "\n";
     for (size_t i = 0; i < NUM_THREADS; i++)
         GL_CORES[i]->print_stats(std::cout);
+    print_llc_stats(std::cout);
     GL_DRAM->print_stats(std::cout);
     GL_OS->print_stats(std::cout);
 

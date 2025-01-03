@@ -26,6 +26,20 @@ DRAM::IO::IO(DRAM* d)
 {}
 
 bool
+DRAM::IO::can_accept(uint64_t address, bool write)
+{
+#if defined(DRAM_DROP_WRITES)
+    if (write)
+        return true;
+#endif
+    size_t i = dram_channel(address);
+    if (write)
+        return dram->channels_[i]->write_queue_size() < DRAM_WQ_SIZE;
+    else
+        return dram->channels_[i]->read_queue_size() < DRAM_RQ_SIZE;
+}
+
+bool
 DRAM::IO::add_incoming(Transaction t)
 {
 #if defined(DRAM_DROP_WRITES)
@@ -106,6 +120,8 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(tot_read_latency)
     CREATE_VEC_STAT(tot_write_latency)
 
+    CREATE_VEC_STAT(num_drains)
+
     VecStat<double, DRAM_CHANNELS> rd_rbhr = vec_elwise_mean(vec_read_row_hits, vec_reads),
                                    wr_rbhr = vec_elwise_mean(vec_write_row_hits, vec_writes),
                                    read_latency = vec_elwise_mean(vec_tot_read_latency, vec_reads),
@@ -126,33 +142,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "READ_LATENCY", read_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
 
-#if defined(DRAM_TRACK_ADVANCED_STATS)
-    CREATE_VEC_STAT(tot_drain_bg_spread);
-    CREATE_VEC_STAT(num_drains);
-
-    VecStat<double, DRAM_CHANNELS> mean_drain_bg_spread = vec_elwise_mean(vec_tot_drain_bg_spread, vec_num_drains);
-
-    print_vecstat(out, "DRAM", "MEAN_BANKGROUP_DRAIN_SPREAD", mean_drain_bg_spread, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", vec_num_drains);
-#endif
-
-#if defined(DRAM_ENABLE_BG_WRITE_SYNC)
-    CREATE_VEC_STAT_CMDQ(tot_bg_sync_writes)
-    CREATE_VEC_STAT_CMDQ(mean_bg_sync_queue_size)
-    CREATE_VEC_STAT_CMDQ(tot_bg_sync_drain_spread)
-    CREATE_VEC_STAT_CMDQ(num_bg_sync_drains)
-
-    VecStat<double, DRAM_CHANNELS> mean_bg_sync_writes_per_drain = 
-                                            vec_elwise_mean(vec_tot_bg_sync_writes, vec_num_bg_sync_drains),
-                                   mean_bg_sync_queue_size =
-                                            vec_elwise_mean(vec_mean_bg_sync_queue_size, vec_num_bg_sync_drains),
-                                   mean_bg_sync_drain_spread =
-                                            vec_elwise_mean(vec_tot_bg_sync_drain_spread, vec_num_bg_sync_drains);
-    print_vecstat(out, "DRAM", "MEAN_BG_SYNC_WRITES_PER_DRAIN", mean_bg_sync_writes_per_drain, VecAccMode::HMEAN);
-    print_vecstat(out, "DRAM", "MEAN_BG_SYNC_QUEUE_SIZE", mean_bg_sync_queue_size, VecAccMode::GMEAN);
-    print_vecstat(out, "DRAM", "MEAN_BG_SYNC_DRAIN_SPREAD", mean_bg_sync_drain_spread, VecAccMode::GMEAN);
-    print_vecstat(out, "DRAM", "NUM_BG_SYNC_DRAINS", vec_num_bg_sync_drains);
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////

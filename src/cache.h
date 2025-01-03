@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <tuple>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -55,30 +56,58 @@ struct CacheEntry
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+/*
+ * Forward declarations for friend classes and functions:
+ * */
+template <class CACHE_TYPE> class VirtualWriteQueue;
 
-template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <
+    size_t SETS,
+    size_t WAYS,
+    CacheReplPolicy POL,
+    // Optionals:
+    size_t INDEX_OFFSET=0       // index will be shifted by the given offset
+    >
 class Cache 
 {
 private:
-    using entry_t      = CacheEntry;
-    using cset_t       = std::array<entry_t, WAYS>;
+    using cset_t       = std::array<CacheEntry, WAYS>;
     using cset_array_t = std::array<cset_t, SETS>;
     
     cset_array_t csets_{};
     std::mt19937_64 rng_{0};
 public:
+    using find_result_t = std::tuple<cset_t*, typename cset_t::iterator>;
     using fill_result_t = std::optional<CacheEntry>;
+    using multi_fill_result_t = std::tuple<fill_result_t, fill_result_t>;
+    // Next line fill result also has the LRU position of the second line if it is dirty
+    using next_line_fill_result_t = std::tuple<fill_result_t, fill_result_t, size_t>;
 
     Cache(void) =default;
+    /*
+     * Searches for the given line. Does not update any metadata. This is
+     * like peeking into the cache.
+     * */
+    find_result_t find(uint64_t);
 
     bool probe(uint64_t, bool write=false);
-    bool mark_dirty(uint64_t);
+    bool mark(uint64_t, bool as_dirty);
     /*
      * `num_refs` here corresponds to the number of MSHR/instruction references
      * at the time of install. Necessary for SRRIP, for example.
+     *
+     * `fill_with_eager_writeback` and other functions that return `multi_fill_result_t`
+     * return a victim as well as any entries that should be written back. The caller
+     * can do whatever they want with these entries, but keep in mind that the
+     * cache has not evicted them. Furthermore, these entries are not references. If the
+     * caller wants to modify the cache, they must call the appropriate function to do so.
      * */
-    fill_result_t fill(uint64_t, size_t num_refs);
-    fill_result_t fill(entry_t&&);
+    fill_result_t       fill(uint64_t, size_t num_refs);
+    multi_fill_result_t fill_with_eager_writeback(uint64_t, size_t);
+    next_line_fill_result_t fill_with_next_line_writeback(uint64_t, size_t);
 
     void invalidate(uint64_t);
     /*
@@ -91,21 +120,28 @@ public:
     /*
      * Returns number of entries in the cache.
      * */
-    inline size_t size(void)
-    {
-        return WAYS*SETS;
-    }
+    inline constexpr size_t num_ways(void) const { return WAYS; }
+    inline constexpr size_t num_sets(void) const { return SETS; }
+    inline constexpr size_t size(void) const { return WAYS*SETS; }
+
+    inline size_t get_set_idx(uint64_t x) const { return fast_mod<SETS>(x >> INDEX_OFFSET); }
 private:
     typename cset_t::iterator find_victim(cset_t&);
     /*
      * Update replacement metadata for the entry.
      * */
-    void update(entry_t&);
+    void update(CacheEntry&);
+    /*
+     * Gets way in the given LRU position.
+     * */
+    typename cset_t::iterator get_way_in_lru_pos(cset_t&);
 
-    inline cset_t& get_set(uint64_t x)
-    {
-        return csets_.at(fast_mod<SETS>(x));
-    }
+    inline cset_t& get_set(uint64_t x) { return csets_.at(get_set_idx(x)); }
+    /*
+     * Any non-standard implementations that extend the cache implementation should
+     * be given friend access.
+     * */
+    friend class VirtualWriteQueue<Cache>;
 };
 
 ////////////////////////////////////////////////////////////////////////////

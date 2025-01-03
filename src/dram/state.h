@@ -22,13 +22,14 @@ struct DRAMBankState
 {
     using row_t = std::optional<uint64_t>;
 
-    row_t open_row;
+    row_t open_row{};
 
     uint64_t act_ok =0;
     uint64_t pre_ok =0;
     uint64_t cas_ok =0;
 
     size_t num_cas_to_open_row =0;
+    bool next_cas_is_row_buffer_hit =false;
 };
 
 struct DRAMBankgroupState : public std::array<DRAMBankState, DRAM_BANKS>
@@ -74,6 +75,7 @@ void try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t& s_pre);
  * */
 void update_dram_rank_states(DRAMChannelState&, const DRAMCommand&);
 void update_dram_bankgroup_states(DRAMRankState&, const DRAMCommand&);
+void update_dram_bank_state(DRAMBankState&, const DRAMCommand&);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -7,8 +7,26 @@
 #include <iostream>
 #include <numeric>
 
-#define __TEMPLATE_HEADER__ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
-#define __TEMPLATE_CLASS__  Cache<SETS,WAYS,POL>
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#define __TEMPLATE_HEADER__ template <size_t SETS, size_t WAYS, CacheReplPolicy POL, size_t INDEX_OFFSET>
+#define __TEMPLATE_CLASS__  Cache<SETS,WAYS,POL,INDEX_OFFSET>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::find_result_t
+__TEMPLATE_CLASS__::find(uint64_t addr)
+{
+    cset_t& s = get_set(addr);
+    auto it = std::find_if(s.begin(), s.end(),
+                    [addr] (const CacheEntry& e)
+                    {
+                        return e.valid && e.address == addr;
+                    });
+    return std::make_tuple(&s, it);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -19,13 +37,8 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return true;
 
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (entry_t& e)
-                    {
-                        return e.valid && e.address == addr;
-                    });
-    if (it == s.end())
+    auto [s_p, it] = find(addr);
+    if (it == s_p->end())
         return false;
     else
     {
@@ -39,22 +52,17 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
+__TEMPLATE_CLASS__::mark(uint64_t addr, bool as_dirty)
 {
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return true;
 
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (entry_t& e)
-                    {
-                        return e.valid && e.address == addr;
-                    });
-    if (it == s.end())
+    auto [s_p, it] = find(addr);
+    if (it == s_p->end())
         return false;
     else
     {
-        it->dirty = true;
+        it->dirty = as_dirty;
         return true;
     }
 }
@@ -62,22 +70,16 @@ __TEMPLATE_CLASS__::mark_dirty(uint64_t addr)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::fill_result_t
-__TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs)
-{
-    return fill(entry_t(addr, num_refs));
-}
-
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_t
-__TEMPLATE_CLASS__::fill(entry_t&& e)
+__TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs)
 {
     fill_result_t out;
     if constexpr (POL == CacheReplPolicy::PERFECT)
         return out;
 
-    cset_t& s = get_set(e.address);
+    cset_t& s = get_set(addr);
     auto it = std::find_if_not(s.begin(), s.end(),
-                        [] (entry_t& e)
+                        [] (const CacheEntry& e)
                         {
                             return e.valid;
                         });
@@ -86,23 +88,65 @@ __TEMPLATE_CLASS__::fill(entry_t&& e)
         it = find_victim(s); 
         out = *it;
     }
-    *it = std::move(e);
+    *it = CacheEntry(addr, num_refs);
     return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline void
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_t
+__TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t addr, size_t num_refs)
+{
+    fill_result_t v, w;
+    v = fill(addr, num_refs);
+    // We obtain `w` by checking the new LRU position of the set.
+    auto lru_it = get_way_in_lru_pos(get_set(addr));
+    if (lru_it->dirty)
+        w = *lru_it;
+    return multi_fill_result_t(v, w);
+}
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::next_line_fill_result_t
+__TEMPLATE_CLASS__::fill_with_next_line_writeback(uint64_t addr, size_t num_refs)
+{
+    fill_result_t v, w;
+    size_t w_lru_pos;
+
+    v = fill(addr, num_refs);
+
+    if (v.has_value() && v.value().dirty)
+    {
+        const auto& e = v.value();
+        uint64_t next_lineaddr = e.address ^ 1;  // Flip the last bit of `addr`
+        cset_t& s = get_set(e.address);
+        auto it = std::find_if(s.begin(), s.end(),
+                            [next_lineaddr] (const CacheEntry& e)
+                            {
+                                return e.address == next_lineaddr;
+                            });
+        if (it != s.end() && it->dirty)
+        {
+            w = *it;
+            w_lru_pos = std::count_if(s.begin(), s.end(),
+                                [t=it->timestamp] (const auto& e)
+                                {
+                                    return t > e.timestamp;
+                                });
+        }
+    }
+    return next_line_fill_result_t(v, w, w_lru_pos);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 {
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (entry_t& e)
-                    {
-                        return e.address == addr;
-                    });
-    it->valid = false;
+    auto [s_p, it] = find(addr);
+    if (it != s_p->end())
+        it->valid = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -112,10 +156,12 @@ __TEMPLATE_HEADER__
 template <class PRED> inline size_t
 __TEMPLATE_CLASS__::get_occupancy(const PRED& pred)
 {
-    size_t cnt = std::accumulate(csets_.begin(), csets_.end(), static_cast<size_t>(0),
-                        [pred] (size_t tot, const cset_t& s)
+    size_t cnt = std::transform_reduce(csets_.begin(), csets_.end(), 
+                        static_cast<size_t>(0),
+                        std::plus<size_t>{},
+                        [pred] (const cset_t& s)
                         {
-                            return tot + std::count_if(s.begin(), s.end(), pred);
+                            return std::count_if(s.begin(), s.end(), pred);
                         });
     return cnt;
 }
@@ -123,7 +169,7 @@ __TEMPLATE_CLASS__::get_occupancy(const PRED& pred)
 __TEMPLATE_HEADER__ size_t
 __TEMPLATE_CLASS__::get_occupancy()
 {
-    return get_occupancy([] (const entry_t& e) { return e.valid; });
+    return get_occupancy([] (const CacheEntry& e) { return e.valid; });
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -135,7 +181,7 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
     if constexpr (POL == CacheReplPolicy::LRU)
     {
         return std::min_element(s.begin(), s.end(),
-                                [] (const entry_t& x, const entry_t& y)
+                                [] (const CacheEntry& x, const CacheEntry& y)
                                 {
                                     return x.timestamp < y.timestamp;
                                 });
@@ -147,14 +193,14 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
     else if constexpr (POL == CacheReplPolicy::SRRIP)
     {
         auto v_it = std::min_element(s.begin(), s.end(),
-                                [] (const entry_t& x, const entry_t& y)
+                                [] (const CacheEntry& x, const CacheEntry& y)
                                 {
                                     return x.rrpv < y.rrpv;
                                 });
         if (v_it->rrpv > 0)
         {
             // Reduce all entries' rrpv values.
-            for (entry_t& x : s)
+            for (CacheEntry& x : s)
                 x.rrpv -= v_it->rrpv;
         }
         return v_it;
@@ -170,10 +216,23 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::update(entry_t& e)
+__TEMPLATE_CLASS__::update(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = SRRIP_MAX;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_t::iterator
+__TEMPLATE_CLASS__::get_way_in_lru_pos(cset_t& s)
+{
+    return std::min_element(s.begin(), s.end(),
+                [] (const auto& x, const auto& y)
+                {
+                    return x.timestamp < y.timestamp;
+                });
 }
 
 ////////////////////////////////////////////////////////////////////////////

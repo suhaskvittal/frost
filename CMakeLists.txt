@@ -80,6 +80,7 @@ set(MAIN_SIM_FILES
     src/os/free_list.cpp
     src/transaction.cpp
     src/util/argparse.cpp
+    src/util/stats/cache.cpp
     # Generated files
     _generated/${BUILD_ID}/sim.cpp
     # CORE MODEL FILES)

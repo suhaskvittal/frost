@@ -89,11 +89,10 @@ __TEMPLATE_CLASS__::select_command(const DRAMChannelState& ch, bool force_write)
                     if constexpr (WPOL == DRAMWritePolicy::ALAP)
                         --writes_to_drain_;
                 }
+                cmd_it->is_row_buffer_hit = b.next_cas_is_row_buffer_hit;
                 opt_e.emplace(std::move(*cmd_it));
                 impl_.erase(cmd_it);
             }
-            else
-                cmd_it->is_row_buffer_hit = false;
             break;  // Exit the loop and return.
         }
         else

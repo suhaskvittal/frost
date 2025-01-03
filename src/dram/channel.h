@@ -72,10 +72,6 @@ private:
 
     DRAMChannelState  state_{};
     cmd_sch_ptr cmd_scheduler_;
-
-    bool c128_tracking_writes_ =false;
-    size_t c128_ctr_ =0;
-    uint64_t c128_start_cycle_ =0;
     /*
      * All variables below are used if `DRAM_ENABLE_LOGGER` is defined.
      * 
@@ -100,8 +96,23 @@ public:
     void tick_dram(void);
 
     bool add_incoming(Transaction);
+
+    inline size_t read_queue_size(void) const { return read_queue_.size(); }
+    inline size_t write_queue_size(void) const { return write_queue_.size(); }
+
+    inline bool in_write_mode(void) const { return writes_to_drain_ > 0; }
+    inline void force_toggle_write_mode(uint64_t write_cnt) { ++s_num_drains_; writes_to_drain_ = write_cnt; }
 private:
+    /*
+     * Updates `writes_to_drain_` depending on the size of the write queue.
+     * */
+    void try_switch_to_write_mode(void);
     void issue_next_cmd(void);
+    /*
+     * Directs the logger to only log write-read+-write sequences. Manages
+     * and updates the state of the logger in this mode.
+     * */
+    void log_write_read_write_sequence(const DRAMCommand&);
 
     friend class DRAM;
 };

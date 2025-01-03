@@ -48,7 +48,8 @@ def validate_cache_section(cfg) -> bool:
         ('write_queue_size', 64),
         ('prefetch_queue_size', 32),
         ('latency', 4),
-        ('mode', ''),
+        ('operate_mode', ''),
+        ('writeback_mode', 'FORCED'),
         ('replacement_policy', 'LRU')
     ]
     # Now check if the number of sets or the size of the cache

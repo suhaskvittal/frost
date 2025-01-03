@@ -75,35 +75,7 @@ update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
     // Both rank and bankgroup states need to be updated for "other" ranks/bankgroups.
     update_dram_rank_states(ch, cmd);
     update_dram_bankgroup_states(ra, cmd);
-    
-    // Update bank state.
-    if (cmd_is_cas(c))
-    {
-        uint64_t cas_to_pre = cmd_is_read(c) ? tRTP : (CWL + BL/2 + tWR);
-        if (cmd_is_autopre(c)) 
-        {
-            ba.open_row.reset();
-            ba.num_cas_to_open_row = 0;
-            update(ba.act_ok, cas_to_pre + tRP);
-        } 
-        else
-        {
-            ++ba.num_cas_to_open_row;
-            update(ba.pre_ok, cas_to_pre);
-        }
-    } 
-    else if (cmd_is_act(c))
-    {
-        update(ba.cas_ok, tRCD);
-        update(ba.pre_ok, tRAS);
-        ba.open_row = dram_row(addr);
-    }
-    else // Precharge
-    {
-        ba.open_row.reset();
-        ba.num_cas_to_open_row = 0;
-        update(ba.act_ok, tRP);
-    }
+    update_dram_bank_state(ba, cmd);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -234,6 +206,45 @@ update_dram_bankgroup_states(DRAMRankState& ra, const DRAMCommand& cmd)
 }
 
 #undef UPDATE_SL
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
+{
+    DRAMCommandType c = cmd.type;
+    if (cmd_is_cas(c))
+    {
+        uint64_t cas_to_pre = cmd_is_read(c) ? tRTP : (CWL + BL/2 + tWR);
+        if (cmd_is_autopre(c)) 
+        {
+            ba.open_row.reset();
+            ba.num_cas_to_open_row = 0;
+            
+            ba.act_ok = std::max(ba.act_ok, std::max(GL_DRAM_CYCLE+cas_to_pre, ba.pre_ok)+tRP);
+        } 
+        else
+        {
+            ++ba.num_cas_to_open_row;
+            update(ba.pre_ok, cas_to_pre);
+            ba.next_cas_is_row_buffer_hit = true;
+        }
+    } 
+    else if (cmd_is_act(c))
+    {
+        update(ba.cas_ok, tRCD);
+        update(ba.pre_ok, tRAS);
+        ba.open_row = dram_row(cmd.address);
+        ba.next_cas_is_row_buffer_hit = false;
+    }
+    else // Precharge
+    {
+        ba.open_row.reset();
+        ba.num_cas_to_open_row = 0;
+        update(ba.act_ok, tRP);
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

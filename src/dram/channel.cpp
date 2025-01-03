@@ -5,6 +5,7 @@
 
 #include "globals.h"
 #include "dram_timing.h"
+#include "memsys.h"
 
 #include "dram/address.h"
 #include "dram/channel.h"
@@ -48,18 +49,7 @@ DRAMChannel::DRAMChannel(size_t channel_id, double freq_ghz)
 void
 DRAMChannel::tick_mc()
 {
-    // Here, we will just schedule the next command from the read/write queues.
-    //
-    // Determine if we need to drain writes.
-    if (writes_to_drain_ == 0)
-    {
-        bool drain_cond_1 = write_queue_.size() == DRAM_WQ_SIZE,
-             drain_cond_2 = read_queue_.empty()
-                            && write_queue_.size() > 8
-                            && cmd_scheduler_->has_no_pending_reads();
-        if (drain_cond_1 || drain_cond_2)
-            writes_to_drain_ = write_queue_.size();
-    }
+    try_switch_to_write_mode();
 
     auto& q = writes_to_drain_ > 0 ? write_queue_ : read_queue_;
     auto it = std::find_if(q.begin(), q.end(),
@@ -173,6 +163,35 @@ DRAMChannel::add_incoming(Transaction t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+void
+DRAMChannel::try_switch_to_write_mode()
+{
+
+    if (writes_to_drain_ == 0)
+    {
+#if defined(DRAM_USE_WATERMARKS_TO_DRAIN)
+        bool drain_cond_1 = write_queue_.size() >= DRAM_HIGH_WATERMARK;
+        bool drain_cond_2 = write_queue_.size() > DRAM_LOW_WATERMARK
+                                && read_queue_.empty()
+                                && cmd_scheduler_->has_no_pending_reads();
+        if (drain_cond_1 || drain_cond_2)
+            writes_to_drain_ = write_queue_.size() - DRAM_LOW_WATERMARK;
+#else
+        bool drain_cond_1 = write_queue_.size() == DRAM_WQ_SIZE,
+             drain_cond_2 = read_queue_.empty()
+                            && write_queue_.size() > 8
+                            && cmd_scheduler_->has_no_pending_reads();
+        if (drain_cond_1 || drain_cond_2)
+            writes_to_drain_ = write_queue_.size();
+#endif
+        if (drain_cond_1)
+            ++s_num_drains_;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 inline void
 dec_pending(DRAMChannel::pending_t& m, uint64_t k)
 {
@@ -188,12 +207,9 @@ DRAMChannel::issue_next_cmd()
 #endif
 
     auto [ready_cmd, opt_q_entry] = cmd_scheduler_->select_command();
-
     if (cmd_is_invalid(ready_cmd.type))
         return;
-
     update_dram_state(state_, ready_cmd);
-
     if (cmd_is_cas(ready_cmd.type))
     {
         auto q_entry = opt_q_entry.value();
@@ -237,64 +253,72 @@ DRAMChannel::issue_next_cmd()
 #if defined(DRAM_ENABLE_LOGGER)
     tmp_logger_local_ << "selected command: " << ready_cmd << "\n";
 #if defined(DRAM_LOG_WRW_SEQUENCES)
-    if (cmd_is_cas(ready_cmd.type))
-    {
-        // Current logger setup: we only write to `dram_logger_` if the sequence is of the form:
-        //  (1) a write
-        //  (2) one or more reads
-        //  (3) a write
-        switch (logger_state_)
-        {
-        case LoggerCmdState::NEED_WRITE:
-            if (cmd_is_write(ready_cmd.type))
-            {
-                logger_state_ = LoggerCmdState::NEED_READ;
-                logger_first_write_cycle_ = GL_DRAM_CYCLE;
-                tmp_logger_global_ << tmp_logger_local_.str();
-            }
-            break;
-        case LoggerCmdState::NEED_READ:
-            if (cmd_is_write(ready_cmd.type))
-            {
-                // As this is a write, stay in the same state, but update `tmp_logger_global_`
-                logger_first_write_cycle_ = GL_DRAM_CYCLE;
-                tmp_logger_global_.str("");
-                tmp_logger_global_ << tmp_logger_local_.str();
-            }
-            else
-            {
-                logger_state_ = LoggerCmdState::IN_READS;
-                tmp_logger_global_ << tmp_logger_local_.str();
-            }
-            break;
-        case LoggerCmdState::IN_READS:
-            // Can only promote in this state.
-            tmp_logger_global_ << tmp_logger_local_.str();
-            if (cmd_is_write(ready_cmd.type))
-            {
-                // We are done: write to dram_logger_
-                dram_logger_ << "SEQUENCE START\n\n" 
-                             << tmp_logger_global_.str() 
-                             << "\nSEQUENCE END (t = " << (GL_DRAM_CYCLE-logger_first_write_cycle_) << "\n";
-                tmp_logger_global_.str(tmp_logger_local_.str());
-
-                logger_state_ = LoggerCmdState::NEED_READ;
-                logger_first_write_cycle_ = GL_DRAM_CYCLE;
-            }
-            else if (GL_DRAM_CYCLE - logger_first_write_cycle_ > 2048)
-            {
-                // Reset the state as we are taking too long to reach the next write.
-                logger_state_ = LoggerCmdState::NEED_WRITE;
-                tmp_logger_global_.str("");
-            }
-            break;
-        }
-    }
+    log_write_read_write_sequence(ready_cmd);
 #else
     if (cmd_is_cas(ready_cmd.type))
         dram_logger_ << tmp_logger_local_.str();
 #endif
 #endif
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
+DRAMChannel::log_write_read_write_sequence(const DRAMCommand& ready_cmd)
+{
+    if (!cmd_is_cas(ready_cmd.type))
+        return;
+    // Current logger setup: we only write to `dram_logger_` if the sequence is of the form:
+    //  (1) a write
+    //  (2) one or more reads
+    //  (3) a write
+    switch (logger_state_)
+    {
+    case LoggerCmdState::NEED_WRITE:
+        if (cmd_is_write(ready_cmd.type))
+        {
+            logger_state_ = LoggerCmdState::NEED_READ;
+            logger_first_write_cycle_ = GL_DRAM_CYCLE;
+            tmp_logger_global_ << tmp_logger_local_.str();
+        }
+        break;
+    case LoggerCmdState::NEED_READ:
+        if (cmd_is_write(ready_cmd.type))
+        {
+            // As this is a write, stay in the same state, but update `tmp_logger_global_`
+            logger_first_write_cycle_ = GL_DRAM_CYCLE;
+            tmp_logger_global_.str("");
+            tmp_logger_global_ << tmp_logger_local_.str();
+        }
+        else
+        {
+            logger_state_ = LoggerCmdState::IN_READS;
+            tmp_logger_global_ << tmp_logger_local_.str();
+        }
+        break;
+    case LoggerCmdState::IN_READS:
+        // Can only promote in this state.
+        tmp_logger_global_ << tmp_logger_local_.str();
+        if (cmd_is_write(ready_cmd.type))
+        {
+            // We are done: write to dram_logger_
+            dram_logger_ << "SEQUENCE START\n\n" 
+                         << tmp_logger_global_.str() 
+                         << "\nSEQUENCE END (t = " << (GL_DRAM_CYCLE-logger_first_write_cycle_) << "\n";
+            tmp_logger_global_.str(tmp_logger_local_.str());
+
+            logger_state_ = LoggerCmdState::NEED_READ;
+            logger_first_write_cycle_ = GL_DRAM_CYCLE;
+        }
+        else if (GL_DRAM_CYCLE - logger_first_write_cycle_ > 2048)
+        {
+            // Reset the state as we are taking too long to reach the next write.
+            logger_state_ = LoggerCmdState::NEED_WRITE;
+            tmp_logger_global_.str("");
+        }
+        break;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -17,7 +17,7 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-void
+inline void
 print_cache_stats_for_core_header(std::ostream& out)
 {
     out << std::setw(16) << std::left << "CACHE"
@@ -30,8 +30,6 @@ print_cache_stats_for_core_header(std::ostream& out)
         << std::setw(16) << std::left << "MPKI"
         << std::setw(16) << std::left << "AAT"
         << std::setw(16) << std::left << "MISS_PENALTY"
-        << std::setw(16) << std::left << "WRITEBACKS"
-        << std::setw(16) << std::left << "WRITE_BLOCKED"
         << "\n" << BAR << "\n";
 }
 
@@ -55,8 +53,6 @@ print_cache_stats_for_core(CORE* c, const std::unique_ptr<CACHE>& cache, std::os
     double miss_rate = mean(misses, accesses);
     double aat = CACHE::CACHE_LATENCY * (1-miss_rate) + miss_penalty*miss_rate;
 
-    uint64_t write_blocked_cycles = cache->io_->s_blocking_writes_ / CACHE::NUM_RW_PORTS;
-
     out << std::setw(16) << std::left << header
         << std::setw(16) << std::left << accesses
         << std::setw(16) << std::left << misses
@@ -67,10 +63,13 @@ print_cache_stats_for_core(CORE* c, const std::unique_ptr<CACHE>& cache, std::os
         << std::setw(16) << std::left << std::setprecision(3) << mpki
         << std::setw(16) << std::left << std::setprecision(3) << aat
         << std::setw(16) << std::left << std::setprecision(3) << miss_penalty
-        << std::setw(16) << std::left << cache->s_writebacks_
-        << std::setw(16) << std::left << write_blocked_cycles
         << "\n";
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void print_llc_stats(std::ostream&);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
