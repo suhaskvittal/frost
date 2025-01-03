@@ -101,28 +101,41 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t addr, size_t num_refs)
     fill_result_t v, w;
     v = fill(addr, num_refs);
     // We obtain `w` by checking the new LRU position of the set.
-    CacheEntry& lru_way = get_way_in_lru_pos(get_set(addr));
-    if (lru_way.dirty)
-        w = lru_way;
+    auto lru_it = get_way_in_lru_pos(get_set(addr));
+    if (lru_it->dirty)
+        w = *lru_it;
     return multi_fill_result_t(v, w);
 }
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_t
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::next_line_fill_result_t
 __TEMPLATE_CLASS__::fill_with_next_line_writeback(uint64_t addr, size_t num_refs)
 {
     fill_result_t v, w;
+    size_t w_lru_pos;
+
     v = fill(addr, num_refs);
 
-    uint64_t next_lineaddr = addr ^ 1;  // Flip the last bit of `addr`
-    cset_t& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                        [next_lineaddr] (const CacheEntry& e)
-                        {
-                            return e.address == next_lineaddr;
-                        });
-    if (it != s.end() && it->dirty)
-        w = *it;
-    return multi_fill_result_t(v, w);
+    if (v.has_value() && v.value().dirty)
+    {
+        const auto& e = v.value();
+        uint64_t next_lineaddr = e.address ^ 1;  // Flip the last bit of `addr`
+        cset_t& s = get_set(e.address);
+        auto it = std::find_if(s.begin(), s.end(),
+                            [next_lineaddr] (const CacheEntry& e)
+                            {
+                                return e.address == next_lineaddr;
+                            });
+        if (it != s.end() && it->dirty)
+        {
+            w = *it;
+            w_lru_pos = std::count_if(s.begin(), s.end(),
+                                [t=it->timestamp] (const auto& e)
+                                {
+                                    return t > e.timestamp;
+                                });
+        }
+    }
+    return next_line_fill_result_t(v, w, w_lru_pos);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -212,15 +225,14 @@ __TEMPLATE_CLASS__::update(CacheEntry& e)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline cset_t::iterator
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_t::iterator
 __TEMPLATE_CLASS__::get_way_in_lru_pos(cset_t& s)
 {
-    auto it = std::min_element(s.begin(), s.end(),
+    return std::min_element(s.begin(), s.end(),
                 [] (const auto& x, const auto& y)
                 {
                     return x.timestamp < y.timestamp;
                 });
-    return *it;
 }
 
 ////////////////////////////////////////////////////////////////////////////

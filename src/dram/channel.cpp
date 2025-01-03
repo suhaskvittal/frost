@@ -5,6 +5,7 @@
 
 #include "globals.h"
 #include "dram_timing.h"
+#include "memsys.h"
 
 #include "dram/address.h"
 #include "dram/channel.h"
@@ -165,8 +166,6 @@ DRAMChannel::add_incoming(Transaction t)
 void
 DRAMChannel::try_switch_to_write_mode()
 {
-    if (LLCache::WRITEBACK_MODE == CacheWbMode::VIRTUAL_WRITE_QUEUE)
-        return; // Switch is performed by the LLC instead of MC.
 
     if (writes_to_drain_ == 0)
     {
@@ -185,23 +184,8 @@ DRAMChannel::try_switch_to_write_mode()
         if (drain_cond_1 || drain_cond_2)
             writes_to_drain_ = write_queue_.size();
 #endif
-#if defined(DRAM_TRACK_ADVANCED_STATS)
         if (drain_cond_1)
-        {
-            // Demand drain: we are interested in the spread of writes across bankgroups.
-            std::array<size_t, DRAM_RANKS*DRAM_BANKGROUPS> cnt{};
-            for (const Transaction& t : write_queue_)
-            {
-                size_t ii = dram_bankgroup(t.address) + dram_rank(t.address)*DRAM_BANKGROUPS;
-                ++cnt[ii];
-            }
-            // Update stats
-            const auto& [min_it, max_it] = std::minmax_element(cnt.begin(), cnt.end());
-            s_tot_drain_bg_spread_ += (*max_it) - (*min_it);
-
             ++s_num_drains_;
-        }
-#endif
     }
 }
 

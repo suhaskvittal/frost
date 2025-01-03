@@ -81,6 +81,9 @@ constexpr size_t DRAM_RQ_SIZE = {rq_size};
 constexpr size_t DRAM_WQ_SIZE = {wq_size};
 constexpr size_t DRAM_CMDQ_SIZE = {cmdq_size};
 
+constexpr size_t DRAM_LOW_WATERMARK = static_cast<size_t>(0.2 * DRAM_WQ_SIZE);
+constexpr size_t DRAM_HIGH_WATERMARK = static_cast<size_t>(0.8 * DRAM_WQ_SIZE);
+
 constexpr size_t DRAM_SIZE_MB = DRAM_CHANNELS * DRAM_RANKS * DRAM_BANKGROUPS * DRAM_BANKS
                                 * DRAM_ROWS * DRAM_COLUMNS * LINESIZE / (1024*1024);
 

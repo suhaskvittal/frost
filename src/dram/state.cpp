@@ -221,7 +221,8 @@ update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
         {
             ba.open_row.reset();
             ba.num_cas_to_open_row = 0;
-            update(ba.act_ok, cas_to_pre + tRP);
+            
+            ba.act_ok = std::max(ba.act_ok, std::max(GL_DRAM_CYCLE+cas_to_pre, ba.pre_ok)+tRP);
         } 
         else
         {

@@ -23,6 +23,7 @@ def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
         early_wb_is_lazy = True
         # remove `_L` from the string.
         wb_mode = wb_mode[:wb_mode.find('_L')]
+    early_wb_is_lazy = 'true' if early_wb_is_lazy else 'false'
 
     cache_decl =\
 f'''

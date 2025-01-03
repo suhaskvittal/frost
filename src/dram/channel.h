@@ -99,8 +99,11 @@ public:
 
     bool add_incoming(Transaction);
 
+    inline size_t read_queue_size(void) const { return read_queue_.size(); }
     inline size_t write_queue_size(void) const { return write_queue_.size(); }
-    inline void force_toggle_write_mode(uint64_t write_cnt) { writes_to_drain_ = write_cnt; }
+
+    inline bool in_write_mode(void) const { return writes_to_drain_ > 0; }
+    inline void force_toggle_write_mode(uint64_t write_cnt) { ++s_num_drains_; writes_to_drain_ = write_cnt; }
 private:
     /*
      * Updates `writes_to_drain_` depending on the size of the write queue.

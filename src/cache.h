@@ -56,13 +56,20 @@ struct CacheEntry
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+/*
+ * Forward declarations for friend classes and functions:
+ * */
+template <class CACHE_TYPE> class VirtualWriteQueue;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 template <
     size_t SETS,
     size_t WAYS,
     CacheReplPolicy POL,
     // Optionals:
-    size_t INDEX_OFFSET=0,      // index will be shifted by the given offset
+    size_t INDEX_OFFSET=0       // index will be shifted by the given offset
     >
 class Cache 
 {
@@ -76,6 +83,8 @@ public:
     using find_result_t = std::tuple<cset_t*, typename cset_t::iterator>;
     using fill_result_t = std::optional<CacheEntry>;
     using multi_fill_result_t = std::tuple<fill_result_t, fill_result_t>;
+    // Next line fill result also has the LRU position of the second line if it is dirty
+    using next_line_fill_result_t = std::tuple<fill_result_t, fill_result_t, size_t>;
 
     Cache(void) =default;
     /*
@@ -98,7 +107,7 @@ public:
      * */
     fill_result_t       fill(uint64_t, size_t num_refs);
     multi_fill_result_t fill_with_eager_writeback(uint64_t, size_t);
-    multi_fill_result_t fill_with_next_line_writeback(uint64_t, size_t);
+    next_line_fill_result_t fill_with_next_line_writeback(uint64_t, size_t);
 
     void invalidate(uint64_t);
     /*
@@ -125,7 +134,7 @@ private:
     /*
      * Gets way in the given LRU position.
      * */
-    CacheEntry& get_way_in_lru_pos(cset_t&);
+    typename cset_t::iterator get_way_in_lru_pos(cset_t&);
 
     inline cset_t& get_set(uint64_t x) { return csets_.at(get_set_idx(x)); }
     /*

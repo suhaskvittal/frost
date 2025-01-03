@@ -32,6 +32,7 @@ public:
         DRAM* dram;
 
         IO(DRAM*);
+        bool can_accept(uint64_t, bool write);
         bool add_incoming(Transaction);
     };
 

@@ -23,6 +23,8 @@ template <class CACHE_TYPE>
 class VirtualWriteQueue
 {
 public:
+    size_t writes_to_drain_ =0;
+
     const size_t high_watermark_;
     const size_t low_watermark_;
 private:
@@ -32,7 +34,19 @@ private:
      * Dram resource tuple: (channel, rank, bankgroup, bank)
      * */
     using dram_resource_tuple_t = std::tuple<size_t, size_t, size_t, size_t>;
-    using common_resource_map_t = std::unordered_map<dram_resource_tuple_t, std::vector<size_t>>;
+
+    struct dram_resource_hash
+    {
+        inline size_t operator()(const dram_resource_tuple_t& x) const
+        {
+            const auto& [ch, ra, bg, ba] = x;
+            return ch | (ra << numeric_traits<DRAM_CHANNELS>::log2)
+                      | (bg << numeric_traits<DRAM_CHANNELS*DRAM_RANKS>::log2)
+                      | (ba << numeric_traits<DRAM_CHANNELS*DRAM_RANKS*DRAM_BANKGROUPS>::log2);
+        }
+    };
+
+    using common_resource_map_t = std::unordered_map<dram_resource_tuple_t, std::vector<size_t>, dram_resource_hash>;
     using dirty_count_array_t = std::array<size_t, DRAM_CHANNELS>;
 
     cache_ptr& cache_;
@@ -45,8 +59,7 @@ private:
      * Maintains a map of DRAM locations to cache sets.
      * */
     common_resource_map_t dram_common_map_; 
-
-    dirty_count_array_t dirty_count_{};
+    size_t dirty_count_ =0;
 public:
     using writeback_t = std::optional<CacheEntry>;
     using write_hit_probe_t = std::vector<CacheEntry>;
@@ -58,18 +71,6 @@ public:
     void update_criticality(size_t set_idx);
     writeback_t schedule_writeback(size_t channel_idx);
     write_hit_probe_t harvest_write_row_hits(uint64_t base_address);
-
-    inline size_t get_count(size_t i) const { return dirty_count_.at(i); }
-private:
-    using lru_ways_t = std::vector<CacheEntry>;
-    /*
-     * This function enables a very fast update to the criticality of the given set (with index `idx`)
-     * if we have already computed its `lru_ways` and are cleaning a line in the set.
-     * */
-    void update_criticality_after_scheduled_writeback(size_t idx, uint64_t cleaned_address, const lru_ways_t&);
-
-    lru_ways_t get_lru_ways(const CACHE_TYPE::cset_t&);
-    size_t count_dirty_lru_ways(const CACHE_TYPE::cset_t&);
     /*
      * Need to use these functions to manipluate `critical_counts_` so `dirty_cnt_` is also updated.
      * */
@@ -77,13 +78,35 @@ private:
     void increment_critical_count(size_t);
     void decrement_critical_count(size_t);
 
-    inline constexpr size_t lru_ways(void) const { return cache_->num_ways() / 4: }
+    void try_switch_write_mode(void);
+private:
+    using lru_ways_t = std::vector<CacheEntry>;
+    /*
+     * This function enables a very fast update to the criticality of the given set (with index `idx`)
+     * if we have already computed its `lru_ways` and are cleaning a line in the set.
+     * */
+    void update_criticality_after_scheduled_writeback(size_t idx, uint64_t cleaned_address);
+
+    lru_ways_t get_lru_ways(const typename CACHE_TYPE::cset_t&);
+    size_t count_dirty_lru_ways(const typename CACHE_TYPE::cset_t&);
+
+    inline constexpr size_t lru_ways(void) const { return cache_->num_ways() / 4; }
     inline dram_resource_tuple_t make_resource_key(uint64_t address)
     {
         return dram_resource_tuple_t{dram_channel(address), dram_rank(address),
                                 dram_bankgroup(address), dram_bank(address)};
     }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+/*
+namespace std
+{
+
+} // std
+*/
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

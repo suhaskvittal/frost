@@ -13,7 +13,10 @@
 #include "transaction.h"
 #include "util/stats.h"
 
+#include "cache/other_impl/virtual_write_queue.h"
+
 #include <memory>
+#include <random>
 #include <unordered_map>
 
 ////////////////////////////////////////////////////////////////////////////
@@ -46,7 +49,7 @@ enum class CacheWBMode
     NEXT_LINE,              // FORCED + writeback if a dirty line's neighboring line is in the same set,
                             // also needs `INDEX_OFFSET` of cache to be 1 or higher.
     VIRTUAL_WRITE_QUEUE     // Performs writebacks according to the virtual write queue implementation.
-}
+};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -92,6 +95,10 @@ public:
     uint64_t s_dirty_victim_adj_lines_also_dirty_ =0;
 
     uint64_t s_eager_writebacks_ =0;
+    uint64_t s_scheduled_writebacks_ =0;
+
+    uint64_t s_tot_next_line_lru_pos_ =0;
+    uint64_t s_tot_next_lines_ =0;
 
     const std::string cache_name_;
 private:
@@ -113,6 +120,8 @@ private:
      * `vwq_` operates as a wrapper for some of `cache_`'s functionality.
      * */
     vwq_ptr vwq_ =nullptr;
+
+    std::mt19937_64 rng_{0};
 public:
     CacheControl(std::string cache_name, next_ptr&);
 
@@ -136,7 +145,7 @@ private:
     void handle_hit(const Transaction&);
     void handle_miss(const Transaction&, bool write_miss=false);
 
-    void handle_eager_writeback(CACHE::entry_t&);
+    void handle_eager_writeback(CacheEntry&);
 
     bool do_writeback(uint64_t addr);
     /*
@@ -148,8 +157,8 @@ private:
     /*
      * Virtual write queue implementation:
      * */ 
-    void vwq_try_switch_write_mode(void);
     void vwq_schedule_writebacks(void);
+    void vwq_schedule_writebacks_on_fill(uint64_t address);
 };
 
 ////////////////////////////////////////////////////////////////////////////

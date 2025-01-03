@@ -21,7 +21,7 @@ __TEMPLATE_CLASS__::CacheControl(std::string cache_name, next_ptr& n)
 {
     mshr_.reserve(IMPL::NUM_MSHR);
 
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWbMode::VIRTUAL_WRITE_QUEUE)
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
         vwq_ = vwq_ptr(new VirtualWriteQueue<CACHE>(cache_));
 }
 
@@ -67,7 +67,11 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
                 if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
                     next_->cache_->fill(e.address, 1);
                 if (e.dirty)
+                {
                     next_->warmup_access(e.address, true);
+                    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
+                        vwq_->update_criticality(cache_->get_set_idx(e.address));
+                }
             }
         }
     }
@@ -98,9 +102,9 @@ __TEMPLATE_CLASS__::tick()
     for (size_t i = 0; i < IMPL::NUM_RW_PORTS; i++)
         next_access();
 
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWbMode::VIRTUAL_WRITE_QUEUE)
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
     {
-        vwq_try_switch_write_mode();
+        vwq_->try_switch_write_mode();
         vwq_schedule_writebacks();
     }
 }
@@ -154,43 +158,53 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
 {
-    CACHE::fill_result_t v, w;
+    typename CACHE::fill_result_t v, w;
+    size_t w_lru_pos;
 
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
-        std::tie(v,w) = cache_->fill_with_eager_writeback(address, refcnt);
+        std::tie(v, w) = cache_->fill_with_eager_writeback(address, refcnt);
     else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-        std::tie(v,w) = cache_->fill_with_next_line_writeback(address, refcnt);
+        std::tie(v, w, w_lru_pos) = cache_->fill_with_next_line_writeback(address, refcnt);
     else
         v = cache_->fill(address, refcnt);
 
     if (dirty)
         cache_mark(address, true);
-    if (v.has_value()) 
+    if (!v.has_value()) 
+        return;
+    // Then we evicted some line.
+    CacheEntry& e = v.value();
+    if (e.dirty)
     {
-        // Then we evicted some line.
-        CacheEntry& e = v.value();
-        if (e.dirty)
+        ++s_writebacks_;
+        const auto [s_p, it] = cache_->find(e.address^1);
+        if (it != s_p->end())
         {
-            ++s_writebacks_;
-            const auto [s_p, it] = (e.address & 1) ? cache_->find(e.address-1) : cache_->find(e.address+1);
-            if (it != s_p->end())
-            {
-                ++s_dirty_victim_adj_lines_;
-                if (it->dirty)
-                    ++s_dirty_victim_adj_lines_also_dirty_;
-            }
-
-            if constexpr (IMPL::WRITEBACK_MODE == CacheWbMode::VIRTUAL_WRITE_QUEUE)
-                vwq_->update_criticality(cache_->get_set_idx(e,address));
+            ++s_dirty_victim_adj_lines_;
+            if (it->dirty)
+                ++s_dirty_victim_adj_lines_also_dirty_;
         }
-        // Install into the next level of the cache.
-        if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
-            next_->demand_fill(e.address, 1, e.dirty);
-        else if (e.dirty && !do_writeback(e.address))
+
+        if (!do_writeback(e.address))
             writeback_queue_.push_back(e.address);
-        // Also writeback `w` if it has a value.
-        if (w.has_value())
-            handle_eager_writeback(w.value());
+
+        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
+        {
+            vwq_->update_criticality(cache_->get_set_idx(e.address));
+            vwq_schedule_writebacks_on_fill(e.address);
+        }
+    }
+    else if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
+        next_->demand_fill(e.address, 1, e.dirty);
+    // Also writeback `w` if it has a value.
+    if (w.has_value())
+    {
+        handle_eager_writeback(w.value());
+        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
+        {
+            s_tot_next_line_lru_pos_ += w_lru_pos;
+            ++s_tot_next_lines_;
+        }
     }
 }
 
@@ -298,20 +312,28 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::handle_eager_writeback(CACHE::entry_t& e)
+__TEMPLATE_CLASS__::handle_eager_writeback(CacheEntry& e)
 {
-    ++s_eager_writebacks_;
-    if constexpr (IMPL::LAZY_EARLY_WRITEBACK)
+    if (curr_mshr_size() >= IMPL::NUM_MSHR)
+        return;
+
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
     {
-        if (do_writeback(e.address))
-            cache_mark(e.address, false);
+        size_t ch = dram_channel(e.address);
+        if (next_->channels_[ch]->write_queue_size() >= DRAM_HIGH_WATERMARK)
+            return;
+
+        do_writeback(e.address);
+        cache_mark(e.address, false);
     }
     else
     {
-        cache_mark(e.address, false);
         if (!do_writeback(e.address))
             writeback_queue_.push_back(e.address);
+        cache_->invalidate(e.address);
     }
+    ++s_eager_writebacks_;
+    ++s_writebacks_;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -330,7 +352,7 @@ __TEMPLATE_CLASS__::do_writeback(uint64_t address)
 __TEMPLATE_HEADER__ inline bool
 __TEMPLATE_CLASS__::cache_probe(uint64_t address, bool write)
 {
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWbMode::VIRTUAL_WRITE_QUEUE)
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
         return vwq_->probe_with_criticality_update(address);
     else
         return cache_->probe(address, write);
@@ -339,7 +361,7 @@ __TEMPLATE_CLASS__::cache_probe(uint64_t address, bool write)
 __TEMPLATE_HEADER__ inline bool
 __TEMPLATE_CLASS__::cache_mark(uint64_t address, bool dirty)
 {
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWbMode::VIRTUAL_WRITE_QUEUE)
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
         return vwq_->mark_with_criticality_update(address, dirty);
     else
         return cache_->mark(address, dirty);
@@ -349,36 +371,57 @@ __TEMPLATE_CLASS__::cache_mark(uint64_t address, bool dirty)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::vwq_try_switch_write_mode()
-{
-    for (size_t i = 0; i < next_->channels_.size(); i++)
-    {
-        auto& ch = next_->channels_[i];
-        if (vwq_->get_count(i) >= vwq_->high_watermark_)
-            ch->force_toggle_write_mode(vwq_->get_count(i) - vwq_->low_watermark_);
-    }
-}
-
-__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::vwq_schedule_writebacks()
 {
-    auto channel_it = std::find_if(next_->channels_.begin(), next_->channels_.end(),
-                                [] (const auto& ch)
-                                {
-                                    return ch->write_queue_size() >= DRAM_LOW_WATERMARK;
-                                });
-    if (channel_it != next_->channels_.end())
+    for (auto& ch : next_->channels_)
     {
-        auto wb = vwq_->schedule_writeback((*channel_it)->channel_id_);
+        if (curr_mshr_size() >= IMPL::NUM_MSHR || vwq_->writes_to_drain_ == 0)
+            return;
+
+        auto wb = vwq_->schedule_writeback(ch->channel_id_);
         if (wb.has_value())
         {
             CacheEntry& e = wb.value();
             auto row_hits = vwq_->harvest_write_row_hits(e.address);
             // Perform writebacks.
-            next_->io_->add_incoming(e.address);
+            if (!do_writeback(e.address))
+                writeback_queue_.push_back(e.address);
             for (const auto& f : row_hits)
-                next_->io_->add_incoming(f.address);
+            {
+                if (!do_writeback(f.address))
+                    writeback_queue_.push_back(e.address);
+            }
+            size_t num_writes = 1 + row_hits.size();
+            s_scheduled_writebacks_ += num_writes;
+            s_writebacks_ += num_writes;
+    
+            vwq_->writes_to_drain_ = num_writes > vwq_->writes_to_drain_ ? 0 : vwq_->writes_to_drain_ - num_writes;
         }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::vwq_schedule_writebacks_on_fill(uint64_t address)
+{
+    size_t ch_idx = dram_channel(address);
+    if (curr_mshr_size() < IMPL::NUM_MSHR 
+            && next_->channels_[ch_idx]->write_queue_size() < DRAM_HIGH_WATERMARK)
+    {
+        // Get row buffer hits in nearby sets.
+        auto row_hits = vwq_->harvest_write_row_hits(address);
+        for (const auto& e : row_hits)
+        {
+            if (!do_writeback(e.address))
+                writeback_queue_.push_back(e.address);
+        }
+        s_writebacks_ += row_hits.size();
+        s_scheduled_writebacks_ += row_hits.size();
+
+        vwq_->writes_to_drain_ = row_hits.size() > vwq_->writes_to_drain_ ? 0 
+                                    : vwq_->writes_to_drain_ - row_hits.size();
     }
 }
 
