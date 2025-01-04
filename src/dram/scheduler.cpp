@@ -3,6 +3,7 @@
  *  date:   24 December 2024
  * */
 
+#include "dram/channel.h"
 #include "dram/scheduler.h"
 #include "util/numerics.h"
 
@@ -160,7 +161,7 @@ CommandScheduler::alap_sync_enter_write_mode()
                                         return q.num_writes();
                                     });
     size_t writes;
-    if (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
+    if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
         writes = max_writes;
     else
         writes = std::max(min_writes, static_cast<size_t>(1));

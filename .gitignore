@@ -16,3 +16,6 @@ out
 out/*
 stats/__pycache__
 stats/__pycache__/*
+
+ini
+ini/*

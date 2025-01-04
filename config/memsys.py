@@ -18,12 +18,6 @@ def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
     next_is_invalidate_on_hit = 'true' if (cfg['operate_mode'] == 'NEXT_IS_INVALIDATE_ON_HIT') else 'false'
 
     wb_mode = cfg['writeback_mode']
-    early_wb_is_lazy = False
-    if wb_mode.endswith('_L'):
-        early_wb_is_lazy = True
-        # remove `_L` from the string.
-        wb_mode = wb_mode[:wb_mode.find('_L')]
-    early_wb_is_lazy = 'true' if early_wb_is_lazy else 'false'
 
     cache_decl =\
 f'''
@@ -42,7 +36,6 @@ struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheRep
     constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = {next_is_invalidate_on_hit};
 
     constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
-    constexpr static bool        LAZY_EARLY_WRITEBACK = {early_wb_is_lazy};
 
     {typename}(std::string name, CacheControl::next_ptr& n)
         :CacheControl(name, n)

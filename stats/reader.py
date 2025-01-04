@@ -13,12 +13,12 @@ def parse_line(out: dict, line: str):
     data = line.strip().split()
     out[data[0]] = data[1]
 
-def parse_core_line(out: dict, line: str):
+def parse_stat_line(out: dict, line: str):
     data = line.strip().split()
-    core, stat, value = data[:]
-    if core not in out:
-        out[core] = {}
-    out[core][stat] = value
+    who, stat, value = data[:]
+    if who not in out:
+        out[who] = {}
+    out[who][stat] = value
 
 def parse_dram_line(out: dict, line: str):
     data = line.strip().split()
@@ -89,16 +89,19 @@ def read_results(rd) -> dict:
     line = rd.readline()
     while not is_bar(line):
         line = rd.readline()
-    # This is the core region: keep reading until we hit DRAM
+    # This is the core region: keep reading until we hit LLC
     line = rd.readline()
-    while 'DRAM' not in line:
+    while 'LLC' not in line:
         if 'CACHE' in line:
             # We have hit the cache results table.
             parse_table(rd, out, line, '', place_in_core_data=True)
         elif not is_bar(line):
-            parse_core_line(out, line)
+            parse_stat_line(out, line)
         line = rd.readline()
-
+    # next data is all LLC data. stop when we hit a line
+    while not is_bar(line):
+        parse_stat_line(out, line)
+        line = rd.readline()
     # Next data is all dram data. Stop when we hit a line
     while not is_bar(line):
         parse_dram_line(out, line)

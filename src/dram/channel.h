@@ -52,6 +52,8 @@ public:
 
     uint64_t s_tot_read_latency_ =0;
     uint64_t s_tot_write_latency_ =0;
+
+    uint64_t s_num_drains_ =0;
     /*
      * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
      *  these are stats that are computationally intensive to compute, and thus can be disabled.

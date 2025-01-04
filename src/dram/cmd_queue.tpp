@@ -175,7 +175,7 @@ __TEMPLATE_CLASS__::allow_demand_precharge(
                                     {
                                         return b.open_row == cmd.trans.address;
                                     });
-        return is_first && (!any_pending_hits || b.num_cas_to_open_row > 4);
+        return is_first && (!any_pending_hits || b.num_cas_to_open_row >= 4);
     }
 }
 
