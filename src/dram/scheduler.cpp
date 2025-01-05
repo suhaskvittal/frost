@@ -146,25 +146,20 @@ CommandScheduler::alap_sync_update_write_mode()
 void
 CommandScheduler::alap_sync_enter_write_mode()
 {
-    size_t max_writes = std::transform_reduce(cmd_queues_.begin(), cmd_queues_.end(),
-                                    0,
-                                    [] (size_t x, size_t y) { return std::max(x,y); },
-                                    [] (const auto& q)
-                                    {
-                                        return q.num_writes();
-                                    });
-    size_t min_writes = std::transform_reduce(cmd_queues_.begin(), cmd_queues_.end(),
-                                    std::numeric_limits<size_t>::max(),
-                                    [] (size_t x, size_t y) { return std::min(x,y); },
-                                    [] (const auto& q)
-                                    {
-                                        return q.num_writes();
-                                    });
+    std::array<size_t, TOT_BANKS> write_cnts;
+    std::transform(cmd_queues_.begin(), cmd_queues_.end(), write_cnts.begin(),
+                    [] (const auto& q) { return q.num_writes(); });
+
     size_t writes;
-    if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
-        writes = max_writes;
+    if (has_no_pending_reads())
+    {
+        writes = std::reduce(write_cnts.begin(), write_cnts.end(), static_cast<size_t>(0), std::plus<size_t>{})
+                            / TOT_BANKS;
+    }
     else
-        writes = std::max(min_writes, static_cast<size_t>(1));
+    {
+        writes = std::max(*std::min_element(write_cnts.begin(), write_cnts.end()), 4ul);
+    }
     // Setup state for write moder:
     alap_sync_in_write_mode_ = true;
     alap_sync_write_tracker_.fill(writes);

@@ -176,7 +176,7 @@ update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define UPDATE_SL(t, s, l)  update(t, i == bgidx ? (s) : (l))
+#define UPDATE_SL(t, s, l)  update(t, i == bgidx ? (l) : (s))
 
 void
 update_dram_bankgroup_states(DRAMRankState& ra, const DRAMCommand& cmd)
