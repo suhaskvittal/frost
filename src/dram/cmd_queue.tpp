@@ -170,11 +170,21 @@ __TEMPLATE_CLASS__::allow_demand_precharge(
         return true;
     else
     {
-        bool any_pending_hits = std::any_of(std::next(cmd_it), end,
-                                    [b] (const auto& cmd)
-                                    {
-                                        return b.open_row == cmd.trans.address;
-                                    });
+        bool any_pending_hits = 
+            std::any_of(std::next(cmd_it), end,
+                    [b, 
+                    base_cmd_is_read=trans_is_read(cmd_it->trans.type),
+                    bank_idx=get_bank_idx(cmd_it->trans.address)] 
+                    (const auto& cmd)
+                    {
+                        if constexpr (WPOL == DRAMWritePolicy::ALAP || WPOL == DRAMWritePolicy::ALAP_SYNC)
+                        {
+                            if (trans_is_read(cmd.trans.type) != base_cmd_is_read)
+                                return false;
+                        }
+                        return bank_idx == get_bank_idx(cmd.trans.address)
+                                && b.open_row == dram_row(cmd.trans.address);
+                    });
         return is_first && (!any_pending_hits || b.num_cas_to_open_row >= 4);
     }
 }

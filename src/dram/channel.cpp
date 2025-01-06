@@ -75,7 +75,7 @@ void
 DRAMChannel::tick_dram()
 {
 #if defined(DRAM_ENABLE_LOGGER)
-    tmp_logger_local_.str("");
+    tmp_logger_.str("");
 
     bool any_ranks_in_refresh = std::any_of(state_.begin(), state_.end(),
                                         [] (const auto& ra)
@@ -88,14 +88,14 @@ DRAMChannel::tick_dram()
                                             return GL_DRAM_CYCLE < ra.next_cmd_post_ref_cycle;
                                         });
 
-    tmp_logger_local_ 
+    tmp_logger_ 
         << "========================= DRAM CYCLE " << GL_DRAM_CYCLE << " ===============================\n"
         << "channel state: FAW = {";
 
     for (uint64_t c : state_.faw)
-        tmp_logger_local_ << " " << ((c+tFAW) - GL_DRAM_CYCLE);
+        tmp_logger_ << " " << ((c+tFAW) - GL_DRAM_CYCLE);
 
-    tmp_logger_local_ << " }, in REF: " << (any_ranks_in_refresh ? "y" : "n")
+    tmp_logger_ << " }, in REF: " << (any_ranks_in_refresh ? "y" : "n")
                       << ", in tRFC post REF: " << (any_ranks_in_trfc ? "y" : "n")
                       << "\n";
 #endif
@@ -203,7 +203,7 @@ void
 DRAMChannel::issue_next_cmd()
 {
 #if defined(DRAM_ENABLE_LOGGER)
-    cmd_scheduler_->print_queue_state(tmp_logger_local_);
+    cmd_scheduler_->print_queue_state(tmp_logger_);
 #endif
 
     auto [ready_cmd, opt_q_entry] = cmd_scheduler_->select_command();
@@ -249,15 +249,15 @@ DRAMChannel::issue_next_cmd()
             ++s_pre_demand_;
         }
     }
+    // additional stats:
+#if defined(DRAM_TRACK_ADVANCED_STATS)
+    update_wrw_state(ready_cmd);
+#endif
 
 #if defined(DRAM_ENABLE_LOGGER)
-    tmp_logger_local_ << "selected command: " << ready_cmd << "\n";
-#if defined(DRAM_LOG_WRW_SEQUENCES)
-    log_write_read_write_sequence(ready_cmd);
-#else
+    tmp_logger_ << "selected command: " << ready_cmd << "\n";
     if (cmd_is_cas(ready_cmd.type))
-        dram_logger_ << tmp_logger_local_.str();
-#endif
+        dram_logger_ << tmp_logger_.str();
 #endif
 }
 
@@ -265,7 +265,7 @@ DRAMChannel::issue_next_cmd()
 ////////////////////////////////////////////////////////////////////////////
 
 void
-DRAMChannel::log_write_read_write_sequence(const DRAMCommand& ready_cmd)
+DRAMChannel::update_wrw_state(const DRAMCommand& ready_cmd)
 {
     if (!cmd_is_cas(ready_cmd.type))
         return;
@@ -273,50 +273,37 @@ DRAMChannel::log_write_read_write_sequence(const DRAMCommand& ready_cmd)
     //  (1) a write
     //  (2) one or more reads
     //  (3) a write
-    switch (logger_state_)
+    switch (wrw_seq_state_)
     {
-    case LoggerCmdState::NEED_WRITE:
+    case WRWSequenceState::NEED_WRITE:
         if (cmd_is_write(ready_cmd.type))
         {
-            logger_state_ = LoggerCmdState::NEED_READ;
-            logger_first_write_cycle_ = GL_DRAM_CYCLE;
-            tmp_logger_global_ << tmp_logger_local_.str();
+            wrw_seq_state_ = WRWSequenceState::NEED_READ;
+            wrw_first_write_cycle_ = GL_DRAM_CYCLE;
         }
         break;
-    case LoggerCmdState::NEED_READ:
+    case WRWSequenceState::NEED_READ:
         if (cmd_is_write(ready_cmd.type))
-        {
-            // As this is a write, stay in the same state, but update `tmp_logger_global_`
-            logger_first_write_cycle_ = GL_DRAM_CYCLE;
-            tmp_logger_global_.str("");
-            tmp_logger_global_ << tmp_logger_local_.str();
-        }
+            wrw_first_write_cycle_ = GL_DRAM_CYCLE;
         else
-        {
-            logger_state_ = LoggerCmdState::IN_READS;
-            tmp_logger_global_ << tmp_logger_local_.str();
-        }
+            wrw_seq_state_ = WRWSequenceState::IN_READS;
         break;
-    case LoggerCmdState::IN_READS:
+    case WRWSequenceState::IN_READS:
         // Can only promote in this state.
-        tmp_logger_global_ << tmp_logger_local_.str();
         if (cmd_is_write(ready_cmd.type))
         {
-            // We are done: write to dram_logger_
-            dram_logger_ << "SEQUENCE START\n\n" 
-                         << tmp_logger_global_.str() 
-                         << "\nSEQUENCE END (t = " << (GL_DRAM_CYCLE-logger_first_write_cycle_) << "\n";
-            tmp_logger_global_.str(tmp_logger_local_.str());
-
-            logger_state_ = LoggerCmdState::NEED_READ;
-            logger_first_write_cycle_ = GL_DRAM_CYCLE;
+            wrw_seq_state_ = WRWSequenceState::NEED_READ;
+            for (size_t i = 0; i < 4; i++)
+            {
+                uint64_t max_cyc = 1L << (i+8);
+                if (GL_DRAM_CYCLE - wrw_first_write_cycle_ <= max_cyc)
+                    ++s_num_seq_[i];
+            }
+            wrw_first_write_cycle_ = GL_DRAM_CYCLE;
         }
-        else if (GL_DRAM_CYCLE - logger_first_write_cycle_ > 2048)
-        {
+        else if (GL_DRAM_CYCLE - wrw_first_write_cycle_ > 2048)
             // Reset the state as we are taking too long to reach the next write.
-            logger_state_ = LoggerCmdState::NEED_WRITE;
-            tmp_logger_global_.str("");
-        }
+            wrw_seq_state_ = WRWSequenceState::NEED_WRITE;
         break;
     }
 }

@@ -143,6 +143,15 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
 
     print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", vec_num_drains);
+
+#if defined(DRAM_TRACK_ADVANCED_STATS)
+    for (size_t i = 0; i < 4; i++)
+    {
+        uint64_t max_cyc = 1L << (i+8);
+        std::array<uint64_t,2> vec{channels_[0]->s_num_seq_[i], channels_[1]->s_num_seq_[i]};
+        print_vecstat(out, "DRAM", "NUM_WR+W_SEQ_LE_" + std::to_string(max_cyc), vec);
+    }
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////

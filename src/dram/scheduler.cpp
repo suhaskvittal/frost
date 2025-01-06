@@ -3,7 +3,7 @@
  *  date:   24 December 2024
  * */
 
-#include "dram/channel.h"
+#include "dram/enums.h"
 #include "dram/scheduler.h"
 #include "util/numerics.h"
 
@@ -79,7 +79,8 @@ CommandScheduler::select_command()
             else if (write_cnt > 0)
             {
                 out = q.select_command(state_, true);
-                if (cmd_is_write(std::get<0>(out).type))
+                const auto& [ready_cmd, e] = out;
+                if (cmd_is_write(ready_cmd.type) && !e.value().is_row_buffer_hit)
                     --write_cnt;
             }
         }
@@ -143,6 +144,9 @@ CommandScheduler::alap_sync_update_write_mode()
     }
 }
 
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 void
 CommandScheduler::alap_sync_enter_write_mode()
 {
@@ -150,16 +154,8 @@ CommandScheduler::alap_sync_enter_write_mode()
     std::transform(cmd_queues_.begin(), cmd_queues_.end(), write_cnts.begin(),
                     [] (const auto& q) { return q.num_writes(); });
 
-    size_t writes;
-    if (has_no_pending_reads())
-    {
-        writes = std::reduce(write_cnts.begin(), write_cnts.end(), static_cast<size_t>(0), std::plus<size_t>{})
-                            / TOT_BANKS;
-    }
-    else
-    {
-        writes = std::max(*std::min_element(write_cnts.begin(), write_cnts.end()), 4ul);
-    }
+    size_t writes = std::reduce(write_cnts.begin(), write_cnts.end(), static_cast<size_t>(0)) / TOT_BANKS;
+    
     // Setup state for write moder:
     alap_sync_in_write_mode_ = true;
     alap_sync_write_tracker_.fill(writes);

@@ -10,6 +10,7 @@
 
 #include "dram/command.h"
 #include "dram/cmd_queue.h"
+#include "dram/enums.h"
 #include "dram/scheduler.h"
 #include "dram/state.h"
 #include "io_bus.h"
@@ -21,11 +22,6 @@
 #include <iostream>
 #include <sstream>
 #include <optional>
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-enum class DRAMPagePolicy { OPEN, CLOSE };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -58,6 +54,9 @@ public:
      * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
      *  these are stats that are computationally intensive to compute, and thus can be disabled.
      * */
+    using wrw_stat_t = std::array<uint64_t, 4>;
+
+    wrw_stat_t s_num_seq_{};
 
     const double freq_ghz_;
     const size_t channel_id_;
@@ -75,22 +74,22 @@ private:
     DRAMChannelState  state_{};
     cmd_sch_ptr cmd_scheduler_;
     /*
+     * Variables for tracking WR+W sequences:
+     * */
+    enum class WRWSequenceState { NEED_WRITE, NEED_READ, IN_READS };
+
+    WRWSequenceState wrw_seq_state_ =WRWSequenceState::NEED_WRITE;
+    uint64_t         wrw_first_write_cycle_ =0;
+    /*
      * All variables below are used if `DRAM_ENABLE_LOGGER` is defined.
      * 
      * `dram_logger_` is used to log information and write to a file. File is default: `dram_channel.<id>.log`.
      *
      * `tmp_logger_` is used to buffer log info. `tmp_logger_` is only used to write to `dram_logger_` if a
      * command is issued.
-     *
-     * `last_two_cmds_` tracks the last two commands. Useful for logging dependent on commands.
      * */
-    enum class LoggerCmdState { NEED_WRITE, NEED_READ, IN_READS };
-
     std::ofstream     dram_logger_{};
-    std::stringstream tmp_logger_local_;
-    std::stringstream tmp_logger_global_;
-    LoggerCmdState    logger_state_ =LoggerCmdState::NEED_WRITE;
-    uint64_t          logger_first_write_cycle_ =0;
+    std::stringstream tmp_logger_;
 public:
     DRAMChannel(size_t channel_id, double freq_ghz);
     
@@ -110,13 +109,13 @@ private:
      * */
     void try_switch_to_write_mode(void);
     void issue_next_cmd(void);
+
+    void update_wrw_state(const DRAMCommand&);
     /*
      * Directs the logger to only log write-read+-write sequences. Manages
      * and updates the state of the logger in this mode.
      * */
     void log_write_read_write_sequence(const DRAMCommand&);
-
-    friend class DRAM;
 };
 
 ////////////////////////////////////////////////////////////////////////////
