@@ -35,4 +35,3 @@ else:
 
 for b in builds:
     os.system(f'python scripts/run.py mtf/spec2017 {b} {INST_SIM} {INST_WARMUP}')
-    time.sleep(60)
