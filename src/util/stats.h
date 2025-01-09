@@ -74,6 +74,18 @@ vec_hmean(const VecStat<T,N>& arr)
     return static_cast<double>(N) / denom;
 }
 
+template <class T, size_t N> inline T
+vec_max(const VecStat<T,N>& arr)
+{
+    return *std::max_element(arr.begin(), arr.end());
+}
+
+template <class T, size_t N> inline T
+vec_min(const VecStat<T,N>& arr)
+{
+    return *std::min_element(arr.begin(), arr.end());
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -109,7 +121,7 @@ void print_stat(std::ostream& out,
     out << std::setw(STAT_WIDTH) << std::right << stat << "\n";
 }
 
-enum class VecAccMode { NONE, SUM, AMEAN, GMEAN, HMEAN };
+enum class VecAccMode { NONE, SUM, AMEAN, GMEAN, HMEAN, MAX, MIN };
 
 template <class T, size_t N>
 void print_vecstat(std::ostream& out,
@@ -140,6 +152,12 @@ void print_vecstat(std::ostream& out,
         break;
     case VecAccMode::HMEAN:
         out << std::setw(STAT_WIDTH) << std::right << vec_hmean(arr) << "\n";
+        break;
+    case VecAccMode::MAX:
+        out << std::setw(STAT_WIDTH) << std::right << vec_max(arr) << "\n";
+        break;
+    case VecAccMode::MIN:
+        out << std::setw(STAT_WIDTH) << std::right << vec_min(arr) << "\n";
         break;
     default:
         out << "\n";

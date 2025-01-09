@@ -107,6 +107,9 @@ __TEMPLATE_CLASS__::tick()
         vwq_->try_switch_write_mode();
         vwq_schedule_writebacks();
     }
+
+    if (!eager_queue_.empty() && do_writeback(eager_queue_.front()))
+        eager_queue_.pop_front();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -317,24 +320,18 @@ __TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
 __TEMPLATE_HEADER__ inline void
 __TEMPLATE_CLASS__::handle_eager_writeback(CacheEntry& e)
 {
-    if (curr_mshr_size() >= IMPL::NUM_MSHR)
+    if (eager_queue_.size() >= EAGER_QUEUE_SIZE)
         return;
-
+    
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
     {
         size_t ch = dram_channel(e.address);
         if (next_->channels_[ch]->write_queue_size() >= DRAM_HIGH_WATERMARK)
             return;
+    }
 
-        do_writeback(e.address);
-        cache_mark(e.address, false);
-    }
-    else
-    {
-        if (!do_writeback(e.address))
-            writeback_queue_.push_back(e.address);
-        cache_mark(e.address, false);
-    }
+    eager_queue_.push_back(e.address);
+    cache_mark(e.address, false);
     ++s_eager_writebacks_;
     ++s_writebacks_;
 }

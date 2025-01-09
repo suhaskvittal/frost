@@ -15,9 +15,8 @@ enum class DRAMSchedPolicy
 
 enum class DRAMWritePolicy
 {
-    ASAP,       // Writes are finished in their command queue order.
-    ALAP,       // Writes are only issued if `MAX_WRITES` is reached
-    ALAP_SYNC   // Writes are issued if any command queue reaches `MAX_WRITES`
+    ASYNC,  // Writes are issued when they are ready
+    SYNC    // Writes are issued altogether by each command queue
 };
 
 #endif  // DRAM_ENUMS_h

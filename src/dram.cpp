@@ -94,15 +94,15 @@ DRAM::tick()
 ////////////////////////////////////////////////////////////////////////////
 
 #define CREATE_VEC_STAT(stat)\
-    VecStat<uint64_t,DRAM_CHANNELS> vec_##stat;\
+    VecStat<uint64_t,DRAM_CHANNELS> stat;\
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
-        vec_##stat[i] = channels_[i]->s_##stat##_;\
+        stat[i] = channels_[i]->s_##stat##_;\
     }\
 
-#define CREATE_VEC_STAT_CMDQ(stat)\
-    VecStat<uint64_t,DRAM_CHANNELS> vec_##stat;\
+#define CREATE_VEC_STAT_SCHED(stat)\
+    VecStat<uint64_t,DRAM_CHANNELS> stat;\
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
-        vec_##stat[i] = channels_[i]->cmd_scheduler_->s_##stat##_;\
+        stat[i] = channels_[i]->cmd_scheduler_->s_##stat##_;\
     }\
 
 void
@@ -119,30 +119,36 @@ DRAM::print_stats(std::ostream& out)
 
     CREATE_VEC_STAT(tot_read_latency)
     CREATE_VEC_STAT(tot_write_latency)
-
     CREATE_VEC_STAT(num_drains)
 
-    VecStat<double, DRAM_CHANNELS> rd_rbhr = vec_elwise_mean(vec_read_row_hits, vec_reads),
-                                   wr_rbhr = vec_elwise_mean(vec_write_row_hits, vec_writes),
-                                   read_latency = vec_elwise_mean(vec_tot_read_latency, vec_reads),
-                                   write_latency = vec_elwise_mean(vec_tot_write_latency, vec_writes);
+    CREATE_VEC_STAT_SCHED(write_bursts)
+    CREATE_VEC_STAT_SCHED(max_writes_in_burst)
+    CREATE_VEC_STAT_SCHED(min_writes_in_burst)
+
+    VecStat<double, DRAM_CHANNELS> rd_rbhr = vec_elwise_mean(read_row_hits, reads),
+                                   wr_rbhr = vec_elwise_mean(write_row_hits, writes),
+                                   read_latency = vec_elwise_mean(tot_read_latency, reads),
+                                   write_latency = vec_elwise_mean(tot_write_latency, writes),
+                                   mean_writes_in_burst = vec_elwise_mean(writes, write_bursts);
 
     out << BAR << "\n";
 
-    print_vecstat(out, "DRAM", "NUM_READS", vec_reads);
-    print_vecstat(out, "DRAM", "NUM_WRITES", vec_writes);
-    print_vecstat(out, "DRAM", "NUM_PRECHARGE", vec_precharges);
-    print_vecstat(out, "DRAM", "NUM_ACTIVATE", vec_activates);
-    print_vecstat(out, "DRAM", "NUM_REFRESH", vec_refreshes);
-    print_vecstat(out, "DRAM", "NUM_PREDEMAND", vec_pre_demand);
-
+    print_vecstat(out, "DRAM", "NUM_READS", reads);
+    print_vecstat(out, "DRAM", "NUM_WRITES", writes);
+    print_vecstat(out, "DRAM", "NUM_PRECHARGE", precharges);
+    print_vecstat(out, "DRAM", "NUM_ACTIVATE", activates);
+    print_vecstat(out, "DRAM", "NUM_REFRESH", refreshes);
+    print_vecstat(out, "DRAM", "NUM_PREDEMAND", pre_demand);
     print_vecstat(out, "DRAM", "READ_ROW_BUFFER_HIT_RATE", rd_rbhr, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "WRITE_ROW_BUFFER_HIT_RATE", wr_rbhr, VecAccMode::HMEAN);
-
     print_vecstat(out, "DRAM", "READ_LATENCY", read_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
-
-    print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", vec_num_drains);
+    print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", num_drains);
+    
+    print_vecstat(out, "DRAM", "SCHED_WRITE_BURTS", write_bursts);
+    print_vecstat(out, "DRAM", "SCHED_MEAN_WRITES_PER_BURST", mean_writes_in_burst, VecAccMode::HMEAN);
+    print_vecstat(out, "DRAM", "SCHED_MAX_WRITES_PER_BURST", max_writes_in_burst, VecAccMode::MAX);
+    print_vecstat(out, "DRAM", "SCHED_MIN_WRITES_PER_BURST", min_writes_in_burst, VecAccMode::MIN);
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)
     for (size_t i = 0; i < 4; i++)

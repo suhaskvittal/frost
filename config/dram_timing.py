@@ -19,6 +19,9 @@ def write(cfg, build):
         return int(math.ceil(t_ns*dram_freq))
 
     tRTRS = 1
+    tRPST = 0.5
+    tWPRE = 2
+    READ_DQS_OFFSET = 0
 
     if dram_type == '4800':
         CL = ckcast(16.0)
@@ -32,12 +35,12 @@ def write(cfg, build):
         tCCD_S = 8
         tCCD_S_WR = 8
         tCCD_S_WTR = CWL + BL//2 + max(4, ckcast(2.5));
-        tCCD_S_RTW = tCCD_S_WTR
+        tCCD_S_RTW = (CL-CWL) + BL//2 + 2 - READ_DQS_OFFSET + int(tRPST - 0.5) + tWPRE
 
         tCCD_L = max(8, ckcast(5.0))
         tCCD_L_WR = max(32, ckcast(20.0))
         tCCD_L_WTR = CWL + BL//2 + max(16, ckcast(10.0))
-        tCCD_L_RTW = tCCD_L_WTR
+        tCCD_L_RTW = (CL-CWL) + BL//2 + 2 - READ_DQS_OFFSET + int(tRPST - 0.5) + tWPRE
 
         tRRD_S = 8
         tRRD_L = max(8, ckcast(5.0))

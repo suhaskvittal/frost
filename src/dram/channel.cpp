@@ -9,7 +9,6 @@
 
 #include "dram/address.h"
 #include "dram/channel.h"
-#include "dram/cmd_queue.h"
 #include "dram/state.h"
 #include "util/numerics.h"
 
