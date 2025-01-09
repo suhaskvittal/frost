@@ -9,7 +9,6 @@
 #include "constants.h"
 
 #include "dram/command.h"
-#include "dram/cmd_queue.h"
 #include "dram/enums.h"
 #include "dram/scheduler.h"
 #include "dram/state.h"
@@ -116,6 +115,8 @@ private:
      * and updates the state of the logger in this mode.
      * */
     void log_write_read_write_sequence(const DRAMCommand&);
+
+    friend class DRAM;
 };
 
 ////////////////////////////////////////////////////////////////////////////

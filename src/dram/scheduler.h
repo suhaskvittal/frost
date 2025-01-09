@@ -6,55 +6,135 @@
 #ifndef DRAM_SCHEDULER_h
 #define DRAM_SCHEDULER_h
 
-#include "dram/cmd_queue.h"
+#include "constants.h"
+
+#include "dram/address.h"
+#include "dram/command.h"
+#include "dram/state.h"
+#include "transaction.h"
+#include "util/numerics.h"
+
+#include <array>
+#include <cstdint>
+#include <cstddef>
+#include <deque>
+#include <iosfwd>
+#include <limits>
+#include <tuple>
+#include <optional>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+struct CmdQueueEntry
+{
+    Transaction     trans;
+    DRAMCommandType type;
+    bool is_row_buffer_hit =false;
+
+    uint64_t cycle_entered_queue;
+
+    CmdQueueEntry(Transaction t, DRAMCommandType c)
+        :trans(t),
+        type(c),
+        cycle_entered_queue(GL_DRAM_CYCLE)
+    {}
+};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /*
- * This is just a wrapper for the entire command queueing structure.
+ * This is a simple extension of `std::deque` that counts the number of writes
+ * in the queue
  * */
+struct CmdQueue : public std::deque<CmdQueueEntry>
+{
+    size_t writes =0;
+
+    inline void emplace_back(Transaction&& t, DRAMCommandType c)
+    {
+        if (cmd_is_write(c))
+            ++writes;
+        std::deque<CmdQueueEntry>::emplace_back(t, c);
+    }
+
+    inline size_t num_writes(void) const { return writes; }
+    inline size_t num_reads(void) const { return size() - num_writes(); }
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+ * Use this struct for any metadata needed for scheduling.
+ * */
+struct AlgoState
+{
+    bool is_first =true;
+
+    const DRAMBankState& bank;
+
+    AlgoState(const DRAMBankState& b)
+        :bank(b)
+    {}
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 class CommandScheduler
 {
 public:
+    uint64_t s_write_bursts_ =0;
+    uint64_t s_max_writes_in_burst_ =0;
+    uint64_t s_min_writes_in_burst_ =std::numeric_limits<uint64_t>::max();
 private:
     constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
-    /*
-     * Command queue definitions:
-     * */
-    using cmd_queue_t = CmdQueue<
-                                DRAM_SCHED_POLICY,
-                                DRAM_CMDQ_SIZE,
-                                true,
-                                DRAM_WRITE_POLICY>;
-    using cmd_array_t = std::array<cmd_queue_t, TOT_BANKS>;
+
+    using cmd_queue_array_type = std::array<CmdQueue, TOT_BANKS>;
+    using write_counter_array_type = std::array<size_t, TOT_BANKS>;
 
     const DRAMChannelState& state_;
     /*
      * Command queues and pointer to next command queue to select from. Command queues
      * are selected in a round robin.
      * */
-    cmd_array_t cmd_queues_{};
+    cmd_queue_array_type cmd_queues_{};
     size_t next_cmd_queue_idx_ =0;
     /*
-     * Used if write policy is ALAP_SYNC.
+     * For scheduling policies that require write synchronization:
      * */
-    using alap_sync_write_tracker_t = std::array<size_t, TOT_BANKS>;
+    bool                     global_write_mode_ =false;
+    write_counter_array_type write_counters_{};
 
-    bool                      alap_sync_in_write_mode_ =false;
-    alap_sync_write_tracker_t alap_sync_write_tracker_{};
+    uint64_t write_burst_count_ =0;
 public:
+    using cmd_output_type = std::tuple<DRAMCommand, std::optional<CmdQueueEntry>>;
+
     CommandScheduler(const DRAMChannelState&);
 
-    bool can_accept(uint64_t address, bool is_write);
+    bool can_accept(uint64_t address, bool is_write) const;
     bool has_no_pending_reads(void) const;
     void enqueue(Transaction&&, DRAMCommandType);
 
-    cmd_queue_t::cmd_output_t select_command(void);
+    cmd_output_type select_command(void);
 
-    void print_queue_state(std::ostream&);
+    void print_queue_state(std::ostream&) const;
 private:
-    void alap_sync_update_write_mode(void);
-    void alap_sync_enter_write_mode(void);
+    cmd_output_type select_command_from_queue(CmdQueue&, const DRAMBankState&);
+
+    bool skip_command(CmdQueue::const_iterator, const CmdQueue&, const AlgoState&);
+    bool allow_demand_precharge(CmdQueue::const_iterator, const CmdQueue&, const AlgoState&);
+
+    void update_write_mode(void);
+    void enter_write_mode(void);
+
+    inline const DRAMBankState& get_bank_ref(size_t ii) const
+    {
+        size_t i = fast_mod<DRAM_BANKS>(ii),
+               j = fast_mod<DRAM_BANKGROUPS>(ii >> numeric_traits<DRAM_BANKS>::log2),
+               k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
+        return state_.at(k).at(j).at(i);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

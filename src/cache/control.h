@@ -78,17 +78,17 @@ public:
     using cache_ptr = std::unique_ptr<CACHE>;
     using next_ptr = std::unique_ptr<NEXT_CONTROL>;
 
-    using stat_t = VecStat<uint64_t, NUM_THREADS>;
+    using stat_type = VecStat<uint64_t, NUM_THREADS>;
 
     cache_ptr  cache_;
     io_ptr     io_;
     
-    stat_t s_accesses_{};
-    stat_t s_misses_{};
-    stat_t s_tot_penalty_{};
-    stat_t s_num_penalty_{};
-    stat_t s_invalidates_{};
-    stat_t s_write_alloc_{};
+    stat_type s_accesses_{};
+    stat_type s_misses_{};
+    stat_type s_tot_penalty_{};
+    stat_type s_num_penalty_{};
+    stat_type s_invalidates_{};
+    stat_type s_write_alloc_{};
 
     uint64_t s_writebacks_ =0;
     uint64_t s_dirty_victim_adj_lines_ =0;
@@ -102,20 +102,25 @@ public:
 
     const std::string cache_name_;
 private:
-    using mshr_t = std::unordered_multimap<uint64_t, MSHREntry>;
-    using wb_queue_t = std::deque<uint64_t>;
+    using mshr_type = std::unordered_multimap<uint64_t, MSHREntry>;
+    using wb_queue_type = std::deque<uint64_t>;
 
     next_ptr& next_;
     /*
      * MSHR space is split between `mshr_` and `writeback_queue_`. Note that
      * in a real system, pending writebacks would be stored in the MSHR.
      * */
-    mshr_t     mshr_;
-    wb_queue_t writeback_queue_;
+    mshr_type     mshr_;
+    wb_queue_type writeback_queue_;
     /*
      * Specific implementations that are nonstandard:
      * */
+    constexpr static size_t EAGER_QUEUE_SIZE = 32;
+
+    using eager_queue_type = std::deque<uint64_t>;
     using vwq_ptr = std::unique_ptr<VirtualWriteQueue<CACHE>>;
+
+    eager_queue_type eager_queue_;
     /*
      * `vwq_` operates as a wrapper for some of `cache_`'s functionality.
      * */

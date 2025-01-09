@@ -100,10 +100,13 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t addr, size_t num_refs)
 {
     fill_result_t v, w;
     v = fill(addr, num_refs);
-    // We obtain `w` by checking the new LRU position of the set.
-    auto lru_it = get_way_in_lru_pos(get_set(addr));
-    if (lru_it->dirty)
-        w = *lru_it;
+    if (v.has_value())
+    {
+        // We obtain `w` by checking the new LRU position of the set.
+        auto lru_it = get_way_in_lru_pos(get_set(addr));
+        if (lru_it->dirty)
+            w = *lru_it;
+    }
     return multi_fill_result_t(v, w);
 }
 
@@ -180,11 +183,7 @@ __TEMPLATE_CLASS__::find_victim(cset_t& s)
 {
     if constexpr (POL == CacheReplPolicy::LRU)
     {
-        return std::min_element(s.begin(), s.end(),
-                                [] (const CacheEntry& x, const CacheEntry& y)
-                                {
-                                    return x.timestamp < y.timestamp;
-                                });
+        return get_way_in_lru_pos(s);
     }
     else if constexpr (POL == CacheReplPolicy::RAND)
     {
