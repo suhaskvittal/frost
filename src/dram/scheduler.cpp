@@ -154,8 +154,13 @@ CommandScheduler::alap_sync_enter_write_mode()
     std::transform(cmd_queues_.begin(), cmd_queues_.end(), write_cnts.begin(),
                     [] (const auto& q) { return q.num_writes(); });
 
-    size_t writes = std::reduce(write_cnts.begin(), write_cnts.end(), static_cast<size_t>(0)) / TOT_BANKS;
-    
+    size_t writes;
+#if defined(ALAP_SYNC_COMPLETE_ALL_WRITES)
+    writes = 1'000'000;
+#else
+    writes = std::reduce(write_cnts.begin(), write_cnts.end(), static_cast<size_t>(0)) / TOT_BANKS;
+#endif
+    writes = std::max(writes, 1ul);
     // Setup state for write moder:
     alap_sync_in_write_mode_ = true;
     alap_sync_write_tracker_.fill(writes);

@@ -114,6 +114,7 @@ def read_results(rd) -> dict:
 ####################################################################
 
 def read_output_file(filename: str) -> tuple[dict,dict]:
+    print(f'reading data from {filename}')
     # A lot of the info is just for our information, so we need
     # to ignore the useless stuff.
     with open(filename, 'r') as rd:

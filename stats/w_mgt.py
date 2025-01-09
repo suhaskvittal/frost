@@ -20,7 +20,7 @@ def create_csv_file_for_ipc(output_file: str, suite: str, *builds):
 
     ipc_list = {b: [] for b in builds}
 
-    with open(output_file, 'w') as wr:
+    with open(f'data/{output_file}', 'w') as wr:
         header = ','.join(f'\"{b}\"' for b in builds)
         wr.write(f'{header}\n')
         for w in common_workloads:
@@ -30,6 +30,9 @@ def create_csv_file_for_ipc(output_file: str, suite: str, *builds):
                 b : read_output_file(f'out/{suite}/{b}/{w}') for b in builds
             }
             baseline = builds[0]  # This is the assumption
+            mpki = get_per_core_stat(results_map[baseline][1], lambda d: d['LLC']['MPKI'])
+            if mpki < 1.0:
+                continue
             # Construct array for line
             data_list = [wname]
             base_ipc = get_per_core_stat(results_map[baseline][1], lambda d: d['IPC'])
@@ -48,36 +51,21 @@ def create_csv_file_for_ipc(output_file: str, suite: str, *builds):
 
 ####################################################################
 ####################################################################
-
-all_am = ['COFFEELAKE', 'SKYLAKE', 'MOP4', 'ZEN']
-
-####################################################################
-####################################################################
-# BASELINE TESTS
-baseline_op_builds = [f'BASELINE_OP_{am}' for am in all_am]
-baseline_cp_builds = [f'BASELINE_CP_{am}' for am in all_am]
-create_csv_file_for_ipc('baseline_test_op.ipc.csv', 'mtf/spec2017', *baseline_op_builds)
-create_csv_file_for_ipc('baseline_test_cp.ipc.csv', 'mtf/spec2017', *baseline_cp_builds)
-
-####################################################################
-####################################################################
 # MOTIVATION
-write_queue_builds = [f'WRITE_QUEUE_{p}_CP_ZEN' for p in [9,11]]
-create_csv_file_for_ipc('motivation.ipc.csv', 'mtf/spec2017',
-        'BASELINE_CP_ZEN',
-        'NO_WRITES_CP_ZEN',
-        *write_queue_builds)
-
-exit(1)
+for suffix in ['OP_MOP4', 'CP_ZEN']:
+    builds = [f'BASELINE_{suffix}', f'NO_WRITES_{suffix}']
+    for p in [9]:
+        builds.append(f'WRITE_QUEUE_{p}_{suffix}')
+    s = 'op' if suffix == 'OP_MOP4' else 'cp'
+    create_csv_file_for_ipc(f'motivation_{s}.ipc.csv', 'mtf/spec2017', *builds)
 
 ####################################################################
 ####################################################################
-# PRIOR WORK
-baseline_builds = [f'BASELINE_OP_{am}' for am in all_am]
-eager_builds = [f'EAGER_OP_{am}' for am in all_am]
-vwq_builds = [f'VWQ_OP_{am}' for am in all_am]
-create_csv_file_for_ipc('prior_work.ipc.csv', 'mtf/spec2017',
-        *baseline_builds, *eager_builds, *vwq_builds)
+# WRITE HANDSHAKING
+for suffix in ['OP_MOP4', 'CP_ZEN']:
+    builds = [f'BASELINE_{suffix}', f'NO_WRITES_{suffix}', f'WRITE_QUEUE_9_{suffix}', f'WRITE_HAND_{suffix}']
+    s = 'op' if suffix == 'OP_MOP4' else 'cp'
+    create_csv_file_for_ipc(f'handshaking_{s}.ipc.csv', 'mtf/spec2017', *builds)
 
 ####################################################################
 ####################################################################

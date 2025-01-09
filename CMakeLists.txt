@@ -10,6 +10,7 @@ project(Frost VERSION 1.0)
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
         -Ofast
+        -flto
         -funroll-loops
         -fstrict-aliasing
         -march=native

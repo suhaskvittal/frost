@@ -10,10 +10,18 @@ CORES = 8
 def write_ini(filename: str,
               page_mode='CLOSE',
               write_queue_size=128,
-              write_policy='ASAP',
+              write_policy='ALAP_SYNC',
               wb_mode='FORCED',
               address_mapping='ZEN',
+              alap_sync_complete_all_writes=True,
               other_defines=''):
+
+    if len(other_defines) > 0:
+        other_defines += ','
+    other_defines += 'DRAM_TRACK_ADVANCED_STATS'
+    if alap_sync_complete_all_writes:
+        other_defines += ',ALAP_SYNC_COMPLETE_ALL_WRITES'
+
     with open(filename, 'w') as wr:
         wr.write(
 f'''[SYSTEM]
@@ -65,24 +73,31 @@ def make_filename(basename: str, page_mode: str, address_mapping: str) -> str:
     am_str = address_mapping.lower()
     return f'ini/simple_core/w_mgt/{basename}_{page_str}_{am_str}.ini'
 
+def get_default_mapping(page_mode: str) -> str:
+    return 'MOP4' if page_mode == 'OPEN' else 'ZEN'
+
 ############################################################
 ############################################################
 # BASELINE
 for page_mode in ['OPEN', 'CLOSE']:
-    for am in ['ZEN', 'COFFEELAKE', 'MOP4', 'SKYLAKE']:
-        write_ini(make_filename('baseline', page_mode, am), address_mapping=am, page_mode=page_mode)
+    am = get_default_mapping(page_mode)
+    write_ini(make_filename('baseline', page_mode, am), address_mapping=am, page_mode=page_mode)
 
 ############################################################
 ############################################################
 # MOTIVATION: NO WRITES + SPEEDUP WITH WRITE BUFFER
-write_ini(make_filename('no_writes', 'CLOSE', 'ZEN'), page_mode='CLOSE', address_mapping='ZEN', other_defines='DRAM_DROP_WRITES')
-for p in [9, 11, 13, 15]:
-    write_ini(make_filename(f'write_queue_{p}', 'CLOSE', 'ZEN'), page_mode='CLOSE', address_mapping='ZEN', write_queue_size=2**p)
+for page_mode in ['OPEN', 'CLOSE']:
+    am = get_default_mapping(page_mode)
+    write_ini(make_filename('no_writes', page_mode, am), page_mode=page_mode, address_mapping=am, other_defines='DRAM_DROP_WRITES')
+    for p in [9, 11]:
+        write_ini(make_filename(f'write_queue_{p}', page_mode, am), page_mode=page_mode, address_mapping=am, write_queue_size=2**p)
 
 ############################################################
 ############################################################
-# MOTIVATION: EAGER WRITEBACK AND VWQ, open page
-for am in ['ZEN', 'COFFEELAKE', 'MOP4', 'SKYLAKE']:
-    write_ini(make_filename('eager', 'OPEN', am), address_mapping=am, page_mode='OPEN', wb_mode='EAGER')
-    write_ini(make_filename('vwq', 'OPEN', am), address_mapping=am, page_mode='OPEN', wb_mode='VIRTUAL_WRITE_QUEUE')
+# WRITE HANDSHAKING
+for page_mode in ['OPEN', 'CLOSE']:
+    am = get_default_mapping(page_mode)
+    write_ini(make_filename('write_hand', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='ALAP_SYNC', alap_sync_complete_all_writes=False)
 
+############################################################
+############################################################

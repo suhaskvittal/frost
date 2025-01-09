@@ -199,12 +199,15 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
     // Also writeback `w` if it has a value.
     if (w.has_value())
     {
-        handle_eager_writeback(w.value());
         if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
         {
+            if (w_lru_pos == 0)  // Only writeback if this line will be in the LRU position.
+                handle_eager_writeback(w.value());
             s_tot_next_line_lru_pos_ += w_lru_pos;
             ++s_tot_next_lines_;
         }
+        else
+            handle_eager_writeback(w.value());
     }
 }
 
@@ -330,7 +333,7 @@ __TEMPLATE_CLASS__::handle_eager_writeback(CacheEntry& e)
     {
         if (!do_writeback(e.address))
             writeback_queue_.push_back(e.address);
-        cache_->invalidate(e.address);
+        cache_mark(e.address, false);
     }
     ++s_eager_writebacks_;
     ++s_writebacks_;

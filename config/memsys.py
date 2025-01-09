@@ -19,9 +19,11 @@ def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
 
     wb_mode = cfg['writeback_mode']
 
+    index_offset = 1 if wb_mode == 'NEXT_LINE' else 0
+
     cache_decl =\
 f'''
-struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheReplPolicy::{repl}>, {next_typename}>
+struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheReplPolicy::{repl},{index_offset}>, {next_typename}>
 {{
     constexpr static size_t RQ_SIZE = {rq_size};
     constexpr static size_t WQ_SIZE = {wq_size};
