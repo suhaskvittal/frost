@@ -59,6 +59,8 @@ public:
 
     const double freq_ghz_;
     const size_t channel_id_;
+    const size_t low_watermark_;
+    const size_t high_watermark_;
 private:
     using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
     /* 

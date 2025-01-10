@@ -9,6 +9,7 @@
 
 #include "dram/address.h"
 #include "dram/channel.h"
+#include "dram/cmd_args.h"
 #include "dram/state.h"
 #include "util/numerics.h"
 
@@ -33,6 +34,8 @@ constexpr DRAMCommandType WRITE_CMD = (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
 DRAMChannel::DRAMChannel(size_t channel_id, double freq_ghz)
     :freq_ghz_(freq_ghz),
     channel_id_(channel_id),
+    low_watermark_(OPT_DRAM_LOW_WATERMARK*DRAM_WQ_SIZE),
+    high_watermark_(OPT_DRAM_HIGH_WATERMARK*DRAM_WQ_SIZE),
 #if defined(DRAM_ENABLE_LOGGER)
     dram_logger_("dram_channel." + std::to_string(channel_id) + ".log")
 #else
@@ -169,12 +172,12 @@ DRAMChannel::try_switch_to_write_mode()
     if (writes_to_drain_ == 0)
     {
 #if defined(DRAM_USE_WATERMARKS_TO_DRAIN)
-        bool drain_cond_1 = write_queue_.size() >= DRAM_HIGH_WATERMARK;
-        bool drain_cond_2 = write_queue_.size() > DRAM_LOW_WATERMARK
+        bool drain_cond_1 = write_queue_.size() >= high_watermark_;
+        bool drain_cond_2 = write_queue_.size() > low_watermark_
                                 && read_queue_.empty()
                                 && cmd_scheduler_->has_no_pending_reads();
         if (drain_cond_1 || drain_cond_2)
-            writes_to_drain_ = write_queue_.size() - DRAM_LOW_WATERMARK;
+            writes_to_drain_ = write_queue_.size() - low_watermark_;
 #else
         bool drain_cond_1 = write_queue_.size() == DRAM_WQ_SIZE,
              drain_cond_2 = read_queue_.empty()

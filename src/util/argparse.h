@@ -63,7 +63,7 @@ ArgParseResult::operator()(std::string_view argname, T& argout)
             if constexpr (std::is_same<T, bool>::value)
             {
                 typenamestr = "bool";
-                argout = value != "";
+                argout = !value.empty();
             } 
             else if constexpr (std::is_unsigned<T>::value)
             {

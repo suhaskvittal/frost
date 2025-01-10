@@ -10,17 +10,14 @@ CORES = 8
 def write_ini(filename: str,
               page_mode='CLOSE',
               write_queue_size=128,
-              write_policy='ALAP_SYNC',
+              write_policy='ASYNC',
               wb_mode='FORCED',
               address_mapping='ZEN',
-              alap_sync_complete_all_writes=True,
               other_defines=''):
 
     if len(other_defines) > 0:
         other_defines += ','
     other_defines += 'DRAM_TRACK_ADVANCED_STATS'
-    if alap_sync_complete_all_writes:
-        other_defines += ',ALAP_SYNC_COMPLETE_ALL_WRITES'
 
     with open(filename, 'w') as wr:
         wr.write(
@@ -85,6 +82,13 @@ for page_mode in ['OPEN', 'CLOSE']:
 
 ############################################################
 ############################################################
+# WATERMARK
+for page_mode in ['OPEN', 'CLOSE']:
+    am = get_default_mapping(page_mode)
+    write_ini(make_filename('watermark', page_mode, am), address_mapping=am, page_mode=page_mode, other_defines='DRAM_USE_WATERMARKS_TO_DRAIN')
+
+############################################################
+############################################################
 # MOTIVATION: NO WRITES + SPEEDUP WITH WRITE BUFFER
 for page_mode in ['OPEN', 'CLOSE']:
     am = get_default_mapping(page_mode)
@@ -94,10 +98,10 @@ for page_mode in ['OPEN', 'CLOSE']:
 
 ############################################################
 ############################################################
-# WRITE HANDSHAKING
+# WRITE SYNCHRONIZATION
 for page_mode in ['OPEN', 'CLOSE']:
     am = get_default_mapping(page_mode)
-    write_ini(make_filename('write_hand', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='ALAP_SYNC', alap_sync_complete_all_writes=False)
+    write_ini(make_filename('write_sync', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='SYNC')
 
 ############################################################
 ############################################################

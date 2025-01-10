@@ -27,7 +27,11 @@ std::string OPT_TRACE_FILE;
 uint64_t OPT_INST_SIM;
 uint64_t OPT_INST_WARMUP;
 
+double OPT_DRAM_LOW_WATERMARK;
+double OPT_DRAM_HIGH_WATERMARK;
+
 uint64_t OPT_DRAM_WRITE_SYNC_COUNT;
+bool     OPT_DRAM_WRITE_SYNC_PREF_AVERAGE;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -42,12 +46,18 @@ int main(int argc, char* argv[])
             { // Optional
                 {"w", "Number of warmup instructions", "10000000"},
                 {"s", "Number of instructions to simulate", "10000000"},
-                {"wsynccnt", "", "4"}
+                {"dramwmlow", "DRAM Low Watermark", "0.0"},
+                {"dramwmhigh", "DRAM High Watermark", "1.0"},
+                {"wsynccnt", "", "4"},
+                {"wsyncprefavg", "", ""}
             });
     ARGS("trace", OPT_TRACE_FILE);
     ARGS("w", OPT_INST_WARMUP);
     ARGS("s", OPT_INST_SIM);
+    ARGS("dramwmlow", OPT_DRAM_LOW_WATERMARK);
+    ARGS("dramwmhigh", OPT_DRAM_HIGH_WATERMARK);
     ARGS("wsynccnt", OPT_DRAM_WRITE_SYNC_COUNT);
+    ARGS("wsyncprefavg", OPT_DRAM_WRITE_SYNC_PREF_AVERAGE);
 
     sim_init();
     print_config(std::cout);

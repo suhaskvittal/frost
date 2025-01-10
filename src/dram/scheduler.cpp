@@ -259,11 +259,16 @@ CommandScheduler::enter_write_mode()
     std::transform(cmd_queues_.begin(), cmd_queues_.end(), write_cnts.begin(),
             [] (const auto& q) { return q.num_writes(); });
 
-    size_t writes = std::reduce(write_cnts.begin(), write_cnts.end()) / TOT_BANKS;
-    writes = std::max(writes, static_cast<size_t>(1));
+    size_t writes;
+    if (OPT_DRAM_WRITE_SYNC_PREF_AVERAGE)
+    {
+        writes = std::reduce(write_cnts.begin(), write_cnts.end()) / TOT_BANKS;
+        writes = std::max(writes, static_cast<size_t>(OPT_DRAM_WRITE_SYNC_COUNT));
+    }
+    else
+        writes = OPT_DRAM_WRITE_SYNC_COUNT;
     
-    write_counters_.fill(OPT_DRAM_WRITE_SYNC_COUNT);
-//  write_counters_.fill(writes);
+    write_counters_.fill(writes);
     for (size_t i = 0; i < TOT_BANKS; i++)
         write_counters_[i] = std::min(cmd_queues_[i].num_writes(), write_counters_[i]);
     global_write_mode_ = true;
