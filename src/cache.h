@@ -67,13 +67,10 @@ template <class CACHE_TYPE> class VirtualWriteQueue;
 template <
     size_t SETS,
     size_t WAYS,
-    CacheReplPolicy POL,
-    // Optionals:
-    size_t INDEX_OFFSET=0       // index will be shifted by the given offset
-    >
+    CacheReplPolicy POL>
 class Cache 
 {
-private:
+protected:
     using cset_t       = std::array<CacheEntry, WAYS>;
     using cset_array_t = std::array<cset_t, SETS>;
     
@@ -93,8 +90,8 @@ public:
      * */
     find_result_t find(uint64_t);
 
-    bool probe(uint64_t, bool write=false);
-    bool mark(uint64_t, bool as_dirty);
+    virtual bool probe(uint64_t, bool write=false);
+    virtual bool mark(uint64_t, bool as_dirty);
     /*
      * `num_refs` here corresponds to the number of MSHR/instruction references
      * at the time of install. Necessary for SRRIP, for example.
@@ -105,11 +102,11 @@ public:
      * cache has not evicted them. Furthermore, these entries are not references. If the
      * caller wants to modify the cache, they must call the appropriate function to do so.
      * */
-    fill_result_t       fill(uint64_t, size_t num_refs);
-    multi_fill_result_t fill_with_eager_writeback(uint64_t, size_t);
-    next_line_fill_result_t fill_with_next_line_writeback(uint64_t, size_t);
+    virtual fill_result_t fill(uint64_t, size_t num_refs);
+    virtual multi_fill_result_t fill_with_eager_writeback(uint64_t, size_t);
+    virtual next_line_fill_result_t fill_with_next_line_writeback(uint64_t, size_t);
 
-    void invalidate(uint64_t);
+    virtual void invalidate(uint64_t);
     /*
      * Counts number of elements in cache meeting criteria. If `get_occupancy(void)` is
      * used, then this just counts the number of valid elements in the cache.
@@ -124,24 +121,19 @@ public:
     inline constexpr size_t num_sets(void) const { return SETS; }
     inline constexpr size_t size(void) const { return WAYS*SETS; }
 
-    inline size_t get_set_idx(uint64_t x) const { return fast_mod<SETS>(x >> INDEX_OFFSET); }
-private:
-    typename cset_t::iterator find_victim(cset_t&);
+    inline size_t get_set_index(uint64_t x) const { return fast_mod<SETS>(x); }
+protected:
+    virtual typename cset_t::iterator find_victim(cset_t&);
     /*
      * Update replacement metadata for the entry.
      * */
-    void update(CacheEntry&);
+    virtual void update(CacheEntry&);
     /*
      * Gets way in the given LRU position.
      * */
     typename cset_t::iterator get_way_in_lru_pos(cset_t&);
 
-    inline cset_t& get_set(uint64_t x) { return csets_.at(get_set_idx(x)); }
-    /*
-     * Any non-standard implementations that extend the cache implementation should
-     * be given friend access.
-     * */
-    friend class VirtualWriteQueue<Cache>;
+    inline cset_t& get_set(uint64_t x) { return csets_.at(get_set_index(x)); }
 };
 
 ////////////////////////////////////////////////////////////////////////////
