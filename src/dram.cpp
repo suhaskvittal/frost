@@ -145,7 +145,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", num_drains);
     
-    print_vecstat(out, "DRAM", "SCHED_WRITE_BURTS", write_bursts);
+    print_vecstat(out, "DRAM", "SCHED_WRITE_BURST", write_bursts);
     print_vecstat(out, "DRAM", "SCHED_MEAN_WRITES_PER_BURST", mean_writes_in_burst, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "SCHED_MAX_WRITES_PER_BURST", max_writes_in_burst, VecAccMode::MAX);
     print_vecstat(out, "DRAM", "SCHED_MIN_WRITES_PER_BURST", min_writes_in_burst, VecAccMode::MIN);

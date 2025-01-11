@@ -52,7 +52,7 @@ IOBus::add_incoming(Transaction t)
     if (trans_is_read(t.type))
     {
         size_t s = (t.type == TransactionType::PREFETCH) ? pq_size_ : rq_size_;
-        in_queue_t& q = (t.type == TransactionType::PREFETCH) ? prefetch_queue_ : read_queue_;
+        in_queue_type& q = (t.type == TransactionType::PREFETCH) ? prefetch_queue_ : read_queue_;
         if (q.size() == s)
             return false;
         else

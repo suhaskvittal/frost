@@ -43,6 +43,16 @@ CommandScheduler::has_no_pending_reads() const
                 });
 }
 
+bool
+CommandScheduler::has_no_pending_writes() const
+{
+    return std::all_of(cmd_queues_.begin(), cmd_queues_.end(),
+                [] (const auto& q) 
+                {
+                    return q.num_writes() == 0;
+                });
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -60,23 +70,17 @@ typename CommandScheduler::cmd_output_type
 CommandScheduler::select_command()
 {
     cmd_output_type out;
+    global_write_mode_ = global_write_mode_ && !has_no_pending_writes();
 
-    update_write_mode();
     for (size_t i = 0; i < cmd_queues_.size(); i++)
     {
         auto& q = cmd_queues_[next_cmd_queue_idx_];
         const auto& b = get_bank_ref(next_cmd_queue_idx_);
 
-        size_t& write_cnt = write_counters_[next_cmd_queue_idx_];
         if (global_write_mode_)
         {
-            if (write_cnt > 0)
-            {
+            if (q.num_writes() > 0)
                 out = select_command_from_queue(q, b);
-                const auto& [ready_cmd, e] = out;
-                if (cmd_is_write(ready_cmd.type))
-                    --write_cnt;
-            }
         }
         else
             out = select_command_from_queue(q, b);
@@ -88,7 +92,11 @@ CommandScheduler::select_command()
     
     const auto& [ready_cmd, e] = out;
     if (cmd_is_write(ready_cmd.type))
+    {
         ++write_burst_count_;
+        if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
+            global_write_mode_ = true;
+    }
     else if (cmd_is_read(ready_cmd.type) && write_burst_count_ > 0)
     {
         // Update write burst stats
@@ -188,11 +196,8 @@ CommandScheduler::select_command_from_queue(CmdQueue& q, const DRAMBankState& b)
 bool
 CommandScheduler::skip_command(CmdQueue::const_iterator cmd_it, const CmdQueue& q, const AlgoState& s)
 {
-    if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
-    {
-        if (global_write_mode_ == cmd_is_read(cmd_it->type))
-            return true;
-    }
+    if (global_write_mode_ && cmd_is_read(cmd_it->type))
+        return true;
     return false;
 }
 
@@ -204,74 +209,18 @@ CommandScheduler::allow_demand_precharge(CmdQueue::const_iterator cmd_it, const 
     else if constexpr (DRAM_SCHED_POLICY == DRAMSchedPolicy::FRFCFS)
     {
         bool any_pending_hits = std::any_of(std::next(cmd_it), q.end(),
-                                    [row=s.bank.open_row.value(), cmd_type=cmd_it->type]
+                                    [write_mode=global_write_mode_,
+                                    row=s.bank.open_row.value()]
                                     (const auto& e)
                                     {
-                                        if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
-                                        {
-                                            if (cmd_type != e.type)
-                                                return false;
-                                        }
+                                        if (write_mode && cmd_is_read(e.type))
+                                            return false;
                                         return row == dram_row(e.trans.address);
                                     });
         return s.is_first && (!any_pending_hits || s.bank.num_cas_to_open_row >= 4);
     }
     else
         return false;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-CommandScheduler::update_write_mode()
-{
-    if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
-    {
-        constexpr size_t SWITCH_THRESHOLD = DRAM_CMDQ_SIZE / 4;
-
-        if (!global_write_mode_)
-        {
-            auto q_it = std::find_if(cmd_queues_.begin(), cmd_queues_.end(),
-                                    [no_pending=has_no_pending_reads()] (const auto& q)
-                                    { 
-                                        return (no_pending || q.size() >= DRAM_CMDQ_SIZE)
-                                                && q.num_writes() > SWITCH_THRESHOLD;
-                                    });
-            if (q_it != cmd_queues_.end())
-                enter_write_mode();
-        }
-        else
-        {
-            global_write_mode_ = std::any_of(write_counters_.begin(), write_counters_.end(),
-                                        [] (size_t x) { return x != 0; });
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-void
-CommandScheduler::enter_write_mode()
-{
-    std::array<size_t, TOT_BANKS> write_cnts;
-    std::transform(cmd_queues_.begin(), cmd_queues_.end(), write_cnts.begin(),
-            [] (const auto& q) { return q.num_writes(); });
-
-    size_t writes;
-    if (OPT_DRAM_WRITE_SYNC_PREF_AVERAGE)
-    {
-        writes = std::reduce(write_cnts.begin(), write_cnts.end()) / TOT_BANKS;
-        writes = std::max(writes, static_cast<size_t>(OPT_DRAM_WRITE_SYNC_COUNT));
-    }
-    else
-        writes = OPT_DRAM_WRITE_SYNC_COUNT;
-    
-    write_counters_.fill(writes);
-    for (size_t i = 0; i < TOT_BANKS; i++)
-        write_counters_[i] = std::min(cmd_queues_[i].num_writes(), write_counters_[i]);
-    global_write_mode_ = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////

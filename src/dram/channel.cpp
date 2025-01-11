@@ -53,23 +53,35 @@ DRAMChannel::tick_mc()
 {
     try_switch_to_write_mode();
 
-    auto& q = writes_to_drain_ > 0 ? write_queue_ : read_queue_;
+    auto& q = tot_writes_to_drain_ ? write_queue_ : read_queue_;
     auto it = std::find_if(q.begin(), q.end(),
-                    [this, write_mode=(writes_to_drain_>0)] (const Transaction& t)
+                    [this, write_mode=(tot_writes_to_drain_>0)] (const Transaction& t)
                     {
-                        if (write_mode && this->pending_reads_.count(t.address))
-                            return false;
+                        if (write_mode)
+                        {
+                            if (this->pending_reads_.count(t.address))
+                                return false;
+                            if (this->writes_to_drain_per_bank_[ get_bank_idx(t.address) ] == 0)
+                                return false;
+                        }
                         return this->cmd_scheduler_->can_accept(t.address, write_mode);
                     });
-    if (it != q.end()) {
+    if (it != q.end())
+    {
         DRAMCommandType cmd_type = READ_CMD;
-        if (writes_to_drain_ > 0)
+        if (tot_writes_to_drain_ > 0)
         {
             cmd_type = WRITE_CMD;
-            --writes_to_drain_;
+            --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
+            --tot_writes_to_drain_;
         } 
         cmd_scheduler_->enqueue(std::move(*it), cmd_type);
         q.erase(it);
+    }
+    else
+    {
+        tot_writes_to_drain_ = 0;
+        writes_to_drain_per_bank_.fill(0);
     }
 }
 
@@ -122,7 +134,7 @@ DRAMChannel::tick_dram()
 ////////////////////////////////////////////////////////////////////////////
 
 inline bool
-trans_add(DRAMChannel::in_queue_t& q, DRAMChannel::pending_t& p, Transaction t, size_t qsize)
+trans_add(DRAMChannel::in_queue_type& q, DRAMChannel::pending_type& p, Transaction t, size_t qsize)
 {
     if (q.size() >= qsize)
         return false;
@@ -168,26 +180,34 @@ DRAMChannel::add_incoming(Transaction t)
 void
 DRAMChannel::try_switch_to_write_mode()
 {
-
-    if (writes_to_drain_ == 0)
+    if (tot_writes_to_drain_ == 0)
     {
 #if defined(DRAM_USE_WATERMARKS_TO_DRAIN)
         bool drain_cond_1 = write_queue_.size() >= high_watermark_;
         bool drain_cond_2 = write_queue_.size() > low_watermark_
                                 && read_queue_.empty()
                                 && cmd_scheduler_->has_no_pending_reads();
-        if (drain_cond_1 || drain_cond_2)
-            writes_to_drain_ = write_queue_.size() - low_watermark_;
 #else
-        bool drain_cond_1 = write_queue_.size() == DRAM_WQ_SIZE,
+        bool drain_cond_1 = write_queue_.size() >= DRAM_WQ_SIZE,
              drain_cond_2 = read_queue_.empty()
                             && write_queue_.size() > 8
                             && cmd_scheduler_->has_no_pending_reads();
-        if (drain_cond_1 || drain_cond_2)
-            writes_to_drain_ = write_queue_.size();
 #endif
-        if (drain_cond_1)
+        if (drain_cond_1 || drain_cond_2)
+        {
+            size_t num_writes = write_queue_.size() - low_watermark_;
+            if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
+            {
+                writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_COUNT);
+                tot_writes_to_drain_ = std::min(num_writes, static_cast<size_t>(TOT_BANKS*OPT_DRAM_WRITE_SYNC_COUNT));
+            }
+            else
+            {
+                writes_to_drain_per_bank_.fill(num_writes);
+                tot_writes_to_drain_ = num_writes;
+            }
             ++s_num_drains_;
+        }
     }
 }
 
@@ -195,7 +215,7 @@ DRAMChannel::try_switch_to_write_mode()
 ////////////////////////////////////////////////////////////////////////////
 
 inline void
-dec_pending(DRAMChannel::pending_t& m, uint64_t k)
+dec_pending(DRAMChannel::pending_type& m, uint64_t k)
 {
     if ((--m[k]) == 0)
         m.erase(k);

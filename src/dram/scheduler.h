@@ -103,8 +103,7 @@ private:
     /*
      * For scheduling policies that require write synchronization:
      * */
-    bool                     global_write_mode_ =false;
-    write_counter_array_type write_counters_{};
+    bool global_write_mode_ =false;
 
     uint64_t write_burst_count_ =0;
 public:
@@ -114,6 +113,7 @@ public:
 
     bool can_accept(uint64_t address, bool is_write) const;
     bool has_no_pending_reads(void) const;
+    bool has_no_pending_writes(void) const;
     void enqueue(Transaction&&, DRAMCommandType);
 
     cmd_output_type select_command(void);
@@ -124,9 +124,6 @@ private:
 
     bool skip_command(CmdQueue::const_iterator, const CmdQueue&, const AlgoState&);
     bool allow_demand_precharge(CmdQueue::const_iterator, const CmdQueue&, const AlgoState&);
-
-    void update_write_mode(void);
-    void enter_write_mode(void);
 
     inline const DRAMBankState& get_bank_ref(size_t ii) const
     {

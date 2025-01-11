@@ -23,23 +23,23 @@
 class IOBus
 {
 public:
-    using opt_trans_t = std::optional<Transaction>;
+    using opt_trans_type = std::optional<Transaction>;
     /*
-     * `out_trans_t`: (1) the `Transaction`, and (2) the cycle it is ready.
+     * `out_trans_type`: (1) the `Transaction`, and (2) the cycle it is ready.
      * */
-    using out_trans_t = std::tuple<Transaction, uint64_t>;
+    using out_trans_type = std::tuple<Transaction, uint64_t>;
     struct out_queue_cmp
     {
-        inline bool operator()(const out_trans_t& x, const out_trans_t& y)
+        inline bool operator()(const out_trans_type& x, const out_trans_type& y)
         {
             return std::get<1>(x) > std::get<1>(y);
         }
     };
 
-    using in_queue_t = std::deque<Transaction>;
-    using pending_t = std::unordered_map<uint64_t, size_t>;
-    using out_queue_t = std::priority_queue<out_trans_t, 
-                                            std::vector<out_trans_t>,
+    using in_queue_type = std::deque<Transaction>;
+    using pending_type = std::unordered_map<uint64_t, size_t>;
+    using out_queue_type = std::priority_queue<out_trans_type, 
+                                            std::vector<out_trans_type>,
                                             out_queue_cmp>;
     /*
      * This is a queue for outgoing transactions. It has
@@ -48,7 +48,7 @@ public:
      * Makes sense to make this public as other classes
      * will manipulate the outputs.
      * */
-    out_queue_t outgoing_queue_;
+    out_queue_type outgoing_queue_;
 
     uint64_t s_blocking_writes_ =0;
     /*
@@ -61,12 +61,12 @@ private:
     /*
      * These are all inputs:
      * */
-    in_queue_t read_queue_;
-    in_queue_t write_queue_;
-    in_queue_t prefetch_queue_;
+    in_queue_type read_queue_;
+    in_queue_type write_queue_;
+    in_queue_type prefetch_queue_;
 
-    pending_t pending_reads_;
-    pending_t pending_writes_;
+    pending_type pending_reads_;
+    pending_type pending_writes_;
 
     size_t writes_to_drain_ =0;
 public:
@@ -77,9 +77,9 @@ public:
      * returned if the predicate returns true.
      * */
     template <class PRED>
-    opt_trans_t get_next_incoming(PRED);
+    opt_trans_type get_next_incoming(PRED);
 
-    inline opt_trans_t get_next_incoming()
+    inline opt_trans_type get_next_incoming()
     {
         return get_next_incoming([] (const Transaction&) { return true; });
     }
@@ -95,9 +95,9 @@ public:
      * */
     bool deadlock_find_inst(const inst_ptr);
 private:
-    bool deadlock_search_in_queue(std::string_view qname, const in_queue_t&, const inst_ptr);
+    bool deadlock_search_in_queue(std::string_view qname, const in_queue_type&, const inst_ptr);
 
-    inline void dec_pending(pending_t& p, uint64_t addr)
+    inline void dec_pending(pending_type& p, uint64_t addr)
     {
         if ((--p[addr]) == 0)
             p.erase(addr);
@@ -107,10 +107,10 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class PRED> IOBus::opt_trans_t
+template <class PRED> typename IOBus::opt_trans_type
 IOBus::get_next_incoming(PRED pred)
 {
-    opt_trans_t out;
+    opt_trans_type out;
     // Need to drain writes if the queue is full, or we can also
     // do it if there is nothing left to do.
     bool write_drain_cond = write_queue_.size() == wq_size_
@@ -144,7 +144,7 @@ IOBus::get_next_incoming(PRED pred)
 
     if (!access_done)
     {
-        in_queue_t& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
+        in_queue_type& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
         auto r_it = std::find_if(q.begin(), q.end(), pred);
         if (r_it != q.end())
         {

@@ -28,11 +28,11 @@
 class DRAMChannel
 {
 public:
-    using in_queue_t = IOBus::in_queue_t;
-    using pending_t = IOBus::pending_t;
-    using out_queue_t = IOBus::out_queue_t;
+    using in_queue_type = IOBus::in_queue_type;
+    using pending_type = IOBus::pending_type;
+    using out_queue_type = IOBus::out_queue_type;
 
-    out_queue_t outgoing_queue_;
+    out_queue_type outgoing_queue_;
 
     uint64_t s_reads_ =0;
     uint64_t s_writes_ =0;
@@ -53,24 +53,32 @@ public:
      * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
      *  these are stats that are computationally intensive to compute, and thus can be disabled.
      * */
-    using wrw_stat_t = std::array<uint64_t, 4>;
+    using wrw_stat_type = std::array<uint64_t, 4>;
 
-    wrw_stat_t s_num_seq_{};
+    wrw_stat_type s_num_seq_{};
 
     const double freq_ghz_;
     const size_t channel_id_;
     const size_t low_watermark_;
     const size_t high_watermark_;
 private:
+    constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
+
+    using write_drain_array_type = std::array<size_t, TOT_BANKS>;
     using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
     /* 
      * Custom IO implementation
      * */
-    in_queue_t read_queue_;
-    in_queue_t write_queue_;
-    pending_t pending_reads_;
-    pending_t pending_writes_;
-    size_t writes_to_drain_ =0;
+    in_queue_type read_queue_;
+    in_queue_type write_queue_;
+    pending_type pending_reads_;
+    pending_type pending_writes_;
+    /*
+     * `writes_to_drain_` holds the maximum number of writes that can be issued from the write queue
+     * for each bank.
+     * */
+    write_drain_array_type writes_to_drain_per_bank_{};
+    size_t tot_writes_to_drain_ =0;
 
     DRAMChannelState  state_{};
     cmd_sch_ptr cmd_scheduler_;
@@ -101,9 +109,6 @@ public:
 
     inline size_t read_queue_size(void) const { return read_queue_.size(); }
     inline size_t write_queue_size(void) const { return write_queue_.size(); }
-
-    inline bool in_write_mode(void) const { return writes_to_drain_ > 0; }
-    inline void force_toggle_write_mode(uint64_t write_cnt) { ++s_num_drains_; writes_to_drain_ = write_cnt; }
 private:
     /*
      * Updates `writes_to_drain_` depending on the size of the write queue.

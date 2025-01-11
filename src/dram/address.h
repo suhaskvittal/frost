@@ -41,6 +41,11 @@ inline size_t get_bank_idx(uint64_t addr)
             + dram_rank(addr)*DRAM_BANKGROUPS*DRAM_BANKS;
 }
 
+inline size_t get_bankgroup_idx(uint64_t addr)
+{
+    return dram_bankgroup(addr) + dram_rank(addr)*DRAM_BANKGROUPS;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
