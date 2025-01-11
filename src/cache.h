@@ -71,24 +71,24 @@ template <
 class Cache 
 {
 protected:
-    using cset_t       = std::array<CacheEntry, WAYS>;
-    using cset_array_t = std::array<cset_t, SETS>;
+    using cset_type       = std::array<CacheEntry, WAYS>;
+    using cset_array_type = std::array<cset_type, SETS>;
     
-    cset_array_t csets_{};
+    cset_array_type csets_{};
     std::mt19937_64 rng_{0};
 public:
-    using find_result_t = std::tuple<cset_t*, typename cset_t::iterator>;
-    using fill_result_t = std::optional<CacheEntry>;
-    using multi_fill_result_t = std::tuple<fill_result_t, fill_result_t>;
+    using find_result_type = std::tuple<cset_type*, typename cset_type::iterator>;
+    using fill_result_type = std::optional<CacheEntry>;
+    using multi_fill_result_type = std::tuple<fill_result_type, fill_result_type>;
     // Next line fill result also has the LRU position of the second line if it is dirty
-    using next_line_fill_result_t = std::tuple<fill_result_t, fill_result_t, size_t>;
+    using next_line_fill_result_type = std::tuple<fill_result_type, fill_result_type, size_t>;
 
     Cache(void) =default;
     /*
      * Searches for the given line. Does not update any metadata. This is
      * like peeking into the cache.
      * */
-    find_result_t find(uint64_t);
+    find_result_type find(uint64_t);
 
     virtual bool probe(uint64_t, bool write=false);
     virtual bool mark(uint64_t, bool as_dirty);
@@ -96,15 +96,15 @@ public:
      * `num_refs` here corresponds to the number of MSHR/instruction references
      * at the time of install. Necessary for SRRIP, for example.
      *
-     * `fill_with_eager_writeback` and other functions that return `multi_fill_result_t`
+     * `fill_with_eager_writeback` and other functions that return `multi_fill_result_type`
      * return a victim as well as any entries that should be written back. The caller
      * can do whatever they want with these entries, but keep in mind that the
      * cache has not evicted them. Furthermore, these entries are not references. If the
      * caller wants to modify the cache, they must call the appropriate function to do so.
      * */
-    virtual fill_result_t fill(uint64_t, size_t num_refs);
-    virtual multi_fill_result_t fill_with_eager_writeback(uint64_t, size_t);
-    virtual next_line_fill_result_t fill_with_next_line_writeback(uint64_t, size_t);
+    virtual fill_result_type fill(uint64_t, size_t num_refs);
+    virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t);
+    virtual next_line_fill_result_type fill_with_next_line_writeback(uint64_t, size_t);
 
     virtual void invalidate(uint64_t);
     /*
@@ -123,7 +123,7 @@ public:
 
     inline size_t get_set_index(uint64_t x) const { return fast_mod<SETS>(x); }
 protected:
-    virtual typename cset_t::iterator find_victim(cset_t&);
+    virtual typename cset_type::iterator find_victim(cset_type&);
     /*
      * Update replacement metadata for the entry.
      * */
@@ -131,9 +131,9 @@ protected:
     /*
      * Gets way in the given LRU position.
      * */
-    typename cset_t::iterator get_way_in_lru_pos(cset_t&);
+    typename cset_type::iterator get_way_in_lru_pos(cset_type&);
 
-    inline cset_t& get_set(uint64_t x) { return csets_.at(get_set_index(x)); }
+    inline cset_type& get_set(uint64_t x) { return csets_.at(get_set_index(x)); }
 };
 
 ////////////////////////////////////////////////////////////////////////////

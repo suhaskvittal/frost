@@ -13,8 +13,6 @@
 #include "transaction.h"
 #include "util/stats.h"
 
-#include "cache/other_impl/virtual_write_queue.h"
-
 #include <memory>
 #include <random>
 #include <unordered_map>
@@ -95,7 +93,6 @@ public:
     uint64_t s_dirty_victim_adj_lines_also_dirty_ =0;
 
     uint64_t s_eager_writebacks_ =0;
-    uint64_t s_scheduled_writebacks_ =0;
 
     uint64_t s_tot_next_line_lru_pos_ =0;
     uint64_t s_tot_next_lines_ =0;
@@ -118,13 +115,8 @@ private:
     constexpr static size_t EAGER_QUEUE_SIZE = 32;
 
     using eager_queue_type = std::deque<uint64_t>;
-    using vwq_ptr = std::unique_ptr<VirtualWriteQueue<CACHE>>;
 
     eager_queue_type eager_queue_;
-    /*
-     * `vwq_` operates as a wrapper for some of `cache_`'s functionality.
-     * */
-    vwq_ptr vwq_ =nullptr;
 
     std::mt19937_64 rng_{0};
 public:
@@ -153,17 +145,6 @@ private:
     void handle_eager_writeback(CacheEntry&);
 
     bool do_writeback(uint64_t addr);
-    /*
-     * Since `probe` and `mark` may require different functionality (i.e.,
-     * if `VIRTUAL_WRITE_QUEUE` is enabled), we have a simple wrapper here.
-     * */
-    bool cache_probe(uint64_t address, bool write=false);
-    bool cache_mark(uint64_t address, bool dirty);
-    /*
-     * Virtual write queue implementation:
-     * */ 
-    void vwq_schedule_writebacks(void);
-    void vwq_schedule_writebacks_on_fill(uint64_t address);
 };
 
 ////////////////////////////////////////////////////////////////////////////
