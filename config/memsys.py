@@ -18,12 +18,11 @@ def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
     next_is_invalidate_on_hit = 'true' if (cfg['operate_mode'] == 'NEXT_IS_INVALIDATE_ON_HIT') else 'false'
 
     wb_mode = cfg['writeback_mode']
-
-    index_offset = 1 if wb_mode == 'NEXT_LINE' else 0
+    cache_type = cfg['base_cache_type']
 
     cache_decl =\
 f'''
-struct {typename} : public CacheControl<{typename}, Cache<{sets},{ways},CacheReplPolicy::{repl},{index_offset}>, {next_typename}>
+struct {typename} : public CacheControl<{typename}, {cache_type}<{sets},{ways},CacheReplPolicy::{repl}>, {next_typename}>
 {{
     constexpr static size_t RQ_SIZE = {rq_size};
     constexpr static size_t WQ_SIZE = {wq_size};
@@ -66,6 +65,9 @@ f'''{AUTOGEN_HEADER}
 #include "cache/control.h"
 #include "dram.h"
 {ptw_inc}
+// Other cache implementations that may be potentially used:
+#include "cache/other_impl/bank_balanced_cache.h"
+
 #include <memory>
 
 ////////////////////////////////////////////////////////////////////////////

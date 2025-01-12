@@ -148,7 +148,7 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
 {
-    typename CACHE::fill_result_t v, w;
+    typename CACHE::fill_result_type v, w;
     size_t w_lru_pos;
 
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
@@ -303,13 +303,6 @@ __TEMPLATE_CLASS__::handle_eager_writeback(CacheEntry& e)
 {
     if (eager_queue_.size() >= EAGER_QUEUE_SIZE)
         return;
-    
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
-    {
-        size_t ch = dram_channel(e.address);
-        if (next_->channels_[ch]->write_queue_size() >= DRAM_HIGH_WATERMARK)
-            return;
-    }
 
     eager_queue_.push_back(e.address);
     cache_->mark(e.address, false);

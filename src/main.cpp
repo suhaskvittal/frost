@@ -12,6 +12,12 @@
 
 #include "util/argparse.h"
 #include "util/stats/cache.h"
+#include "util/timer.h"
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+static Timer timer;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -32,6 +38,17 @@ uint64_t OPT_INST_WARMUP;
 double OPT_DRAM_LOW_WATERMARK;
 double OPT_DRAM_HIGH_WATERMARK;
 uint64_t OPT_DRAM_WRITE_SYNC_COUNT;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class ARCH_PTR> void
+tick_and_measure(ARCH_PTR& x, uint64_t& t)
+{
+    timer.start();
+    x->tick();
+    t += timer.end();
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -64,14 +81,17 @@ int main(int argc, char* argv[])
     std::cout.flush();
 
     size_t curr_core_idx = 0;
-    for (uint64_t i = 0; i < OPT_INST_WARMUP; i++) {
-        if (i % 1'000'000 == 0) {
+    for (uint64_t i = 0; i < OPT_INST_WARMUP; i++)
+    {
+        if (i % 1'000'000 == 0)
+        {
             std::cout << ".";
             std::cout.flush();
         }
 
         size_t ii = curr_core_idx;
-        for (size_t j = 0; j < NUM_THREADS; j++) {
+        for (size_t j = 0; j < NUM_THREADS; j++)
+        {
             GL_CORES[ii]->tick_warmup();
             fast_increment_and_mod_inplace<NUM_THREADS>(ii);
         }
@@ -79,21 +99,29 @@ int main(int argc, char* argv[])
     }
     std::cout << "DONE\n";
 
+    uint64_t time_in_core =0,
+             time_in_llc =0,
+             time_in_os,
+             time_in_dram =0;
+
     bool all_done;
-    do {
+    do
+    {
         print_progress(std::cout);
 
-        GL_DRAM->tick();
-        GL_LLC->tick();
-        GL_OS->tick();
+        tick_and_measure(GL_DRAM, time_in_dram);
+        tick_and_measure(GL_LLC, time_in_llc);
+        tick_and_measure(GL_OS, time_in_os);
 
         drain_llc_outgoing_queue();
 
         size_t ii = curr_core_idx;
-        for (size_t i = 0; i < NUM_THREADS; i++) {
+        for (size_t i = 0; i < NUM_THREADS; i++)
+        {
             auto& c = GL_CORES[ii];
-            c->tick();
-            if (!c->done_ && c->finished_inst_num_ >= OPT_INST_SIM) {
+            tick_and_measure(c, time_in_core);
+            if (!c->done_ && c->finished_inst_num_ >= OPT_INST_SIM)
+            {
                 c->checkpoint_stats();
                 c->done_ = true;
             }
@@ -115,6 +143,17 @@ int main(int argc, char* argv[])
     print_llc_stats(std::cout);
     GL_DRAM->print_stats(std::cout);
     GL_OS->print_stats(std::cout);
+
+    print_stat(std::cout, "TIME", "IN_CORE", time_in_core*1e-9);
+    print_stat(std::cout, "TIME", "IN_OS", time_in_os*1e-9);
+    print_stat(std::cout, "TIME", "IN_LLC", time_in_llc*1e-9);
+    print_stat(std::cout, "TIME", "IN_DRAM", time_in_dram*1e-9);
+
+    uint64_t total_time = time_in_core + time_in_os + time_in_llc + time_in_dram;
+
+    print_stat(std::cout, "TIME", "TOTAL", total_time*1e-9);
+
+    std::cout << BAR << "\n";
 
     return 0;
 }

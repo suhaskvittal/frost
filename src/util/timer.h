@@ -1,0 +1,44 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   11 January 2025
+ * */
+
+#ifndef UTIL_TIMER_h
+#define UTIL_TIMER_h
+
+#include <cstdint>
+#include <ctime>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline uint64_t nanoseconds(const struct timespec& blk)
+{
+    constexpr uint64_t B = 1'000'000'000;
+    return B*blk.tv_sec + blk.tv_nsec;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+struct Timer
+{
+    struct timespec blk;
+
+    inline void start(void)
+    {
+        clock_gettime(CLOCK_MONOTONIC_RAW, &blk);
+    }
+
+    inline uint64_t end(void)
+    {
+        uint64_t start_time = nanoseconds(blk);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &blk);
+        return nanoseconds(blk) - start_time;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#endif  // UTIL_TIMER_h

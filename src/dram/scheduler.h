@@ -88,10 +88,8 @@ public:
     uint64_t s_max_writes_in_burst_ =0;
     uint64_t s_min_writes_in_burst_ =std::numeric_limits<uint64_t>::max();
 private:
-    constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
-
-    using cmd_queue_array_type = std::array<CmdQueue, TOT_BANKS>;
-    using write_counter_array_type = std::array<size_t, TOT_BANKS>;
+    using cmd_queue_array_type = std::array<CmdQueue, DRAM_TOT_BANKS_PER_CHANNEL>;
+    using write_counter_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
 
     const DRAMChannelState& state_;
     /*

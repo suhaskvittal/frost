@@ -199,7 +199,7 @@ DRAMChannel::try_switch_to_write_mode()
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
                 writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_COUNT);
-                tot_writes_to_drain_ = std::min(num_writes, static_cast<size_t>(TOT_BANKS*OPT_DRAM_WRITE_SYNC_COUNT));
+                tot_writes_to_drain_ = std::min(num_writes, static_cast<size_t>(DRAM_TOT_BANKS_PER_CHANNEL*OPT_DRAM_WRITE_SYNC_COUNT));
             }
             else
             {

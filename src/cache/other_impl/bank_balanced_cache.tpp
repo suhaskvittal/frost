@@ -30,7 +30,7 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool as_dirty)
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::fill_result_type
 __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs)
 {
-    auto out = Cache::fill(address, num_refs);
+    auto out = __TEMPLATE_PARENT__::fill(address, num_refs);
     if (out.has_value() && out.value().dirty)
         increment_tracker(out.value().address);
     return out;
@@ -62,7 +62,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
                         });
     }
     else if constexpr (POL == CacheReplPolicy::RAND)
-        return Cache::find_victim(s);
+        return __TEMPLATE_PARENT__::find_victim(s);
     else if constexpr (POL == CacheReplPolicy::SRRIP)
     {
         auto v_it = std::min_element(s.begin(), s.end(),
@@ -91,7 +91,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
         return v_it;
     }
     else
-        return Cache::find_victim(s);
+        return __TEMPLATE_PARENT__::find_victim(s);
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -21,9 +21,6 @@ print_llc_stats(std::ostream& out)
     if constexpr (LLCache::WRITEBACK_MODE == CacheWBMode::EAGER)
         print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);
 
-    if constexpr (LLCache::WRITEBACK_MODE == CacheWBMode::VIRTUAL_WRITE_QUEUE)
-        print_stat(out, "LLC", "SCHEDULED_WRITEBACKS", GL_LLC->s_scheduled_writebacks_);
-
     if constexpr (LLCache::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
     {
         double mean_next_line_lru_pos = mean(GL_LLC->s_tot_next_line_lru_pos_, GL_LLC->s_tot_next_lines_);

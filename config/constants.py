@@ -77,6 +77,8 @@ constexpr size_t DRAM_BANKS = {ba};
 constexpr size_t DRAM_ROWS = {row};
 constexpr size_t DRAM_COLUMNS = {col};
 
+constexpr size_t DRAM_TOT_BANKS_PER_CHANNEL = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
+
 constexpr size_t DRAM_BURST_LENGTH = {BL};
 
 constexpr size_t DRAM_RQ_SIZE = {rq_size};

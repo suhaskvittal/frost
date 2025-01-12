@@ -15,7 +15,7 @@
 
 struct ChannelWriteTracker
 {
-    using bank_counter_array_type = std::array<size_t, TOT_BANKS_PER_CHANNEL>;
+    using bank_counter_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
 
     bank_counter_array_type ctrs{};
     size_t tot_writes_in_epoch =0;
@@ -32,12 +32,14 @@ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 class BankBalancedCache : public Cache<SETS, WAYS, POL>
 {
 private:
-    constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / TOT_BANKS_PER_CHANNEL;
+    constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
 
     using write_tracker_array_type = std::array<ChannelWriteTracker, DRAM_CHANNELS>;
 
     write_tracker_array_type trackers_{};
 public:
+    using typename Cache<SETS,WAYS,POL>::cset_type;
+    using typename Cache<SETS,WAYS,POL>::fill_result_type;
     /*
      * On a `mark` clean, `trackers_` is updated.
      * */

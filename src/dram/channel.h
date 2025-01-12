@@ -62,9 +62,7 @@ public:
     const size_t low_watermark_;
     const size_t high_watermark_;
 private:
-    constexpr static size_t TOT_BANKS = DRAM_RANKS*DRAM_BANKGROUPS*DRAM_BANKS;
-
-    using write_drain_array_type = std::array<size_t, TOT_BANKS>;
+    using write_drain_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
     /* 
      * Custom IO implementation

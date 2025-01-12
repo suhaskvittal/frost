@@ -85,7 +85,7 @@ CommandScheduler::select_command()
         else
             out = select_command_from_queue(q, b);
 
-        fast_increment_and_mod_inplace<TOT_BANKS>(next_cmd_queue_idx_);
+        fast_increment_and_mod_inplace<DRAM_TOT_BANKS_PER_CHANNEL>(next_cmd_queue_idx_);
         if (!cmd_is_invalid(std::get<0>(out).type))
             break;
     }
@@ -116,7 +116,7 @@ void
 CommandScheduler::print_queue_state(std::ostream& out) const
 {
     out << "CMDQ_START -------\n\n";
-    for (size_t i = 0; i < TOT_BANKS; i++)
+    for (size_t i = 0; i < DRAM_TOT_BANKS_PER_CHANNEL; i++)
     {
         if (i == next_cmd_queue_idx_)
             out << "--> ";

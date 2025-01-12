@@ -140,7 +140,7 @@ Core::operate_rob()
     // Check if any entries failed to access the LLC in ifetch.
     for (inst_ptr inst : rob_)
     {
-        if (GL_CYCLE >= inst->cycle_done)
+        if (GL_CYCLE >= inst->cycle_done || inst->is_done())
             continue;
         do_llc_access(inst);
     }
@@ -149,21 +149,26 @@ Core::operate_rob()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <TransactionType T> void
-do_ldst(inst_ptr inst, uint8_t coreid)
+inline void
+do_ldst(inst_ptr inst, uint8_t coreid, TransactionType t)
 {
-    auto& st = (T == TransactionType::READ) ? inst->num_loads_in_state : inst->num_stores_in_state;
-    auto& v = (T == TransactionType::READ) ? inst->loads : inst->stores;
+    if (!GL_LLC->io_->can_accept(t))
+        return;
+
+    auto& st = (t == TransactionType::READ) ? inst->num_loads_in_state : inst->num_stores_in_state;
+    auto& v = (t == TransactionType::READ) ? inst->loads : inst->stores;
 
     inst_do_func_dependent_on_state<AccessState::IN_CACHE>(st, v,
-            [inst, coreid] (Instruction::memop_list_t& v)
+            [inst, coreid, t] (Instruction::memop_list_t& v)
             {
                 for (Memop& x : v) {
+                    if (!GL_LLC->io_->can_accept(t))
+                        break;
                     if (x.state == AccessState::NOT_READY)
                     {
-                        Transaction trans(coreid, inst, T, x.p_lineaddr);
-                        if (GL_LLC->io_->add_incoming(trans))
-                            x.state = AccessState::IN_CACHE;
+                        Transaction trans(coreid, inst, t, x.p_lineaddr);
+                        GL_LLC->io_->add_incoming(trans)k
+                        x.state = AccessState::IN_CACHE;
                     }
                 }
             });
@@ -172,8 +177,8 @@ do_ldst(inst_ptr inst, uint8_t coreid)
 void
 Core::do_llc_access(inst_ptr inst)
 {
-    do_ldst<TransactionType::READ>(inst, coreid_);
-    do_ldst<TransactionType::WRITE>(inst, coreid_);
+    do_ldst(inst, coreid_, TransactionType::READ);
+    do_ldst(inst, coreid_, TransactionType::WRITE);
 
     if (inst->loads.empty() && inst->is_done())
         inst->cycle_done = GL_CYCLE+1;

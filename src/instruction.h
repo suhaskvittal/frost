@@ -117,7 +117,7 @@ using inst_ptr = Instruction*;
  * As shown, the function given only executes if any entry is not
  * in `STATE`.
  * */
-template <AccessState STATE, class FUNC> void
+template <AccessState STATE, class FUNC> inline void
 inst_do_func_dependent_on_state(Instruction::memop_state_array_t& st, Instruction::memop_list_t& v, const FUNC& func)
 {
     constexpr size_t N = static_cast<size_t>(STATE);
@@ -131,7 +131,7 @@ inst_do_func_dependent_on_state(Instruction::memop_state_array_t& st, Instructio
     }
 }
 
-template <AccessState STATE, class FUNC> void
+template <AccessState STATE, class FUNC> inline void
 inst_do_func_dependent_on_state(inst_ptr inst, const FUNC& func)
 {
     inst_do_func_dependent_on_state<STATE, FUNC>(inst->num_loads_in_state, inst->loads, func);
