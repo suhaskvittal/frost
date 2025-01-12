@@ -20,7 +20,9 @@ Core::Core(uint8_t coreid, std::string trace_file)
     :coreid_(coreid),
     trace_file_(trace_file),
     trace_reader_(trace_file)
-{}
+{
+    next_mem_inst_ = new Instruction(trace_reader_());
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -32,12 +34,7 @@ Core::tick_warmup()
     ++inst_warmup_;
 
     if (inst != nullptr)
-    {
-        for (Memop& x : inst->loads)
-            GL_LLC->warmup_access(x.p_lineaddr, false);
-        for (Memop& x : inst->stores)
-            GL_LLC->warmup_access(x.p_lineaddr, true);
-    }
+        GL_LLC->warmup_access(inst->p_lineaddr, inst->is_store);
 
     delete inst;
 }
@@ -119,14 +116,11 @@ Core::operate_rob()
         inst_ptr inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done)
             break;
-        inst->retired = true;
-
         size_t rob_ref_updates = std::min(CORE_FETCH_WIDTH-i, inst->rob_refs);
 
         inst->rob_refs -= rob_ref_updates;
         rob_size_ -= rob_ref_updates;
         finished_inst_num_ += rob_ref_updates;
-
         if (inst->rob_refs == 0)
         {
             rob_.pop_front();
@@ -140,7 +134,7 @@ Core::operate_rob()
     // Check if any entries failed to access the LLC in ifetch.
     for (inst_ptr inst : rob_)
     {
-        if (GL_CYCLE >= inst->cycle_done || inst->is_done())
+        if (GL_CYCLE >= inst->cycle_done || inst->state == AccessState::IN_CACHE || inst->state == AccessState::DONE)
             continue;
         do_llc_access(inst);
     }
@@ -149,39 +143,18 @@ Core::operate_rob()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline void
-do_ldst(inst_ptr inst, uint8_t coreid, TransactionType t)
-{
-    if (!GL_LLC->io_->can_accept(t))
-        return;
-
-    auto& st = (t == TransactionType::READ) ? inst->num_loads_in_state : inst->num_stores_in_state;
-    auto& v = (t == TransactionType::READ) ? inst->loads : inst->stores;
-
-    inst_do_func_dependent_on_state<AccessState::IN_CACHE>(st, v,
-            [inst, coreid, t] (Instruction::memop_list_t& v)
-            {
-                for (Memop& x : v) {
-                    if (!GL_LLC->io_->can_accept(t))
-                        break;
-                    if (x.state == AccessState::NOT_READY)
-                    {
-                        Transaction trans(coreid, inst, t, x.p_lineaddr);
-                        GL_LLC->io_->add_incoming(trans)k
-                        x.state = AccessState::IN_CACHE;
-                    }
-                }
-            });
-}
-
 void
 Core::do_llc_access(inst_ptr inst)
 {
-    do_ldst(inst, coreid_, TransactionType::READ);
-    do_ldst(inst, coreid_, TransactionType::WRITE);
-
-    if (inst->loads.empty() && inst->is_done())
-        inst->cycle_done = GL_CYCLE+1;
+    TransactionType t = inst->is_store ? TransactionType::WRITE : TransactionType::READ;
+    if (GL_LLC->io_->can_accept(t))
+    {
+        Transaction trans(coreid_, inst, t, inst->p_lineaddr);
+        GL_LLC->io_->add_incoming(trans);
+        inst->state = AccessState::IN_CACHE;
+        if (inst->is_store)
+            inst->cycle_done = GL_CYCLE+1;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -191,18 +164,12 @@ inst_ptr
 Core::next_inst()
 {
     // Fetch from trace reader.
-    if (next_mem_inst_ == nullptr)
-        next_mem_inst_ = new Instruction(trace_reader_());
-
     if (next_mem_inst_->inst_num <= curr_inst_num_ + inst_warmup_ )
     {
         inst_ptr out = next_mem_inst_;
-        next_mem_inst_ = nullptr;
+        next_mem_inst_ = new Instruction(trace_reader_());
         // Translate all addresses now.
-        for (Memop& x : out->loads)
-            x.p_lineaddr = GL_OS->translate_lineaddr(x.v_lineaddr, coreid_);
-        for (Memop& x : out->stores)
-            x.p_lineaddr = GL_OS->translate_lineaddr(x.v_lineaddr, coreid_);
+        out->p_lineaddr = GL_OS->translate_lineaddr(out->v_lineaddr, coreid_);
         return out;
     } 
     else
@@ -217,10 +184,10 @@ drain_llc_outgoing_queue()
     drain_cache_outgoing_queue(GL_LLC,
             [] (const Transaction& t)
             {
-                for (auto& inst : t.inst_list) {
-                    ++inst->num_loads_in_state[static_cast<int>(AccessState::DONE)];
-                    if (inst->is_done())
-                        inst->cycle_done = GL_CYCLE;
+                for (auto inst : t.inst_list)
+                {
+                    inst->cycle_done = GL_CYCLE;
+                    inst->state = AccessState::DONE;
                 }
             });
 }
