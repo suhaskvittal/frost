@@ -95,14 +95,14 @@ public:
      * */
     bool deadlock_find_inst(const inst_ptr);
 
-    inline bool can_accept(TransactionType t)
+    inline bool can_accept(uint64_t address, TransactionType t)
     {
-        if (t == TransactionType::READ || t == TransactionType::TRANSLATION)
-            return read_queue_.size() < rq_size_;
-        else if (t == TransactionType::WRITE)
+        if (t == TransactionType::PREFETCH)
+            return prefetch_queue_.size() < pq_size_;
+        else if (trans_is_write(t))
             return write_queue_.size() < wq_size_;
         else
-            return prefetch_queue_.size() < pq_size_;
+            return read_queue_.size() < rq_size_;
     }
 private:
     bool deadlock_search_in_queue(std::string_view qname, const in_queue_type&, const inst_ptr);

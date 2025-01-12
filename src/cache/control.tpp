@@ -83,7 +83,11 @@ __TEMPLATE_CLASS__::tick()
                             return x.second.is_fired;
                         });
     if (mshr_it != mshr_.end())
-        mshr_it->second.is_fired = next_->io_->add_incoming(mshr_it->second.trans);
+    {
+        auto& [address, entry] = *mshr_it;
+        entry.is_fired = next_->io_->can_accept(address, entry.trans.type)
+                                    && next_->io_->add_incoming(entry.trans);
+    }
     // Now try writebacks
     if (!writeback_queue_.empty())
     {
@@ -246,9 +250,9 @@ __TEMPLATE_CLASS__::next_access()
         // Probe the cache
         ++s_accesses_[t.coreid];
         if (cache_->probe(t.address))
-            handle_hit(t);
+            handle_hit(std::move(t));
         else
-            handle_miss(t);
+            handle_miss(std::move(t));
     }
     else 
     {
@@ -259,7 +263,7 @@ __TEMPLATE_CLASS__::next_access()
         {
             ++s_accesses_[t.coreid];
             if (!cache_->probe(t.address, true))
-                handle_miss(t, true);
+                handle_miss(std::move(t), true);
         }
         else
             cache_->mark(t.address, true);
@@ -270,36 +274,38 @@ __TEMPLATE_CLASS__::next_access()
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::handle_hit(const Transaction& t)
+__TEMPLATE_CLASS__::handle_hit(Transaction&& t)
 {
     // Update `io_`'s outgoing queue.
-    io_->add_outgoing(t, IMPL::CACHE_LATENCY);
     if constexpr (IMPL::INVALIDATE_ON_HIT)
     {
         cache_->invalidate(t.address);
         ++s_invalidates_[t.coreid];
     }
+    io_->add_outgoing(std::move(t), IMPL::CACHE_LATENCY);
 }
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::handle_miss(const Transaction& t, bool write_miss)
+__TEMPLATE_CLASS__::handle_miss(Transaction&& t, bool write_miss)
 {
     ++s_misses_[t.coreid];
 
-    MSHREntry e(t, write_miss);
+    uint64_t address = t.address;
+    MSHREntry e(std::move(t), write_miss);
 
     // Need to switch transaction type in case of write allocate.
     if (write_miss)
         e.trans.type = TransactionType::READ;
-    e.is_fired = mshr_.count(t.address) > 0 || next_->io_->add_incoming(e.trans);
-    mshr_.insert({t.address, e});
+    e.is_fired = mshr_.count(address) > 0 
+                  || (next_->io_->can_accept(address, e.trans.type) && next_->io_->add_incoming(e.trans));
+    mshr_.insert({address, e});
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::handle_eager_writeback(CacheEntry& e)
+__TEMPLATE_CLASS__::handle_eager_writeback(const CacheEntry& e)
 {
     if (eager_queue_.size() >= EAGER_QUEUE_SIZE)
         return;
@@ -316,8 +322,14 @@ __TEMPLATE_CLASS__::handle_eager_writeback(CacheEntry& e)
 __TEMPLATE_HEADER__ inline bool
 __TEMPLATE_CLASS__::do_writeback(uint64_t address)
 {
-    Transaction t(0, nullptr, TransactionType::WRITE, address);
-    return next_->io_->add_incoming(t);
+    if (next_->io_->can_accept(address, TransactionType::WRITE))
+    {
+        Transaction t(0, nullptr, TransactionType::WRITE, address);
+        next_->io_->add_incoming(t);
+        return true;
+    }
+    else
+        return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////

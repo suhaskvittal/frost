@@ -28,7 +28,7 @@ public:
     /*
      * `tick` needs to do nothing. This exists for compatibility.
      * */ 
-    void tick(void) {}
+    inline void tick(void) {}
 
     uint64_t translate_lineaddr(uint64_t, uint8_t coreid);
     void print_stats(std::ostream&);

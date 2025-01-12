@@ -28,9 +28,9 @@ struct MSHREntry
 
     uint64_t cycle_fired;
 
-    MSHREntry(const Transaction& t, bool is_write=false)
+    MSHREntry(Transaction&& t, bool is_write=false)
         :is_for_write_allocate(is_write),
-        trans(t),
+        trans(std::move(t)),
         cycle_fired(GL_CYCLE)
     {}
 };
@@ -139,10 +139,10 @@ public:
     inline size_t curr_mshr_size(void) const { return mshr_.size() + writeback_queue_.size(); }
 private:
     void next_access(void);
-    void handle_hit(const Transaction&);
-    void handle_miss(const Transaction&, bool write_miss=false);
+    void handle_hit(Transaction&&);
+    void handle_miss(Transaction&&, bool write_miss=false);
 
-    void handle_eager_writeback(CacheEntry&);
+    void handle_eager_writeback(const CacheEntry&);
 
     bool do_writeback(uint64_t addr);
 };

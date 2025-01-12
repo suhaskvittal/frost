@@ -14,7 +14,15 @@
 
 enum class TransactionType { READ, WRITE, PREFETCH, TRANSLATION };
 
-bool trans_is_read(TransactionType);
+inline bool trans_is_read(TransactionType t)
+{
+    return t != TransactionType::WRITE;
+}
+
+inline bool trans_is_write(TransactionType t)
+{
+    return t == TransactionType::WRITE;
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

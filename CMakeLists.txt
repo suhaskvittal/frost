@@ -10,8 +10,8 @@ project(Frost VERSION 1.0)
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
         -Ofast
-        -flto
-        -funroll-loops
+        -flto=auto
+        -fwhole-program
         -fstrict-aliasing
         -march=native
         -Wno-deprecated
@@ -22,7 +22,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
         -Wunused)
 elseif (CMAKE_BUILD_TYPE MATCHES "Profile")
     set(COMPILE_OPTIONS
-        -fno-strict-aliasing
+        -fstrict-aliasing
         -Wno-deprecated
         -Wno-unknown-warming-option
         -Wno-self-assign

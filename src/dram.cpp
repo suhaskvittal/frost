@@ -26,14 +26,15 @@ DRAM::IO::IO(DRAM* d)
 {}
 
 bool
-DRAM::IO::can_accept(uint64_t address, bool write)
+DRAM::IO::can_accept(uint64_t address, TransactionType type)
 {
+    bool is_write = trans_is_write(type);
 #if defined(DRAM_DROP_WRITES)
-    if (write)
+    if (is_write)
         return true;
 #endif
     size_t i = dram_channel(address);
-    if (write)
+    if (is_write)
         return dram->channels_[i]->write_queue_size() < DRAM_WQ_SIZE;
     else
         return dram->channels_[i]->read_queue_size() < DRAM_RQ_SIZE;

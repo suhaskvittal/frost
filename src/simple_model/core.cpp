@@ -46,6 +46,20 @@ void
 Core::tick()
 {
     operate_rob();
+    
+    if (asleep_inst_ != nullptr)
+    {
+        if (do_llc_access(asleep_inst_))
+        {
+            rob_.push_back(asleep_inst_);
+            ++rob_size_;
+            ++curr_inst_num_;
+            asleep_inst_ = nullptr;
+        }
+        else
+            return;
+    }
+
     ifetch();
 }
 
@@ -87,10 +101,14 @@ Core::ifetch()
         if (rob_size_ == CORE_ROB_SIZE)
             return;
         inst_ptr inst = next_inst();
+        // Install inst into the ROB.
         if (inst != nullptr)
         {
-            do_llc_access(inst);
-            // Install inst into the ROB.
+            if (!do_llc_access(inst))
+            {
+                asleep_inst_ = inst;
+                return;
+            }
             rob_.push_back(inst);
             ++rob_size_;
         }
@@ -129,32 +147,26 @@ Core::operate_rob()
 
         i += rob_ref_updates;
     }
-    if (rob_.empty())
-        return;
-    // Check if any entries failed to access the LLC in ifetch.
-    for (inst_ptr inst : rob_)
-    {
-        if (GL_CYCLE >= inst->cycle_done || inst->state == AccessState::IN_CACHE || inst->state == AccessState::DONE)
-            continue;
-        do_llc_access(inst);
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-void
+bool
 Core::do_llc_access(inst_ptr inst)
 {
     TransactionType t = inst->is_store ? TransactionType::WRITE : TransactionType::READ;
-    if (GL_LLC->io_->can_accept(t))
+    if (GL_LLC->io_->can_accept(inst->p_lineaddr, t))
     {
         Transaction trans(coreid_, inst, t, inst->p_lineaddr);
         GL_LLC->io_->add_incoming(trans);
         inst->state = AccessState::IN_CACHE;
         if (inst->is_store)
             inst->cycle_done = GL_CYCLE+1;
+        return true;
     }
+    else
+        return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////

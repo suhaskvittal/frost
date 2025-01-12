@@ -42,12 +42,12 @@ uint64_t OPT_DRAM_WRITE_SYNC_COUNT;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class ARCH_PTR> void
-tick_and_measure(ARCH_PTR& x, uint64_t& t)
+template <class ARCH_PTR> inline uint64_t
+tick_and_measure(ARCH_PTR& x)
 {
     timer.start();
     x->tick();
-    t += timer.end();
+    return timer.end();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -109,9 +109,9 @@ int main(int argc, char* argv[])
     {
         print_progress(std::cout);
 
-        tick_and_measure(GL_DRAM, time_in_dram);
-        tick_and_measure(GL_LLC, time_in_llc);
-        tick_and_measure(GL_OS, time_in_os);
+        time_in_dram += tick_and_measure(GL_DRAM);
+        time_in_llc += tick_and_measure(GL_LLC);
+        time_in_os += tick_and_measure(GL_OS);
 
         drain_llc_outgoing_queue();
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
         for (size_t i = 0; i < NUM_THREADS; i++)
         {
             auto& c = GL_CORES[ii];
-            tick_and_measure(c, time_in_core);
+            time_in_core += tick_and_measure(c);
             if (!c->done_ && c->finished_inst_num_ >= OPT_INST_SIM)
             {
                 c->checkpoint_stats();
