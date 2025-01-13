@@ -42,13 +42,13 @@ builds = []
 other_args = {}
 
 def append_all_defaults(base: str):
-    for (p, am) in [('OP', 'MOP4'), ('CP', 'ZEN')]:
+    for (p, am) in [('CP','ZEN')]:
         builds.append(f'{base}_{p}_{am}')
 
 which = argv[1]
 
 if which == 'all':
-    for w in ['baseline', 'motivation', 'sync-scan-cnt']:
+    for w in ['baseline', 'motivation', 'sync-scan-cnt', 'bank-balanced-cache']:
         os.system(f'python scripts/w_mgt/run.py {w}')
         print('sleeping for 15 minutes...')
         time.sleep(15*60)
@@ -58,12 +58,14 @@ if which == 'baseline':
     append_all_defaults('BASELINE')
 elif which == 'motivation':
     append_all_defaults('NO_WRITES')
-    for p in [9,11,13,15]:
+    for p in [9,11]:
         append_all_defaults(f'WRITE_QUEUE_{p}')
 elif which == 'watermark-scan':
     append_all_defaults('WATERMARK')
-elif which == 'sync-scan-cnt':
+elif which == 'sync' or which == 'sync-scan':
     append_all_defaults('WRITE_SYNC')
+elif which == 'bank-balanced-cache' or which == 'bank-balanced-cache-scan':
+    append_all_defaults('WRITE_SYNC_BALANCED_CACHE')
 else:
     print('Unknown experiment!')
     exit(1)
@@ -71,7 +73,7 @@ else:
 ############################################################
 ############################################################
 
-for suite in ['mtf/spec2017']:
+for suite in ['mtf/spec2017', 'mtf/gap']:
     benchmarks = [f for f in os.listdir(f'TRACES/{suite}') if f.endswith('.xz') or f.endswith('.gz')]
     for build in builds:
         os.system(f'mkdir -p out/{suite}/{build}')
@@ -81,16 +83,17 @@ for suite in ['mtf/spec2017']:
             base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {INST_WARMUP}'
             if which == 'watermark-scan':
                 for x in [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]:
-                    cmd = f'{base_cmd} -dramwmlow {x} -dramwmhigh 1.0'
+                    cmd = f'{base_cmd} -dram_wm_low {x} -dram_wm_high 1.0'
                     issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{int(x*100)}.out')
-            elif which == 'sync-scan-cnt':
-                # Need to do a sweep of `wsynccnt`
-                for ii in range(1, 16+1):
-                    cmd = f'{base_cmd} -wsynccnt {ii}'
-                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}_noavg.out')
-                for ii in range(1, 16+1):
-                    cmd = f'{base_cmd} -wsynccnt {ii} -wsyncprefavg'
-                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}_avg.out')
+            elif which == 'sync-scan':
+                for ii in [1, 2, 4, 8, 16, 128]:
+                    cmd = f'{base_cmd} -dram_wsync_count {ii}'
+                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
+                time.sleep(120)
+            elif which == 'bank-balanced-cache-scan':
+                for ii in [1, 2, 4, 8]:
+                    cmd = f'{base_cmd} -dram_wsync_count {ii}'
+                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
                 time.sleep(120)
             else:
                 issue_sbatch(base_cmd, f'out/{suite}/{build}/{name}.out')

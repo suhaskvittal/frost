@@ -198,8 +198,20 @@ DRAMChannel::try_switch_to_write_mode()
             size_t num_writes = write_queue_.size() - low_watermark_;
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
-                writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_COUNT);
-                tot_writes_to_drain_ = std::min(num_writes, static_cast<size_t>(DRAM_TOT_BANKS_PER_CHANNEL*OPT_DRAM_WRITE_SYNC_COUNT));
+                if (OPT_DRAM_WRITE_SYNC_COUNT == 0)
+                {
+                    // Take average per bank instead (min 1 write should be done)
+                    size_t writes_per_bank = std::max(static_cast<size_t>(1),
+                                                    static_cast<size_t>(num_writes / DRAM_TOT_BANKS_PER_CHANNEL));
+                    writes_to_drain_per_bank_.fill(writes_per_bank);
+                    tot_writes_to_drain_ = num_writes;
+                }
+                else
+                {
+                    writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_COUNT);
+                    tot_writes_to_drain_ = std::min(num_writes, 
+                                            static_cast<size_t>(DRAM_TOT_BANKS_PER_CHANNEL*OPT_DRAM_WRITE_SYNC_COUNT));
+                }
             }
             else
             {

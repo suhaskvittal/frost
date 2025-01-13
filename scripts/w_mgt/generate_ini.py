@@ -13,6 +13,7 @@ def write_ini(filename: str,
               write_policy='ASYNC',
               wb_mode='FORCED',
               address_mapping='ZEN',
+              cache_type='Cache',
               other_defines=''):
 
     if len(other_defines) > 0:
@@ -52,7 +53,7 @@ dram_type = 4800
 [LLC]
 size_kb_per_core = 2048
 ways = 16
-num_mshr = 512
+num_mshr = {128*CORES}
 num_rw_ports = 4
 latency = 20
 read_queue_size = 64
@@ -60,6 +61,7 @@ write_queue_size = 64
 prefetch_queue_size = 32
 replacement_policy = LRU
 writeback_mode = {wb_mode}
+base_cache_type = {cache_type}
 ''')
 
 ############################################################
@@ -102,6 +104,7 @@ for page_mode in ['OPEN', 'CLOSE']:
 for page_mode in ['OPEN', 'CLOSE']:
     am = get_default_mapping(page_mode)
     write_ini(make_filename('write_sync', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='SYNC')
+    write_ini(make_filename('write_sync_balanced_cache', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='SYNC', cache_type='BankBalancedCache')
 
 ############################################################
 ############################################################
