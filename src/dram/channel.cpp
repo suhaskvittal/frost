@@ -236,6 +236,25 @@ DRAMChannel::try_switch_to_write_mode()
             ++s_num_drains_;
 
             GL_LLC->sig_dram_write_drain(channel_id_);
+#if defined(DRAM_TRACK_ADVANCED_STATS)
+            std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL> write_cnts{};
+            for (const auto& t : write_queue_)
+            {
+                size_t bank_idx = get_bank_idx(t.address);
+                ++write_cnts[bank_idx];
+            }
+            double mean_writes = static_cast<double>(write_queue_.size()) 
+                                    / static_cast<double>(DRAM_TOT_BANKS_PER_CHANNEL);
+#define SQR(x) (x)*(x)
+            double variance = std::transform_reduce(write_cnts.begin(), write_cnts.end(), 0.0,
+                                    std::plus<double>{},
+                                    [mean_writes] (size_t x)
+                                    {
+                                        return SQR(static_cast<double>(x) - mean_writes); 
+                                    }) / static_cast<double>(DRAM_TOT_BANKS_PER_CHANNEL);
+            s_tot_write_variance_ += variance;
+#undef SQR
+#endif
         }
     }
 }

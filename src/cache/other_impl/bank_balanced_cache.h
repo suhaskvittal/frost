@@ -12,23 +12,6 @@
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-struct ChannelWriteTracker
-{
-    using bank_counter_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
-
-    bank_counter_array_type ctrs{};
-    size_t tot_writes_in_epoch =0;
-
-    inline void reset(void)
-    {
-        ctrs.fill(0);
-        tot_writes_in_epoch = 0;
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
 /*
  * This class manages its writebacks so that writebacks do not overwhelming go into
  * a single bank. Instead, writebacks are bank-aware, and the cache will do its
@@ -42,7 +25,8 @@ class BankBalancedCache : public __TEMPLATE_PARENT__
 private:
     constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
 
-    using write_tracker_array_type = std::array<ChannelWriteTracker, DRAM_CHANNELS>;
+    using write_tracker_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
+    using write_tracker_array_type = std::array<write_tracker_type, DRAM_CHANNELS>;
 
     write_tracker_array_type trackers_{};
 public:
@@ -60,7 +44,7 @@ public:
 
     inline void reset_write_counters(size_t channel_id)
     {
-        trackers_[channel_id].reset();
+        trackers_[channel_id].fill(0);
     }
 protected:
     /*

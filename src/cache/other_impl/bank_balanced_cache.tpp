@@ -29,10 +29,38 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool as_dirty)
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::fill_result_type
 __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs)
 {
+    fill_result_type out;
+    if constexpr (POL == CacheReplPolicy::PERFECT)
+        return out;
+
+    cset_type& s = __TEMPLATE_PARENT__::get_set(address);
+    auto it = std::find_if_not(s.begin(), s.end(),
+                        [] (const CacheEntry& e)
+                        {
+                            return e.valid;
+                        });
+    if (it == s.end())
+    {
+        it = find_victim(s); 
+        if (it->dirty)
+        {
+            if (get_tracker_entry(it->address) >= 3*CRITICAL_WRITES/2)
+            {
+                out = CacheEntry(address, num_refs);  // Bypass
+                return out;
+            }
+            increment_tracker(it->address);
+        }
+        out = *it;
+    }
+    *it = CacheEntry(address, num_refs);
+    return out;
+    /*
     auto out = __TEMPLATE_PARENT__::fill(address, num_refs);
     if (out.has_value() && out.value().dirty)
         increment_tracker(out.value().address);
     return out;
+    */
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -41,8 +69,12 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs)
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
+    size_t ch = dram_channel(s[0].address),
+           bank_idx = get_bank_idx(s[0].address);
+    size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
     // Note that all entries in this set also belong to the same bank:
-    bool is_critical = get_tracker_entry(s[0].address) >= CRITICAL_WRITES;
+    bool is_critical = trackers_[ch][bank_idx] >= CRITICAL_WRITES
+                        || (trackers_[ch][bank_idx] - min_writes) >= CRITICAL_WRITES/2;
 
     if constexpr (POL == CacheReplPolicy::LRU)
     {
@@ -101,7 +133,7 @@ __TEMPLATE_CLASS__::get_tracker_entry(uint64_t address)
 {
     size_t ch = dram_channel(address);
     size_t idx = get_bank_idx(address);
-    return trackers_[ch].ctrs[idx];
+    return trackers_[ch][idx];
 }
 
 __TEMPLATE_HEADER__ inline void
@@ -109,8 +141,7 @@ __TEMPLATE_CLASS__::increment_tracker(uint64_t address)
 {
     size_t ch = dram_channel(address);
     size_t idx = get_bank_idx(address);
-    ++trackers_[ch].ctrs[idx];
-    ++trackers_[ch].tot_writes_in_epoch;
+    ++trackers_[ch][idx];
 }
 
 ////////////////////////////////////////////////////////////////////////////
