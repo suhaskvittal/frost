@@ -56,6 +56,7 @@ public:
     using wrw_stat_type = std::array<uint64_t, 4>;
 
     wrw_stat_type s_num_seq_{};
+    double s_tot_write_variance_ =0.0;
 
     const double freq_ghz_;
     const size_t channel_id_;

@@ -19,6 +19,20 @@
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+/*
+ * Different cache writeback policies:
+ * */
+enum class CacheWBMode
+{
+    FORCED,                 // standard writeback -- only writeback when dirty line is evicted
+    EAGER,                  // FORCED + writeback whenever dirty line reaches LRU position.
+    NEXT_LINE,              // FORCED + writeback if a dirty line's neighboring line is in the same set,
+                            // also needs `INDEX_OFFSET` of cache to be 1 or higher.
+    VIRTUAL_WRITE_QUEUE     // Performs writebacks according to the virtual write queue implementation.
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 struct MSHREntry
 {
@@ -35,18 +49,15 @@ struct MSHREntry
     {}
 };
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-/*
- * Different cache writeback policies:
- * */
-enum class CacheWBMode
+struct WBQueueEntry
 {
-    FORCED,                 // standard writeback -- only writeback when dirty line is evicted
-    EAGER,                  // FORCED + writeback whenever dirty line reaches LRU position.
-    NEXT_LINE,              // FORCED + writeback if a dirty line's neighboring line is in the same set,
-                            // also needs `INDEX_OFFSET` of cache to be 1 or higher.
-    VIRTUAL_WRITE_QUEUE     // Performs writebacks according to the virtual write queue implementation.
+    uint64_t address;
+    bool dram_write_hint_valid =false;
+    bool dram_write_hint_do_autopre =false;
+
+    WBQueueEntry(uint64_t addr)
+        :address(addr)
+    {}
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -100,7 +111,7 @@ public:
     const std::string cache_name_;
 private:
     using mshr_type = std::unordered_multimap<uint64_t, MSHREntry>;
-    using wb_queue_type = std::deque<uint64_t>;
+    using wb_queue_type = std::deque<WBQueueEntry>;
 
     next_ptr& next_;
     /*
@@ -109,6 +120,7 @@ private:
      * */
     mshr_type     mshr_;
     wb_queue_type writeback_queue_;
+    size_t num_mshr_asleep_ =0;
     /*
      * Specific implementations that are nonstandard:
      * */
@@ -135,6 +147,11 @@ public:
      * is printed to `stderr` and this function returns true.
      * */
     bool deadlock_find_inst(const inst_ptr);
+    /*
+     * Signals the cache that DRAM has drained its writes. This will do whatever
+     * it wants with the information.
+     * */
+    void sig_dram_write_drain(size_t channel_id);
 
     inline size_t curr_mshr_size(void) const { return mshr_.size() + writeback_queue_.size(); }
 private:
@@ -145,6 +162,7 @@ private:
     void handle_eager_writeback(const CacheEntry&);
 
     bool do_writeback(uint64_t addr);
+    bool do_writeback_with_dram_write_hint(uint64_t addr, bool autopre);
 };
 
 ////////////////////////////////////////////////////////////////////////////

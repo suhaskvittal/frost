@@ -71,9 +71,24 @@ DRAMChannel::tick_mc()
         DRAMCommandType cmd_type = READ_CMD;
         if (tot_writes_to_drain_ > 0)
         {
-            cmd_type = WRITE_CMD;
-            --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
-            --tot_writes_to_drain_;
+            // Check if this transaction has any hints.
+            if (it->dram_write_hint_valid)
+            {
+                if (it->dram_write_hint_do_autopre)
+                {
+                    cmd_type = DRAMCommandType::WRITE_PRECHARGE;
+                    --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
+                    --tot_writes_to_drain_;
+                }
+                else
+                    cmd_type = DRAMCommandType::WRITE;
+            }
+            else
+            {
+                cmd_type = WRITE_CMD;
+                --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
+                --tot_writes_to_drain_;
+            }
         } 
         cmd_scheduler_->enqueue(std::move(*it), cmd_type);
         q.erase(it);
@@ -219,6 +234,27 @@ DRAMChannel::try_switch_to_write_mode()
                 tot_writes_to_drain_ = num_writes;
             }
             ++s_num_drains_;
+
+            GL_LLC->sig_dram_write_drain(channel_id_);
+#if defined(DRAM_TRACK_ADVANCED_STATS)
+            std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL> write_cnts{};
+            for (const auto& t : write_queue_)
+            {
+                size_t bank_idx = get_bank_idx(t.address);
+                ++write_cnts[bank_idx];
+            }
+            double mean_writes = static_cast<double>(write_queue_.size()) 
+                                    / static_cast<double>(DRAM_TOT_BANKS_PER_CHANNEL);
+#define SQR(x) (x)*(x)
+            double variance = std::transform_reduce(write_cnts.begin(), write_cnts.end(), 0.0,
+                                    std::plus<double>{},
+                                    [mean_writes] (size_t x)
+                                    {
+                                        return SQR(static_cast<double>(x) - mean_writes); 
+                                    }) / static_cast<double>(DRAM_TOT_BANKS_PER_CHANNEL);
+            s_tot_write_variance_ += variance;
+#undef SQR
+#endif
         }
     }
 }

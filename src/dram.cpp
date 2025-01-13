@@ -152,12 +152,18 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "SCHED_MIN_WRITES_PER_BURST", min_writes_in_burst, VecAccMode::MIN);
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)
+    CREATE_VEC_STAT(tot_write_variance)
+
+    VecStat<double, DRAM_CHANNELS> mean_write_variance = vec_elwise_mean(tot_write_variance, num_drains);
+
     for (size_t i = 0; i < 4; i++)
     {
         uint64_t max_cyc = 1L << (i+8);
         std::array<uint64_t,2> vec{channels_[0]->s_num_seq_[i], channels_[1]->s_num_seq_[i]};
         print_vecstat(out, "DRAM", "NUM_WR+W_SEQ_LE_" + std::to_string(max_cyc), vec);
     }
+
+    print_vecstat(out, "DRAM", "MEAN_WRITE_DISTR_VARIANCE", mean_write_variance, VecAccMode::GMEAN);
 #endif
 }
 

@@ -48,6 +48,12 @@ struct Transaction
 
     uint64_t address;
     bool     address_is_ip;
+    /*
+     * For the `NEXT_LINE` writeback mode, where the LLC directs DRAM whether or not to close
+     * a row after a write command.
+     * */
+    bool dram_write_hint_valid =false;
+    bool dram_write_hint_do_autopre =false;
 
     Transaction(uint8_t cid, inst_ptr, TransactionType, uint64_t addr, bool addr_is_ip=false);
     Transaction(const Transaction&) =default;
