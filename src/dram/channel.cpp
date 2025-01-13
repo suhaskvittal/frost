@@ -234,6 +234,8 @@ DRAMChannel::try_switch_to_write_mode()
                 tot_writes_to_drain_ = num_writes;
             }
             ++s_num_drains_;
+
+            GL_LLC->sig_dram_write_drain(channel_id_);
         }
     }
 }

@@ -19,6 +19,12 @@ struct ChannelWriteTracker
 
     bank_counter_array_type ctrs{};
     size_t tot_writes_in_epoch =0;
+
+    inline void reset(void)
+    {
+        ctrs.fill(0);
+        tot_writes_in_epoch = 0;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -51,6 +57,11 @@ public:
      * `fill` is updated to update (and potentially reset) `trackers_` on a writeback.
      * */
     fill_result_type fill(uint64_t, size_t num_refs) override;
+
+    inline void reset_write_counters(size_t channel_id)
+    {
+        trackers_[channel_id].reset();
+    }
 protected:
     /*
      * This class modifies standard eviction policies to operate based
@@ -61,6 +72,17 @@ private:
     size_t get_tracker_entry(uint64_t address);
     void increment_tracker(uint64_t address);
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/*
+ * Defining some template structures to check if a cache is a bank-balanced-cache.
+ * */
+template <class>
+struct is_bank_balanced_cache : std::false_type {};
+
+template <size_t SETS, size_t WAYS, CacheReplPolicy POL> 
+struct is_bank_balanced_cache<BankBalancedCache<SETS,WAYS,POL>> : std::true_type {};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

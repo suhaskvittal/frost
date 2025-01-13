@@ -111,13 +111,6 @@ __TEMPLATE_CLASS__::increment_tracker(uint64_t address)
     size_t idx = get_bank_idx(address);
     ++trackers_[ch].ctrs[idx];
     ++trackers_[ch].tot_writes_in_epoch;
-
-    if (trackers_[ch].tot_writes_in_epoch == DRAM_WQ_SIZE)
-    {
-        // Reset the tracker.
-        trackers_[ch].ctrs.fill(0);
-        trackers_[ch].tot_writes_in_epoch = 0;
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

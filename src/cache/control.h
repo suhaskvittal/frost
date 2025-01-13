@@ -147,6 +147,11 @@ public:
      * is printed to `stderr` and this function returns true.
      * */
     bool deadlock_find_inst(const inst_ptr);
+    /*
+     * Signals the cache that DRAM has drained its writes. This will do whatever
+     * it wants with the information.
+     * */
+    void sig_dram_write_drain(size_t channel_id);
 
     inline size_t curr_mshr_size(void) const { return mshr_.size() + writeback_queue_.size(); }
 private:

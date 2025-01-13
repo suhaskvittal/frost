@@ -3,6 +3,7 @@
  *  date:   4 December 2024
  * */
 
+#include "cache/other_impl/bank_balanced_cache.h"
 #include "dram/address.h"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -277,6 +278,16 @@ __TEMPLATE_CLASS__::deadlock_find_inst(const inst_ptr inst)
         std::cerr << "\tnothing found\n";
     }
     return false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::sig_dram_write_drain(size_t channel_id)
+{
+    if constexpr (is_bank_balanced_cache<CACHE>::value)
+        cache_->reset_write_counters(channel_id);
 }
 
 ////////////////////////////////////////////////////////////////////////////
