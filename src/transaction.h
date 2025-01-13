@@ -6,6 +6,7 @@
 #ifndef TRANSACTION_h
 #define TRANSACTION_h
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
