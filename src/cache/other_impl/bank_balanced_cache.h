@@ -28,8 +28,10 @@ struct ChannelWriteTracker
  * a single bank. Instead, writebacks are bank-aware, and the cache will do its
  * best to try and balance out the writes.
  * */
+#define __TEMPLATE_PARENT__ Cache<SETS,WAYS,POL>
+
 template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
-class BankBalancedCache : public Cache<SETS, WAYS, POL>
+class BankBalancedCache : public __TEMPLATE_PARENT__
 {
 private:
     constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
@@ -38,8 +40,9 @@ private:
 
     write_tracker_array_type trackers_{};
 public:
-    using typename Cache<SETS,WAYS,POL>::cset_type;
-    using typename Cache<SETS,WAYS,POL>::fill_result_type;
+    using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
+    using typename __TEMPLATE_PARENT__::cset_type;
+    using typename __TEMPLATE_PARENT__::fill_result_type;
     /*
      * On a `mark` clean, `trackers_` is updated.
      * */
@@ -63,6 +66,8 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 
 #include "bank_balanced_cache.tpp"
+
+#undef __TEMPLATE_PARENT__
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

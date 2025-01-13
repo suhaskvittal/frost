@@ -3,6 +3,12 @@
  *  date:   4 December 2024
  * */
 
+#include "constants.h"
+
+#include <iostream>
+#include <iomanip>
+#include <unordered_set>
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -43,23 +49,32 @@ inline size_t dram_row(uint64_t x)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline size_t dram_switch_bank_idx(uint64_t x, size_t bg, size_t ba)
+template <size_t FROM, size_t SIZE>
+inline bool bit_is_in_region(size_t x)
 {
-    // Clear out the bankgroup and bank bits.
-    x &= ~(mask(DRAM_BANKGROUPS) << BG_OFF);
-    x &= ~(mask(DRAM_BANKS) << BA_OFF);
-    x |= (bg << BG_OFF) | (ba << BA_OFF);
-    return x;
+    return x >= FROM && x < FROM + numeric_traits<SIZE>::log2;
+}
+
+inline constexpr size_t dram_lowest_col_bit_index(void)
+{
+    for (size_t i = 0; i < numeric_traits<DRAM_SIZE_MB*1024*1024>::log2; i++)
+    {
+        if (bit_is_in_region<CH_OFF, DRAM_CHANNELS>(i)
+            || bit_is_in_region<RA_OFF, DRAM_RANKS>(i)
+            || bit_is_in_region<BG_OFF, DRAM_BANKGROUPS>(i)
+            || bit_is_in_region<BA_OFF, DRAM_BANKS>(i)
+            || bit_is_in_region<ROW_OFF, DRAM_ROWS>(i))
+        {
+            continue;
+        }
+        return i;
+    }
+    std::cerr << "column bit not found: invalid dram address mapping.\n";
+    exit(1);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-#include "globals.h"
-
-#include <iostream>
-#include <iomanip>
-#include <unordered_set>
 
 inline void
 print_address_mapping(std::ostream& out)
@@ -91,26 +106,24 @@ print_address_mapping(std::ostream& out)
         BA_OFF+numeric_traits<DRAM_BANKS>::log2,
         ROW_OFF+numeric_traits<DRAM_ROWS>::log2
     };
-#define BETWEEN(x, A, B) ((x) >= (A) && (x) < (A) + numeric_traits<B>::log2)
     for (size_t i = 0; i < numeric_traits<LINESIZE>::log2; i++)
         out << ".  ";
     for (size_t i = 0; i < 48 - numeric_traits<LINESIZE>::log2; i++) 
     {
-        if (BETWEEN(i, CH_OFF, DRAM_CHANNELS))
+        if (bit_is_in_region<CH_OFF, DRAM_CHANNELS>(i))
             out << "ch ";
-        else if (BETWEEN(i, RA_OFF, DRAM_RANKS))
+        else if (bit_is_in_region<RA_OFF, DRAM_RANKS>(i))
             out << "ra ";
-        else if (BETWEEN(i, BG_OFF, DRAM_BANKGROUPS))
+        else if (bit_is_in_region<BG_OFF, DRAM_BANKGROUPS>(i))
             out << "bg ";
-        else if (BETWEEN(i, BA_OFF, DRAM_BANKS))
+        else if (bit_is_in_region<BA_OFF, DRAM_BANKS>(i))
             out << "ba ";
-        else if (BETWEEN(i, ROW_OFF, DRAM_ROWS))
+        else if (bit_is_in_region<ROW_OFF, DRAM_ROWS>(i))
             out << "ro ";
         else if (i < ROW_OFF)
             out << "co ";
     }
     out << "\n";
-#undef BETWEEN
 }
 
 ////////////////////////////////////////////////////////////////////////////

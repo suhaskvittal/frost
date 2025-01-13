@@ -70,6 +70,14 @@ template <
     CacheReplPolicy POL>
 class Cache 
 {
+public:
+    /*
+     * Syntax of this function: returns index, inputs are the line-address and number of sets.
+     * Number of sets is supplied by this class.
+     * */
+    using index_function_type = size_t(*)(uint64_t, size_t);
+
+    const index_function_type index_function_ =nullptr;
 protected:
     using cset_type       = std::array<CacheEntry, WAYS>;
     using cset_array_type = std::array<cset_type, SETS>;
@@ -84,6 +92,9 @@ public:
     using next_line_fill_result_type = std::tuple<fill_result_type, fill_result_type, size_t>;
 
     Cache(void) =default;
+    Cache(index_function_type custom_index_function)
+        :index_function_(custom_index_function)
+    {}
     /*
      * Searches for the given line. Does not update any metadata. This is
      * like peeking into the cache.
@@ -104,7 +115,7 @@ public:
      * */
     virtual fill_result_type fill(uint64_t, size_t num_refs);
     virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t);
-    virtual next_line_fill_result_type fill_with_next_line_writeback(uint64_t, size_t);
+    virtual next_line_fill_result_type fill_with_next_line_writeback(uint64_t, size_t dram_col_bit, size_t);
 
     virtual void invalidate(uint64_t);
     /*
@@ -114,14 +125,18 @@ public:
     template <class PRED>
     size_t get_occupancy(const PRED&);
     size_t get_occupancy(void);
-    /*
-     * Returns number of entries in the cache.
-     * */
-    inline constexpr size_t num_ways(void) const { return WAYS; }
-    inline constexpr size_t num_sets(void) const { return SETS; }
-    inline constexpr size_t size(void) const { return WAYS*SETS; }
 
-    inline size_t get_set_index(uint64_t x) const { return fast_mod<SETS>(x); }
+    inline static constexpr size_t num_ways(void) { return WAYS; }
+    inline static constexpr size_t num_sets(void) { return SETS; }
+    inline static constexpr size_t size(void) { return WAYS*SETS; }
+
+    inline size_t get_set_index(uint64_t x) const
+    {
+        if (index_function_ == nullptr)
+            return fast_mod<SETS>(x);
+        else
+            return index_function_(x, SETS);
+    }
 protected:
     virtual typename cset_type::iterator find_victim(cset_type&);
     /*
@@ -133,7 +148,10 @@ protected:
      * */
     typename cset_type::iterator get_way_in_lru_pos(cset_type&);
 
-    inline cset_type& get_set(uint64_t x) { return csets_.at(get_set_index(x)); }
+    inline cset_type& get_set(uint64_t x)
+    {
+        return csets_.at(get_set_index(x));
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

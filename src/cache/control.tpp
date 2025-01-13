@@ -3,6 +3,8 @@
  *  date:   4 December 2024
  * */
 
+#include "dram/address.h"
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -14,11 +16,24 @@
 
 __TEMPLATE_HEADER__ inline
 __TEMPLATE_CLASS__::CacheControl(std::string cache_name, next_ptr& n)
-    :cache_(new CACHE),
-    io_(new IOBus(IMPL::RQ_SIZE, IMPL::WQ_SIZE, IMPL::PQ_SIZE)),
+    :io_(new IOBus(IMPL::RQ_SIZE, IMPL::WQ_SIZE, IMPL::PQ_SIZE)),
     cache_name_(cache_name),
     next_(n)
 {
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
+    {
+        typename CACHE::index_function_type
+            index_func = [] (uint64_t x, size_t sets)
+            {
+                size_t lower = x & ((1L << dram_lowest_col_bit_index()) - 1);
+                size_t upper = (x >> (dram_lowest_col_bit_index()+1)) & ((sets>>1)-1);
+                return (upper << (dram_lowest_col_bit_index())) | lower;
+            };
+        cache_ = cache_ptr(new CACHE(index_func));
+    }
+    else
+        cache_ = cache_ptr(new CACHE);
+
     mshr_.reserve(IMPL::NUM_MSHR);
 }
 
@@ -77,30 +92,52 @@ __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::tick()
 {
     // First try to deal with any MSHR entries that are not fired.
-    auto mshr_it = std::find_if_not(mshr_.begin(), mshr_.end(),
-                        [] (auto& x)
-                        {
-                            return x.second.is_fired;
-                        });
-    if (mshr_it != mshr_.end())
+    if (num_mshr_asleep_ > 0)
     {
-        auto& [address, entry] = *mshr_it;
-        entry.is_fired = next_->io_->can_accept(address, entry.trans.type)
-                                    && next_->io_->add_incoming(entry.trans);
+        auto mshr_it = std::find_if_not(mshr_.begin(), mshr_.end(),
+                            [] (auto& x)
+                            {
+                                return x.second.is_fired;
+                            });
+        if (mshr_it != mshr_.end())
+        {
+            auto& [address, entry] = *mshr_it;
+            entry.is_fired = next_->io_->can_accept(address, entry.trans.type)
+                                        && next_->io_->add_incoming(entry.trans);
+            if (entry.is_fired)
+                --num_mshr_asleep_;
+        }
     }
     // Now try writebacks
     if (!writeback_queue_.empty())
     {
-        uint64_t addr = writeback_queue_.front();
-        if (do_writeback(addr))
+        const auto& e = writeback_queue_.front();
+        bool success;
+        if (e.dram_write_hint_valid)
+            success = do_writeback_with_dram_write_hint(e.address, e.dram_write_hint_do_autopre);
+        else
+            success = do_writeback(e.address);
+
+        if (success)
             writeback_queue_.pop_front();
     }
     // Now perform cache accesses.
     for (size_t i = 0; i < IMPL::NUM_RW_PORTS; i++)
         next_access();
 
-    if (!eager_queue_.empty() && do_writeback(eager_queue_.front()))
-        eager_queue_.pop_front();
+    if (!eager_queue_.empty())
+    {
+        uint64_t address = eager_queue_.front();
+        bool success;
+        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
+            // We know that this should be the last row hit.
+            success = do_writeback_with_dram_write_hint(address, true);
+        else
+            success = do_writeback(address);
+
+        if (success)
+            eager_queue_.pop_front();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -158,7 +195,7 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
         std::tie(v, w) = cache_->fill_with_eager_writeback(address, refcnt);
     else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-        std::tie(v, w, w_lru_pos) = cache_->fill_with_next_line_writeback(address, refcnt);
+        std::tie(v, w, w_lru_pos) = cache_->fill_with_next_line_writeback(address, dram_lowest_col_bit_index(), refcnt);
     else
         v = cache_->fill(address, refcnt);
 
@@ -167,11 +204,11 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
     if (!v.has_value()) 
         return;
     // Then we evicted some line.
-    CacheEntry& e = v.value();
+    const CacheEntry& e = v.value();
     if (e.dirty)
     {
         ++s_writebacks_;
-        const auto [s_p, it] = cache_->find(e.address^1);
+        const auto [s_p, it] = cache_->find(dram_get_first_column_neighbor(e.address));
         if (it != s_p->end())
         {
             ++s_dirty_victim_adj_lines_;
@@ -179,8 +216,19 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
                 ++s_dirty_victim_adj_lines_also_dirty_;
         }
 
-        if (!do_writeback(e.address))
-            writeback_queue_.push_back(e.address);
+        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
+        {
+            WBQueueEntry wbqe(e.address);
+            wbqe.dram_write_hint_valid = true;
+            wbqe.dram_write_hint_do_autopre = (w_lru_pos != 0) || !w.has_value();
+            if (!do_writeback_with_dram_write_hint(e.address, wbqe.dram_write_hint_do_autopre))
+                writeback_queue_.push_back(wbqe);
+        }
+        else
+        {
+            if (!do_writeback(e.address))
+                writeback_queue_.emplace_back(e.address);
+        }
     }
     else if constexpr (IMPL::NEXT_IS_INVALIDATE_ON_HIT)
         next_->demand_fill(e.address, 1, e.dirty);
@@ -266,7 +314,10 @@ __TEMPLATE_CLASS__::next_access()
                 handle_miss(std::move(t), true);
         }
         else
-            cache_->mark(t.address, true);
+        {
+            if (!cache_->mark(t.address, true))
+                demand_fill(t.address, 1, true);  // Can occur if the cache is non-inclusive.
+        }
     }
 }
 
@@ -298,6 +349,8 @@ __TEMPLATE_CLASS__::handle_miss(Transaction&& t, bool write_miss)
         e.trans.type = TransactionType::READ;
     e.is_fired = mshr_.count(address) > 0 
                   || (next_->io_->can_accept(address, e.trans.type) && next_->io_->add_incoming(e.trans));
+    if (!e.is_fired)
+        ++num_mshr_asleep_;
     mshr_.insert({address, e});
 }
 
@@ -325,6 +378,21 @@ __TEMPLATE_CLASS__::do_writeback(uint64_t address)
     if (next_->io_->can_accept(address, TransactionType::WRITE))
     {
         Transaction t(0, nullptr, TransactionType::WRITE, address);
+        next_->io_->add_incoming(t);
+        return true;
+    }
+    else
+        return false;
+}
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::do_writeback_with_dram_write_hint(uint64_t address, bool autopre)
+{
+    if (next_->io_->can_accept(address, TransactionType::WRITE))
+    {
+        Transaction t(0, nullptr, TransactionType::WRITE, address);
+        t.dram_write_hint_valid = true;
+        t.dram_write_hint_do_autopre = autopre;
         next_->io_->add_incoming(t);
         return true;
     }

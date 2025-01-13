@@ -71,9 +71,24 @@ DRAMChannel::tick_mc()
         DRAMCommandType cmd_type = READ_CMD;
         if (tot_writes_to_drain_ > 0)
         {
-            cmd_type = WRITE_CMD;
-            --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
-            --tot_writes_to_drain_;
+            // Check if this transaction has any hints.
+            if (it->dram_write_hint_valid)
+            {
+                if (it->dram_write_hint_do_autopre)
+                {
+                    cmd_type = DRAMCommandType::WRITE_PRECHARGE;
+                    --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
+                    --tot_writes_to_drain_;
+                }
+                else
+                    cmd_type = DRAMCommandType::WRITE;
+            }
+            else
+            {
+                cmd_type = WRITE_CMD;
+                --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
+                --tot_writes_to_drain_;
+            }
         } 
         cmd_scheduler_->enqueue(std::move(*it), cmd_type);
         q.erase(it);
