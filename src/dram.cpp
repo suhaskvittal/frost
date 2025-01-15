@@ -69,9 +69,11 @@ DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
 void
 DRAM::tick()
 {
-    for (channel_ptr& ch : channels_) {
+    for (channel_ptr& ch : channels_)
+    {
         auto& q = ch->outgoing_queue_;
-        while (!q.empty()) {
+        while (!q.empty())
+        {
             const auto& [t, cycle_done] = q.top();
             if (GL_DRAM_CYCLE < cycle_done)
                 break;
@@ -79,13 +81,18 @@ DRAM::tick()
             q.pop();
         }
         if (leap_ < 1.0)
+        {
             ch->tick_dram();
-        ch->tick_mc();
+            ch->tick_mc();
+        }
     }
 
-    if (leap_ >= 1.0) {
+    if (leap_ >= 1.0)
+    {
         leap_ -= 1.0;
-    } else {
+    } 
+    else
+    {
         ++GL_DRAM_CYCLE;
         leap_ += clock_scale_;
     }

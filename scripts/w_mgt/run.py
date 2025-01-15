@@ -10,6 +10,8 @@ import time
 ############################################################
 ############################################################
 
+WHERE = 'PACE'
+
 def get_name(suite, filename):
     left, right = 0, filename.find('.')
     # The if statements here are just for special cases.
@@ -28,7 +30,9 @@ ISSUE_CNT = 0
 def issue_sbatch(call: str, out: str):
     global ISSUE_CNT
     ISSUE_CNT += 1
-    os.system(f'sbatch -N1 --ntasks-per-node=1 --account=gts-mqureshi4-rg -t8:00:00 -o {out} --wrap=\"{call}\"')
+#   os.system(f'sbatch -N1 --ntasks-per-node=1 --account=gts-mqureshi4-rg -t8:00:00 -o {out} --wrap=\"{call}\"')
+    print(f'{call} > {out} &')
+    os.system(f'{call} > {out} &\n')
 
 ############################################################
 ############################################################
@@ -48,7 +52,7 @@ def append_all_defaults(base: str):
 which = argv[1]
 
 if which == 'all':
-    for w in ['baseline', 'motivation', 'sync-scan-cnt', 'bank-balanced-cache']:
+    for w in ['baseline', 'no_writes', 'sync', 'bank-balanced-cache']:
         os.system(f'python scripts/w_mgt/run.py {w}')
         print('sleeping for 15 minutes...')
         time.sleep(15*60)
@@ -56,8 +60,9 @@ if which == 'all':
 
 if which == 'baseline':
     append_all_defaults('BASELINE')
-elif which == 'motivation':
+elif which == 'no_writes':
     append_all_defaults('NO_WRITES')
+elif which == 'motivation':
     for p in [9,11]:
         append_all_defaults(f'WRITE_QUEUE_{p}')
 elif which == 'watermark-scan':

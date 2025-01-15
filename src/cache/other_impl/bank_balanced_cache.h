@@ -38,13 +38,18 @@ public:
      * */
     bool mark(uint64_t, bool as_dirty) override;
     /*
-     * `fill` is updated to update (and potentially reset) `trackers_` on a writeback.
+     * The new `fill` does two things:
+     *  (1) If the number of writebacks to the bank is greater than or equal to `CRITICAL_WRITES` and
+     *      the victim is dirty, then the fill is aborted. In this case, `fill_result_type` corresponds 
+     *      to the cache-entry that would have been installed.
+     *  (2) Increments the corresponding write counter.
      * */
-    fill_result_type fill(uint64_t, size_t num_refs) override;
+    fill_result_type fill(uint64_t, size_t num_refs, bool mark_dirty=false) override;
 
-    inline void reset_write_counters(size_t channel_id)
+    inline void decrement_write_counters(size_t channel_id, size_t amt)
     {
-        trackers_[channel_id].fill(0);
+        for (size_t& ctr : trackers_[channel_id])
+            ctr = (ctr >= amt) ? ctr - amt : 0;
     }
 protected:
     /*

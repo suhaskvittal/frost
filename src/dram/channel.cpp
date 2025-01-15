@@ -140,21 +140,20 @@ DRAMChannel::tick_dram()
                         });
     if (ra_it != state_.end())
         try_and_issue_ref(*ra_it, s_refreshes_, s_precharges_);
-
-    // Issue commands from the cmd queue.
-    issue_next_cmd();
+    else
+        issue_next_cmd();
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 inline bool
-trans_add(DRAMChannel::in_queue_type& q, DRAMChannel::pending_type& p, Transaction t, size_t qsize)
+trans_add(DRAMChannel::in_queue_type& q, DRAMChannel::pending_type& p, Transaction&& t, size_t qsize)
 {
     if (q.size() >= qsize)
         return false;
-    q.push_back(t);
     ++p[t.address];
+    q.push_back(std::move(t));
     return true;
 }
 
@@ -176,7 +175,7 @@ DRAMChannel::add_incoming(Transaction t)
                             {
                                 return x.address == addr;
                             });
-        if (rd_it == read_queue_.end())
+        if (rd_it != read_queue_.end())
         {
             rd_it->merge(t);
             return true;
@@ -184,9 +183,9 @@ DRAMChannel::add_incoming(Transaction t)
     }
     // Add to requisite queue
     if (trans_is_read(t.type))
-        return trans_add(read_queue_, pending_reads_, t, DRAM_RQ_SIZE);
+        return trans_add(read_queue_, pending_reads_, std::move(t), DRAM_RQ_SIZE);
     else
-        return trans_add(write_queue_, pending_writes_, t, DRAM_WQ_SIZE);
+        return trans_add(write_queue_, pending_writes_, std::move(t), DRAM_WQ_SIZE);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -211,31 +210,34 @@ DRAMChannel::try_switch_to_write_mode()
         if (drain_cond_1 || drain_cond_2)
         {
             size_t num_writes = write_queue_.size() - low_watermark_;
+            size_t writes_per_bank;
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
                 if (OPT_DRAM_WRITE_SYNC_COUNT == 0)
                 {
-                    // Take average per bank instead (min 1 write should be done)
-                    size_t writes_per_bank = std::max(static_cast<size_t>(1),
-                                                    static_cast<size_t>(num_writes / DRAM_TOT_BANKS_PER_CHANNEL));
-                    writes_to_drain_per_bank_.fill(writes_per_bank);
-                    tot_writes_to_drain_ = num_writes;
+                    size_t mean_writes_per_bank = num_writes / DRAM_TOT_BANKS_PER_CHANNEL;
+                    writes_per_bank = std::max(static_cast<size_t>(1), mean_writes_per_bank);
                 }
                 else
                 {
-                    writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_COUNT);
-                    tot_writes_to_drain_ = std::min(num_writes, 
-                                            static_cast<size_t>(DRAM_TOT_BANKS_PER_CHANNEL*OPT_DRAM_WRITE_SYNC_COUNT));
+                    writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
                 }
+
+                size_t max_writes = writes_per_bank * DRAM_TOT_BANKS_PER_CHANNEL;
+
+                writes_to_drain_per_bank_.fill(writes_per_bank);
+                tot_writes_to_drain_ = std::min(num_writes, max_writes);
+                GL_LLC->sig_dram_write_drain(channel_id_, writes_per_bank);
             }
             else
             {
                 writes_to_drain_per_bank_.fill(num_writes);
                 tot_writes_to_drain_ = num_writes;
+
+                GL_LLC->sig_dram_write_drain(channel_id_, num_writes / DRAM_TOT_BANKS_PER_CHANNEL);
             }
             ++s_num_drains_;
 
-            GL_LLC->sig_dram_write_drain(channel_id_);
 #if defined(DRAM_TRACK_ADVANCED_STATS)
             std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL> write_cnts{};
             for (const auto& t : write_queue_)

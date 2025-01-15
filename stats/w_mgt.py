@@ -57,7 +57,7 @@ def create_csv_file_for_ipc(output_file: str, *builds):
                 local_ipc_list[b].append(rel_ipc)
             line = ','.join(data_list)
             wr.write(f'{line}\n')
-        wr.write(f'gmean_{suite},1.0')
+        wr.write(f'gmean_{suite}')
         for (_, arr) in local_ipc_list.items():
             ipc = gmean(arr)
             wr.write(f',{ipc:.3f}')
@@ -132,8 +132,8 @@ for s in ['cp']:
 ####################################################################
 # WRITE SYNCHRONIZATION SCAN
 for s in ['cp']:
-    create_csv_file_for_ipc_scan(f'write_sync_{s}.ipc.csv', [1,2,4,8,16,128], get_folder('WRITE_SYNC', s), get_folder('BASELINE', s))
-    create_csv_file_for_ipc_scan(f'balanced_cache_{s}.ipc.csv', [1,2,4,8], get_folder('WRITE_SYNC_BALANCED_CACHE', s), get_folder('BASELINE', s))
+#   create_csv_file_for_ipc_scan(f'write_sync_{s}.ipc.csv', [1,2,4,8,16,128], get_folder('WRITE_SYNC', s), get_folder('BASELINE', s))
+#   create_csv_file_for_ipc_scan(f'balanced_cache_{s}.ipc.csv', [1,2,4,8], get_folder('WRITE_SYNC_BALANCED_CACHE', s), get_folder('BASELINE', s))
     create_csv_file_for_ipc(f'main_results_1_{s}.ipc.csv',
                             get_folder('BASELINE', s), 
                             get_folder('NO_WRITES', s), 

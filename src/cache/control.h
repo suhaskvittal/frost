@@ -151,7 +151,7 @@ public:
      * Signals the cache that DRAM has drained its writes. This will do whatever
      * it wants with the information.
      * */
-    void sig_dram_write_drain(size_t channel_id);
+    void sig_dram_write_drain(size_t channel_id, size_t writes_per_bank);
 
     inline size_t curr_mshr_size(void) const { return mshr_.size() + writeback_queue_.size(); }
 private:

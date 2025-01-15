@@ -8,4 +8,4 @@ import os
 builds = os.listdir('builds')
 
 for b in builds:
-    os.system(f'cd builds/{b} && make -j4')
+    os.system(f'cd builds/{b} && make -j8')

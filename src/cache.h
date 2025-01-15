@@ -46,8 +46,9 @@ struct CacheEntry
     uint8_t  rrpv;
 
     CacheEntry(void) =default;
-    CacheEntry(uint64_t addr, size_t num_refs)
+    CacheEntry(uint64_t addr, size_t num_refs, bool mark_dirty=false)
         :valid(true),
+        dirty(mark_dirty),
         address(addr),
         timestamp(GL_CYCLE),
         rrpv(num_refs > 1 ? SRRIP_MAX : 1)
@@ -113,9 +114,12 @@ public:
      * cache has not evicted them. Furthermore, these entries are not references. If the
      * caller wants to modify the cache, they must call the appropriate function to do so.
      * */
-    virtual fill_result_type fill(uint64_t, size_t num_refs);
-    virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t);
-    virtual next_line_fill_result_type fill_with_next_line_writeback(uint64_t, size_t dram_col_bit, size_t);
+    virtual fill_result_type 
+        fill(uint64_t, size_t num_refs, bool mark_dirty=false);
+    virtual multi_fill_result_type
+        fill_with_eager_writeback(uint64_t, size_t, bool mark_dirty=false);
+    virtual next_line_fill_result_type 
+        fill_with_next_line_writeback(uint64_t, size_t dram_col_bit, size_t, bool mark_dirty=false);
 
     virtual void invalidate(uint64_t);
     /*

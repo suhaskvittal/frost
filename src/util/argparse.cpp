@@ -30,8 +30,8 @@ ArgParseResult::ArgParseResult(
     {
         std::string descs = "\"" + std::string(desc) + "\"";
         std::string defs = default_value.empty() ? "" : "default: " + std::string(default_value);
-        ss << "\t-" << std::setw(12) << std::left << flag
-            << std::setw(48) << std::left << descs
+        ss << "\t-" << std::setw(48) << std::left << flag
+            << std::setw(120) << std::left << descs
             << std::setw(16) << std::left << defs << "\n";
     }
     help = ss.str();

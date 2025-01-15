@@ -27,7 +27,7 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool as_dirty)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::fill_result_type
-__TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs)
+__TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool mark_dirty)
 {
     fill_result_type out;
     if constexpr (POL == CacheReplPolicy::PERFECT)
@@ -44,23 +44,12 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs)
         it = find_victim(s); 
         if (it->dirty)
         {
-            if (get_tracker_entry(it->address) >= 3*CRITICAL_WRITES/2)
-            {
-                out = CacheEntry(address, num_refs);  // Bypass
-                return out;
-            }
             increment_tracker(it->address);
         }
         out = *it;
     }
-    *it = CacheEntry(address, num_refs);
+    *it = CacheEntry(address, num_refs, mark_dirty);
     return out;
-    /*
-    auto out = __TEMPLATE_PARENT__::fill(address, num_refs);
-    if (out.has_value() && out.value().dirty)
-        increment_tracker(out.value().address);
-    return out;
-    */
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -73,8 +62,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
            bank_idx = get_bank_idx(s[0].address);
     size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
     // Note that all entries in this set also belong to the same bank:
-    bool is_critical = trackers_[ch][bank_idx] >= CRITICAL_WRITES
-                        || (trackers_[ch][bank_idx] - min_writes) >= CRITICAL_WRITES/2;
+    bool is_critical = (trackers_[ch][bank_idx] - min_writes) >= CRITICAL_WRITES/2;
 
     if constexpr (POL == CacheReplPolicy::LRU)
     {

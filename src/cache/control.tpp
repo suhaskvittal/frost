@@ -71,9 +71,7 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t addr, bool write)
         // Do fill.
         if constexpr (!IMPL::INVALIDATE_ON_HIT) 
         {
-            auto res = cache_->fill(addr, 1);
-            if (write)
-                cache_->mark(addr, true);
+            auto res = cache_->fill(addr, 1, write);
             if (res.has_value()) 
             {
                 CacheEntry& e = res.value();
@@ -194,14 +192,13 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
     size_t w_lru_pos;
 
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
-        std::tie(v, w) = cache_->fill_with_eager_writeback(address, refcnt);
+        std::tie(v, w) = cache_->fill_with_eager_writeback(address, refcnt, dirty);
     else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-        std::tie(v, w, w_lru_pos) = cache_->fill_with_next_line_writeback(address, dram_lowest_col_bit_index(), refcnt);
+        std::tie(v, w, w_lru_pos) = 
+            cache_->fill_with_next_line_writeback(address, dram_lowest_col_bit_index(), refcnt, dirty);
     else
-        v = cache_->fill(address, refcnt);
+        v = cache_->fill(address, refcnt, dirty);
 
-    if (dirty)
-        cache_->mark(address, true);
     if (!v.has_value()) 
         return;
     // Then we evicted some line.
@@ -284,10 +281,10 @@ __TEMPLATE_CLASS__::deadlock_find_inst(const inst_ptr inst)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::sig_dram_write_drain(size_t channel_id)
+__TEMPLATE_CLASS__::sig_dram_write_drain(size_t channel_id, size_t writes_per_bank)
 {
     if constexpr (is_bank_balanced_cache<CACHE>::value)
-        cache_->reset_write_counters(channel_id);
+        cache_->decrement_write_counters(channel_id, writes_per_bank);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -296,7 +293,7 @@ __TEMPLATE_CLASS__::sig_dram_write_drain(size_t channel_id)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::next_access()
 {
-    if (curr_mshr_size() == IMPL::NUM_MSHR)
+    if (curr_mshr_size() >= IMPL::NUM_MSHR)
         return;
 
     // Now try to issue some access
