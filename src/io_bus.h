@@ -50,7 +50,8 @@ public:
      * */
     out_queue_type outgoing_queue_;
 
-    uint64_t s_blocking_writes_ =0;
+    uint64_t s_reads_ =0;
+    uint64_t s_writes_ =0;
     /*
      * Queue sizes for each of the input queues.
      * */
@@ -67,22 +68,12 @@ private:
 
     pending_type pending_reads_;
     pending_type pending_writes_;
-
-    size_t writes_to_drain_ =0;
 public:
     IOBus(size_t rq_size, size_t wq_size, size_t pq_size);
     /*
-     * Returns the next available transaction (if one exists). If a
-     * predicate is provided, the selected transaction will only be
-     * returned if the predicate returns true.
+     * Returns the next available transaction (if one exists).
      * */
-    template <class PRED>
-    opt_trans_type get_next_incoming(PRED);
-
-    inline opt_trans_type get_next_incoming()
-    {
-        return get_next_incoming([] (const Transaction&) { return true; });
-    }
+    opt_trans_type get_next_available_request(void);
     /*
      * Pushes the given transaction onto the appropriate queue.
      * Returns `false` if there is no space.
@@ -105,64 +96,61 @@ public:
             return read_queue_.size() < rq_size_;
     }
 private:
-    bool deadlock_search_in_queue(std::string_view qname, const in_queue_type&, const inst_ptr);
+    template <TransactionType T>
+    opt_trans_type search_for_available_request(void);
 
-    inline void dec_pending(pending_type& p, uint64_t addr)
-    {
-        if ((--p[addr]) == 0)
-            p.erase(addr);
-    }
+    template <TransactionType T1, TransactionType T2, TransactionType T3>
+    opt_trans_type search_for_available_request_in_given_order(void);
+
+    bool deadlock_search_in_queue(std::string_view qname, const in_queue_type&, const inst_ptr);
 };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class PRED> typename IOBus::opt_trans_type
-IOBus::get_next_incoming(PRED pred)
+template <TransactionType T> typename IOBus::opt_trans_type
+IOBus::search_for_available_request()
 {
     opt_trans_type out;
-    // Need to drain writes if the queue is full, or we can also
-    // do it if there is nothing left to do.
-    bool write_drain_cond = write_queue_.size() == wq_size_
-                            || (read_queue_.empty() && prefetch_queue_.empty() && !write_queue_.empty());
-    if (writes_to_drain_ == 0 && write_drain_cond)
-        writes_to_drain_ = write_queue_.size();
 
-    bool access_done = false;
-    if (writes_to_drain_ > 0)
+    if constexpr (T == TransactionType::WRITE)
     {
+        if (write_queue_.empty())
+            return out;
         auto w_it = std::find_if(write_queue_.begin(), write_queue_.end(),
-                            [this, pred] (const Transaction& t)
+                            [this] (const Transaction& t)
                             {
-                                return this->pending_reads_.count(t.address) == 0 && pred(t);
+                                return this->pending_reads_.count(t.address) == 0;
                             });
         if (w_it != write_queue_.end())
         {
-            access_done = true;
-            out = *w_it;
-            
-            if (!read_queue_.empty() || !prefetch_queue_.empty())
-                ++s_blocking_writes_;
-
-            dec_pending(pending_writes_, w_it->address);
-            --writes_to_drain_;
+            out.emplace(std::move(*w_it));
             write_queue_.erase(w_it);
-        } 
-        else if (!write_queue_.empty())
-            writes_to_drain_ = 0;  // Cannot proceed with writes -- might as well switch back to reads.
-    }
-
-    if (!access_done)
-    {
-        in_queue_type& q = read_queue_.empty() ? prefetch_queue_ : read_queue_;
-        auto r_it = std::find_if(q.begin(), q.end(), pred);
-        if (r_it != q.end())
-        {
-            dec_pending(pending_reads_, r_it->address);
-            out = *r_it;
-            q.erase(r_it);
         }
     }
+    else
+    {
+        auto& q = (T == TransactionType::READ) ? read_queue_ : prefetch_queue_;
+        if (q.empty())
+            return out;
+        out.emplace(std::move(q.front()));
+        q.pop_front();
+    }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <TransactionType T1, TransactionType T2, TransactionType T3>
+inline typename IOBus::opt_trans_type
+IOBus::search_for_available_request_in_given_order()
+{
+    opt_trans_type out = search_for_available_request<T1>();
+    if (!out.has_value())
+        out = search_for_available_request<T2>();
+    if (!out.has_value())
+        out = search_for_available_request<T3>();
     return out;
 }
 

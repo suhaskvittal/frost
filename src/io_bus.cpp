@@ -25,9 +25,50 @@ IOBus::IOBus(size_t r, size_t w, size_t p)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+#define WRP_ORDER   TransactionType::WRITE, TransactionType::READ, TransactionType::PREFETCH
+#define RPW_ORDER   TransactionType::READ, TransactionType::PREFETCH, TransactionType::WRITE
+
+inline void
+dec_pending(IOBus::pending_type& p, uint64_t addr)
+{
+    if ((--p[addr]) == 0)
+        p.erase(addr);
+}
+
+typename IOBus::opt_trans_type
+IOBus::get_next_available_request()
+{
+    opt_trans_type out;
+
+    if (write_queue_.size() == wq_size_)
+        out = search_for_available_request_in_given_order<WRP_ORDER>();
+    else
+        out = search_for_available_request_in_given_order<RPW_ORDER>();
+
+    if (out.has_value())
+    {
+        const Transaction& trans = out.value();
+        if (trans_is_read(trans.type))
+            dec_pending(pending_reads_, trans.address);
+        else
+            dec_pending(pending_writes_, trans.address);
+    }
+    return out;
+}
+
+#undef WRP_ORDER
+#undef RPW_ORDER
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 bool
 IOBus::add_incoming(Transaction t)
 {
+    if (trans_is_read(t.type))
+        ++s_reads_;
+    else
+        ++s_writes_;
     // Check for forwarding.
     if (pending_writes_.count(t.address))
     {
@@ -86,8 +127,7 @@ IOBus::add_outgoing(Transaction t, uint64_t latency)
 bool
 IOBus::deadlock_find_inst(const inst_ptr inst)
 {
-    std::cerr << "\tio status: writes_to_drain = " << writes_to_drain_ 
-                << ", RQ = " << read_queue_.size()
+    std::cerr << "\tio status: RQ = " << read_queue_.size()
                 << ", WQ = " << write_queue_.size()
                 << ", PQ = " << prefetch_queue_.size()
                 << "\n\tpending_reads:\n";

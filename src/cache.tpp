@@ -43,7 +43,7 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
     else
     {
         update(*it);
-        it->dirty = write;
+        it->dirty |= write;
         return true;
     }
 }

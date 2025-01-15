@@ -15,6 +15,9 @@ void
 print_llc_stats(std::ostream& out)
 {
     out << BAR << "\n";
+    print_stat(out, "LLC", "READS", GL_LLC->io_->s_reads_);
+    print_stat(out, "LLC", "WRITES", GL_LLC->io_->s_writes_);
+
     print_stat(out, "LLC", "WRITEBACKS", GL_LLC->s_writebacks_);
     print_stat(out, "LLC", "WB_NEXT_LINE_IN_$", GL_LLC->s_dirty_victim_adj_lines_);
     print_stat(out, "LLC", "WB_NEXT_LINE_IN_$_DIRTY", GL_LLC->s_dirty_victim_adj_lines_also_dirty_);

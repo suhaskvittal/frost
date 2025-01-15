@@ -102,6 +102,12 @@ public:
      * */
     find_result_type find(uint64_t);
 
+    inline bool get_dirty_bit(uint64_t address)
+    {
+        auto [s_p, it] = find(address);
+        return it->dirty;
+    }
+
     virtual bool probe(uint64_t, bool write=false);
     virtual bool mark(uint64_t, bool as_dirty);
     /*

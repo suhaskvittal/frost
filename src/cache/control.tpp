@@ -297,7 +297,7 @@ __TEMPLATE_CLASS__::next_access()
         return;
 
     // Now try to issue some access
-    auto tt = io_->get_next_incoming();
+    auto tt = io_->get_next_available_request();
     if (!tt.has_value())
         return;
     Transaction& t = tt.value();
