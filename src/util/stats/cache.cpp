@@ -3,6 +3,7 @@
  *  date:   31 December 2024
  * */
 
+#include "globals.h"
 #include "memsys.h"
 
 #include "util/stats/cache.h"

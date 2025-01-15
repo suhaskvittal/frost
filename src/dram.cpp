@@ -88,9 +88,7 @@ DRAM::tick()
     }
 
     if (leap_ >= 1.0)
-    {
         leap_ -= 1.0;
-    } 
     else
     {
         ++GL_DRAM_CYCLE;

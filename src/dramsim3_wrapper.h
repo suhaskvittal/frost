@@ -1,36 +1,28 @@
 /*
  *  author: Suhas Vittal
- *  date:   4 December 2024
+ *  date:   15 January 2025
  * */
 
-#ifndef DRAM_h
-#define DRAM_h
+#ifndef DRAMSIM3_h
+#define DRAMSIM3_h
 
-#if defined(USE_DRAMSIM3)
-#include "dramsim3_wrapper.h"
-#else
+#include "transaction.h"
+#include "dramsim3.h"
 
-#include "dram/channel.h"
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-/*
- * Defined in `transaction.h`
- * */
-class Transaction;
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-/*
- * This class is merely a simple wrapper for managing multiple DRAM
- * channels.
- * */
-class DRAM
+
+extern std::string OPT_DRAMSIM3_CONFIG_FILE;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+struct DRAM
 {
-public:
-    /*
-     * IO mimics `IOBus` but really only implements `add_incoming`.
-     * */
     struct IO
     {
         DRAM* dram;
@@ -41,16 +33,18 @@ public:
     };
 
     using io_ptr = std::unique_ptr<IO>;
-    using channel_ptr = std::unique_ptr<DRAMChannel>;
-    using channel_array_t = std::array<channel_ptr, DRAM_CHANNELS>;
+    using memsys_ptr = std::unique_ptr<dramsim3::MemorySystem>;
 
-    io_ptr io_;
-    channel_array_t channels_;
+    io_ptr     io_;
+    memsys_ptr mem_;
 
     const double freq_ghz_;
 private:
-    double leap_ =0.0;
+    using trans_map_type = std::unordered_multimap<uint64_t, Transaction>;
 
+    trans_map_type pending_reads_;
+
+    double leap_ =0.0;
     const double clock_scale_;
 public:
     DRAM(double cpu_freq_ghz, double freq_ghz);
@@ -58,11 +52,10 @@ public:
     void warmup_access(uint64_t, bool) {}
 
     void tick(void);
-    void print_stats(std::ostream&);
+    void print_stats(std::ostream&) {}
 };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#endif
-#endif  // DRAM_h
+#endif  // DRAMSIM3_h

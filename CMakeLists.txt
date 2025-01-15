@@ -10,8 +10,6 @@ project(Frost VERSION 1.0)
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
         -Ofast
-        -flto=auto
-        -fwhole-program
         -fstrict-aliasing
         -march=native
         -Wno-deprecated
@@ -71,11 +69,6 @@ message("========================================================")
 ########################################################################
 
 set(MAIN_SIM_FILES
-    src/dram.cpp
-    src/dram/channel.cpp
-    src/dram/command.cpp
-    src/dram/scheduler.cpp
-    src/dram/state.cpp
     src/instruction.cpp
     src/io_bus.cpp
     src/os/free_list.cpp
@@ -86,6 +79,23 @@ set(MAIN_SIM_FILES
     _generated/${BUILD_ID}/sim.cpp
     # CORE MODEL FILES)
     ${CORE_MODEL_FILES})
+
+########################################################################
+########################################################################
+
+if (USE_DRAMSIM3)
+    message("linking against dramsim3")
+    add_subdirectory(DRAMsim3)
+    
+    set(MAIN_SIM_FILES ${MAIN_SIM_FILES} src/dramsim3_wrapper.cpp)
+else()
+    set(MAIN_SIM_FILES ${MAIN_SIM_FILES}
+                src/dram.cpp
+                src/dram/channel.cpp
+                src/dram/command.cpp
+                src/dram/scheduler.cpp
+                src/dram/state.cpp)
+endif()
 
 ########################################################################
 ########################################################################
@@ -103,6 +113,11 @@ target_link_libraries(sim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
 target_compile_definitions(sim PRIVATE ${CUSTOM_DEFINES})
 if (CMAKE_BUILD_TYPE MATCHES "Profile")
     target_link_libraries(sim PRIVATE -pg)
+endif()
+
+if (USE_DRAMSIM3)
+    target_link_libraries(sim PRIVATE dramsim3)
+    target_compile_definitions(sim PRIVATE USE_DRAMSIM3)
 endif()
 
 ########################################################################

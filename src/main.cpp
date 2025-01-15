@@ -39,6 +39,8 @@ double OPT_DRAM_LOW_WATERMARK;
 double OPT_DRAM_HIGH_WATERMARK;
 uint64_t OPT_DRAM_WRITE_SYNC_COUNT;
 
+std::string OPT_DRAMSIM3_CONFIG_FILE;
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -65,7 +67,9 @@ int main(int argc, char* argv[])
                 {"s", "Number of instructions to simulate", "10000000"},
                 {"dram_wm_low", "DRAM Low Watermark", "0.0"},
                 {"dram_wm_high", "DRAM High Watermark", "1.0"},
-                {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"}
+                {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"},
+                // Only if using DRAMsim3
+                {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
             });
     ARGS("trace", OPT_TRACE_FILE);
     ARGS("w", OPT_INST_WARMUP);
@@ -73,6 +77,8 @@ int main(int argc, char* argv[])
     ARGS("dram_wm_low", OPT_DRAM_LOW_WATERMARK);
     ARGS("dram_wm_high", OPT_DRAM_HIGH_WATERMARK);
     ARGS("dram_wsync_count", OPT_DRAM_WRITE_SYNC_COUNT);
+
+    ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 
     sim_init();
     print_config(std::cout);
