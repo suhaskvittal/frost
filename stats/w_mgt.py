@@ -27,7 +27,7 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017', 'mtf/gap']
+SUITES = ['mtf/spec2017']
 
 def create_csv_file_for_ipc(output_file: str, *builds):
     wr = open(f'data/{output_file}', 'w')
@@ -122,7 +122,7 @@ def get_folder(base: str, page_mode: str):
 ####################################################################
 ####################################################################
 # MOTIVATION
-for s in ['cp']:
+for s in ['op','cp']:
     builds = [get_folder('BASELINE', s), get_folder('NO_WRITES', s)]
     for p in [9, 11]:
         builds.append(get_folder(f'WRITE_QUEUE_{p}', s))
@@ -131,8 +131,8 @@ for s in ['cp']:
 ####################################################################
 ####################################################################
 # WRITE SYNCHRONIZATION SCAN
-for s in ['cp']:
-#   create_csv_file_for_ipc_scan(f'write_sync_{s}.ipc.csv', [1,2,4,8,16,128], get_folder('WRITE_SYNC', s), get_folder('BASELINE', s))
+for s in ['op','cp']:
+    create_csv_file_for_ipc_scan(f'write_sync_{s}.ipc.csv', [1,2,4,8,16,128], get_folder('WRITE_SYNC', s), get_folder('BASELINE', s))
 #   create_csv_file_for_ipc_scan(f'balanced_cache_{s}.ipc.csv', [1,2,4,8], get_folder('WRITE_SYNC_BALANCED_CACHE', s), get_folder('BASELINE', s))
     create_csv_file_for_ipc(f'main_results_1_{s}.ipc.csv',
                             get_folder('BASELINE', s), 

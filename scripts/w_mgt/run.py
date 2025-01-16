@@ -10,7 +10,7 @@ import time
 ############################################################
 ############################################################
 
-WHERE = 'PACE'
+WHERE = 'AMPERE'
 
 def get_name(suite, filename):
     left, right = 0, filename.find('.')
@@ -30,9 +30,11 @@ ISSUE_CNT = 0
 def issue_sbatch(call: str, out: str):
     global ISSUE_CNT
     ISSUE_CNT += 1
-#   os.system(f'sbatch -N1 --ntasks-per-node=1 --account=gts-mqureshi4-rg -t8:00:00 -o {out} --wrap=\"{call}\"')
-    print(f'{call} > {out} &')
-    os.system(f'{call} > {out} &\n')
+    if WHERE == 'PACE':
+        os.system(f'sbatch -N1 --ntasks-per-node=1 --account=gts-mqureshi4-rg -t8:00:00 -o {out} --wrap=\"{call}\"')
+    else:
+        print(f'source ~/.bashrc && {call} > {out} &')
+#   os.system(f'{call} > {out} &\n')
 
 ############################################################
 ############################################################
@@ -46,16 +48,17 @@ builds = []
 other_args = {}
 
 def append_all_defaults(base: str):
-    for (p, am) in [('CP','ZEN')]:
+    for (p, am) in [('OP', 'MOP4'), ('CP','ZEN')]:
         builds.append(f'{base}_{p}_{am}')
 
 which = argv[1]
 
 if which == 'all':
-    for w in ['baseline', 'no_writes', 'sync', 'bank-balanced-cache']:
+    for w in ['baseline', 'no_writes', 'motivation', 'sync-scan', 'sync', 'bank-balanced-cache']:
         os.system(f'python scripts/w_mgt/run.py {w}')
-        print('sleeping for 15 minutes...')
-        time.sleep(15*60)
+        if WHERE == 'PACE':
+            print('sleeping for 15 minutes...')
+            time.sleep(15*60)
     exit(0)
 
 if which == 'baseline':
@@ -84,7 +87,6 @@ for suite in ['mtf/spec2017', 'mtf/gap']:
         os.system(f'mkdir -p out/{suite}/{build}')
         for b in benchmarks:
             name = get_name(suite, b)
-            print(f'BENCHMARK {b}')
             base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {INST_WARMUP}'
             if which == 'watermark-scan':
                 for x in [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]:
@@ -94,13 +96,13 @@ for suite in ['mtf/spec2017', 'mtf/gap']:
                 for ii in [1, 2, 4, 8, 16, 128]:
                     cmd = f'{base_cmd} -dram_wsync_count {ii}'
                     issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
-                time.sleep(120)
+                if WHERE == 'PACE':
+                    time.sleep(120)
             elif which == 'bank-balanced-cache-scan':
                 for ii in [1, 2, 4, 8]:
                     cmd = f'{base_cmd} -dram_wsync_count {ii}'
                     issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
-                time.sleep(120)
+                if WHERE == 'PACE':
+                    time.sleep(120)
             else:
                 issue_sbatch(base_cmd, f'out/{suite}/{build}/{name}.out')
-
-print(f'issued {ISSUE_CNT} jobs')

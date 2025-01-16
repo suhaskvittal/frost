@@ -73,22 +73,28 @@ DRAMChannel::tick_mc()
         {
             // Check if this transaction has any hints.
             if (it->dram_write_hint_valid)
-            {
-                if (it->dram_write_hint_do_autopre)
-                {
-                    cmd_type = DRAMCommandType::WRITE_PRECHARGE;
-                    --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
-                    --tot_writes_to_drain_;
-                }
-                else
-                    cmd_type = DRAMCommandType::WRITE;
-            }
+                cmd_type = it->dram_write_hint_do_autopre 
+                            ? DRAMCommandType::WRITE_PRECHARGE : DRAMCommandType::WRITE;
             else
-            {
                 cmd_type = WRITE_CMD;
-                --writes_to_drain_per_bank_[ get_bank_idx(it->address) ];
-                --tot_writes_to_drain_;
+
+            if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
+            {
+                uint64_t address = it->address;
+                size_t bank_idx = get_bank_idx(address);
+                size_t row = dram_row(address);
+
+                bool is_row_buffer_hit = !cmd_is_autopre(cmd_type)
+                                         && std::any_of(std::next(it), q.end(),
+                                                [bank_idx, row] (const Transaction& t)
+                                                {
+                                                    return get_bank_idx(t.address) == bank_idx
+                                                            && dram_row(t.address) == row;
+                                                });
+                size_t write_cost = is_row_buffer_hit ? OPT_DRAM_WRITE_SYNC_HIT_COST : OPT_DRAM_WRITE_SYNC_MISS_COST;
+                clampsub(writes_to_drain_per_bank_[bank_idx], write_cost);
             }
+            --tot_writes_to_drain_;
         } 
         cmd_scheduler_->enqueue(std::move(*it), cmd_type);
         q.erase(it);
@@ -219,13 +225,13 @@ DRAMChannel::try_switch_to_write_mode()
                     writes_per_bank = std::max(static_cast<size_t>(1), mean_writes_per_bank);
                 }
                 else
-                {
                     writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
-                }
 
                 size_t max_writes = writes_per_bank * DRAM_TOT_BANKS_PER_CHANNEL;
+                size_t write_cost = (2*s_write_row_hits_ < s_writes_)
+                                    ? OPT_DRAM_WRITE_SYNC_MISS_COST : OPT_DRAM_WRITE_SYNC_HIT_COST;
 
-                writes_to_drain_per_bank_.fill(writes_per_bank);
+                writes_to_drain_per_bank_.fill(write_cost * writes_per_bank);
                 tot_writes_to_drain_ = std::min(num_writes, max_writes);
                 GL_LLC->sig_dram_write_drain(channel_id_, writes_per_bank);
             }
