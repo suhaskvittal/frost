@@ -1,5 +1,6 @@
 
 import os
+from sys import argv
 
 workloads = [
     'lbm_17',
@@ -9,7 +10,8 @@ workloads = [
     'cactuBSSN_17'
 ]
 
-args = ' '.join(argv[1:])
+suffix = argv[1]
+args = ' '.join(argv[2:])
 
 for w in workloads:
-    print(f'source ~/.bashrc && ./sim ../../TRACES/mtf/spec2017/{w}.mtf.gz -s 100000000 -w 0 {args} > {w}.out')
+    print(f'source ~/.bashrc && ./sim ../../TRACES/mtf/spec2017/{w}.mtf.gz -s 100000000 -w 0 {args} > {w}_{suffix}.out')

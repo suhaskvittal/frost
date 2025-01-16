@@ -112,8 +112,9 @@ public:
     bool can_accept(uint64_t address, bool is_write) const;
     bool has_no_pending_reads(void) const;
     bool has_no_pending_writes(void) const;
-    void enqueue(Transaction&&, DRAMCommandType);
+    size_t count_pending_reads(void) const;
 
+    void enqueue(Transaction&&, DRAMCommandType);
     cmd_output_type select_command(void);
 
     void print_queue_state(std::ostream&) const;

@@ -41,6 +41,7 @@ double OPT_DRAM_HIGH_WATERMARK;
 uint64_t OPT_DRAM_WRITE_SYNC_COUNT;
 uint64_t OPT_DRAM_WRITE_SYNC_HIT_COST;
 uint64_t OPT_DRAM_WRITE_SYNC_MISS_COST;
+uint64_t OPT_DRAM_WRITE_SYNC_READ_DIVISOR;
 
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
@@ -73,6 +74,7 @@ int main(int argc, char* argv[])
                 {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"},
                 {"dram_wsync_hit_cost", "Cost of a write hit", "1"},
                 {"dram_wsync_miss_cost", "Cost of a write miss", "3"},
+                {"dram_wsync_read_divisor", "Inverse of read value", "100"},
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
             });
@@ -84,6 +86,7 @@ int main(int argc, char* argv[])
     ARGS("dram_wsync_count", OPT_DRAM_WRITE_SYNC_COUNT);
     ARGS("dram_wsync_hit_cost", OPT_DRAM_WRITE_SYNC_HIT_COST);
     ARGS("dram_wsync_miss_cost", OPT_DRAM_WRITE_SYNC_MISS_COST);
+    ARGS("dram_wsync_read_divisor", OPT_DRAM_WRITE_SYNC_READ_DIVISOR);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 

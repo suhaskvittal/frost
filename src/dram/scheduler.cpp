@@ -53,6 +53,17 @@ CommandScheduler::has_no_pending_writes() const
                 });
 }
 
+size_t
+CommandScheduler::count_pending_reads() const
+{
+    return std::transform_reduce(cmd_queues_.begin(), cmd_queues_.end(), static_cast<size_t>(0),
+                            std::plus<size_t>{},
+                            [] (const auto& q)
+                            {
+                                return q.num_reads();
+                            });
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
