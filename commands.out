@@ -1,672 +1,84 @@
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/povray.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/mcf.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/namd.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/fotonik3d.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/cam4.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/deepsjeng.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/imagick.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/wrf.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/parest.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/leela.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/lbm.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/nab.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/blender.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/cactuBSSN.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/perlbench.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/x264.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/xz.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/gcc.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/roms.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/xalancbmk.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/omnetpp.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_OP_MOP4/bwaves.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/povray.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/mcf.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/namd.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/fotonik3d.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/cam4.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/deepsjeng.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/imagick.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/wrf.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/parest.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/leela.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/lbm.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/nab.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/blender.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/cactuBSSN.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/perlbench.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/x264.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/xz.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/gcc.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/roms.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/xalancbmk.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/omnetpp.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/BASELINE_CP_ZEN/bwaves.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_OP_MOP4/cc.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_OP_MOP4/bc.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_OP_MOP4/sssp.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_OP_MOP4/tc.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_OP_MOP4/pr.out &
-source ~/.bashrc && ./builds/BASELINE_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_OP_MOP4/bfs.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_CP_ZEN/cc.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_CP_ZEN/bc.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_CP_ZEN/sssp.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_CP_ZEN/tc.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_CP_ZEN/pr.out &
-source ~/.bashrc && ./builds/BASELINE_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/BASELINE_CP_ZEN/bfs.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/povray.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/mcf.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/namd.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/fotonik3d.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/cam4.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/deepsjeng.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/imagick.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/wrf.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/parest.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/leela.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/lbm.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/nab.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/blender.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/cactuBSSN.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/perlbench.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/x264.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/xz.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/gcc.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/roms.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/xalancbmk.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/omnetpp.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_OP_MOP4/bwaves.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/povray.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/mcf.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/namd.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/fotonik3d.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/cam4.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/deepsjeng.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/imagick.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/wrf.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/parest.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/leela.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/lbm.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/nab.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/blender.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/cactuBSSN.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/perlbench.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/x264.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/xz.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/gcc.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/roms.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/xalancbmk.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/omnetpp.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/NO_WRITES_CP_ZEN/bwaves.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_OP_MOP4/cc.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_OP_MOP4/bc.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_OP_MOP4/sssp.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_OP_MOP4/tc.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_OP_MOP4/pr.out &
-source ~/.bashrc && ./builds/NO_WRITES_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_OP_MOP4/bfs.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_CP_ZEN/cc.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_CP_ZEN/bc.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_CP_ZEN/sssp.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_CP_ZEN/tc.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_CP_ZEN/pr.out &
-source ~/.bashrc && ./builds/NO_WRITES_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/NO_WRITES_CP_ZEN/bfs.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/povray.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/mcf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/namd.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/cam4.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/imagick.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/wrf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/parest.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/leela.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/lbm.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/nab.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/blender.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/x264.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/xz.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/gcc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/roms.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_OP_MOP4/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/povray.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/mcf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/namd.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/cam4.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/imagick.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/wrf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/parest.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/leela.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/lbm.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/nab.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/blender.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/x264.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/xz.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/gcc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/roms.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_9_CP_ZEN/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/povray.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/mcf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/namd.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/cam4.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/imagick.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/wrf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/parest.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/leela.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/lbm.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/nab.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/blender.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/x264.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/xz.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/gcc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/roms.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_OP_MOP4/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/povray.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/mcf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/namd.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/cam4.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/imagick.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/wrf.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/parest.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/leela.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/lbm.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/nab.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/blender.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/x264.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/xz.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/gcc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/roms.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_QUEUE_11_CP_ZEN/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_OP_MOP4/cc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_OP_MOP4/bc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_OP_MOP4/sssp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_OP_MOP4/tc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_OP_MOP4/pr.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_OP_MOP4/bfs.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_CP_ZEN/cc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_CP_ZEN/bc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_CP_ZEN/sssp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_CP_ZEN/tc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_CP_ZEN/pr.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_9_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_9_CP_ZEN/bfs.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_OP_MOP4/cc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_OP_MOP4/bc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_OP_MOP4/sssp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_OP_MOP4/tc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_OP_MOP4/pr.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_OP_MOP4/bfs.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_CP_ZEN/cc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_CP_ZEN/bc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_CP_ZEN/sssp.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_CP_ZEN/tc.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_CP_ZEN/pr.out &
-source ~/.bashrc && ./builds/WRITE_QUEUE_11_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_QUEUE_11_CP_ZEN/bfs.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 1 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs_scan1.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 2 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs_scan2.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 4 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs_scan4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 8 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs_scan8.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 16 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs_scan16.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_count 128 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs_scan128.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/povray.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/mcf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/namd.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cam4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/imagick.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/wrf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/parest.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/leela.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/lbm.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/nab.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/blender.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/x264.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xz.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/gcc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/roms.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_CP_ZEN/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_CP_ZEN/cc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_CP_ZEN/sssp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_CP_ZEN/tc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_CP_ZEN/pr.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_CP_ZEN/bfs.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/povray.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/mcf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/namd.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/cam4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/imagick.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/wrf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/parest.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/leela.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/lbm.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/nab.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/blender.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/x264.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/xz.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/gcc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/roms.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/povray.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/mcf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/namd.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/fotonik3d.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/cam4.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/deepsjeng.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/imagick.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/wrf.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/parest.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/leela.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/lbm.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/nab.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/blender.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/cactuBSSN.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/perlbench.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/x264.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/xz.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/gcc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/roms.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/xalancbmk.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/omnetpp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 > out/mtf/spec2017/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/bwaves.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/cc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/bc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sssp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/tc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/pr.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_OP_MOP4/bfs.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/cc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/bc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sssp.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/tc.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/pr.out &
-source ~/.bashrc && ./builds/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 > out/mtf/gap/WRITE_SYNC_BALANCED_CACHE_CP_ZEN/bfs.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/povray_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/mcf_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/namd_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/fotonik3d_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cam4_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/deepsjeng_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/imagick_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/wrf_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/parest_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/leela_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/lbm_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/nab_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/blender_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/cactuBSSN_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/perlbench_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/x264_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xz_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/gcc_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/roms_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/xalancbmk_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/omnetpp_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/spec2017/WRITE_SYNC_OP_MOP4/bwaves_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/cc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/gap/WRITE_SYNC_OP_MOP4/cc_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bc_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/sssp.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/gap/WRITE_SYNC_OP_MOP4/sssp_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/tc.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/gap/WRITE_SYNC_OP_MOP4/tc_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/pr.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/gap/WRITE_SYNC_OP_MOP4/pr_scan2.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 0 -dram_wsync_miss_cost 1 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan0.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 2 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan1.out &
+source ~/.bashrc && ./builds/WRITE_SYNC_OP_MOP4/sim TRACES/mtf/gap/bfs.mtf.gz -s 100000000 -w 0 -dram_wsync_hit_cost 1 -dram_wsync_miss_cost 3 > out/mtf/gap/WRITE_SYNC_OP_MOP4/bfs_scan2.out &

@@ -74,6 +74,8 @@ elif which == 'sync' or which == 'sync-scan':
     append_all_defaults('WRITE_SYNC')
 elif which == 'bank-balanced-cache' or which == 'bank-balanced-cache-scan':
     append_all_defaults('WRITE_SYNC_BALANCED_CACHE')
+elif which == 'cost-scan':
+    builds.append('WRITE_SYNC_OP_MOP4')
 else:
     print('Unknown experiment!')
     exit(1)
@@ -101,6 +103,12 @@ for suite in ['mtf/spec2017', 'mtf/gap']:
             elif which == 'bank-balanced-cache-scan':
                 for ii in [1, 2, 4, 8]:
                     cmd = f'{base_cmd} -dram_wsync_count {ii}'
+                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
+                if WHERE == 'PACE':
+                    time.sleep(120)
+            elif which == 'cost-scan':
+                for (ii,(hit,miss)) in enumerate([(0,1), (1,2), (1,3)]):
+                    cmd = f'{base_cmd} -dram_wsync_hit_cost {hit} -dram_wsync_miss_cost {miss}'
                     issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
                 if WHERE == 'PACE':
                     time.sleep(120)

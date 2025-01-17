@@ -227,9 +227,6 @@ DRAMChannel::try_switch_to_write_mode()
                 else
                     writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
 
-                writes_per_bank -= read_queue_.size()
-                                    / (DRAM_TOT_BANKS_PER_CHANNEL*OPT_DRAM_WRITE_SYNC_READ_DIVISOR);
-
                 size_t max_writes = writes_per_bank * DRAM_TOT_BANKS_PER_CHANNEL;
                 size_t write_cost = (2*s_write_row_hits_ < s_writes_)
                                     ? OPT_DRAM_WRITE_SYNC_MISS_COST : OPT_DRAM_WRITE_SYNC_HIT_COST;
@@ -246,6 +243,7 @@ DRAMChannel::try_switch_to_write_mode()
                 GL_LLC->sig_dram_write_drain(channel_id_, num_writes / DRAM_TOT_BANKS_PER_CHANNEL);
             }
             ++s_num_drains_;
+            s_tot_read_occu_at_drain_ += read_queue_.size();
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)
             std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL> write_cnts{};

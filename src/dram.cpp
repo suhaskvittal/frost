@@ -126,6 +126,7 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(tot_read_latency)
     CREATE_VEC_STAT(tot_write_latency)
     CREATE_VEC_STAT(num_drains)
+    CREATE_VEC_STAT(tot_read_occu_at_drain)
 
     CREATE_VEC_STAT_SCHED(write_bursts)
     CREATE_VEC_STAT_SCHED(max_writes_in_burst)
@@ -135,7 +136,8 @@ DRAM::print_stats(std::ostream& out)
                                    wr_rbhr = vec_elwise_mean(write_row_hits, writes),
                                    read_latency = vec_elwise_mean(tot_read_latency, reads),
                                    write_latency = vec_elwise_mean(tot_write_latency, writes),
-                                   mean_writes_in_burst = vec_elwise_mean(writes, write_bursts);
+                                   mean_writes_in_burst = vec_elwise_mean(writes, write_bursts),
+                                   mean_read_occu_at_drain = vec_elwise_mean(tot_read_occu_at_drain, num_drains);
 
     out << BAR << "\n";
 
@@ -150,6 +152,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "READ_LATENCY", read_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", num_drains);
+    print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain);
     
     print_vecstat(out, "DRAM", "SCHED_WRITE_BURST", write_bursts);
     print_vecstat(out, "DRAM", "SCHED_MEAN_WRITES_PER_BURST", mean_writes_in_burst, VecAccMode::HMEAN);
