@@ -59,7 +59,7 @@ __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
     size_t ch = dram_channel(s[0].address),
-           bank_idx = get_bank_idx(s[0].address);
+           bank_idx = dram_bank_idx(s[0].address);
     size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
     // Note that all entries in this set also belong to the same bank:
     bool is_critical = (trackers_[ch][bank_idx] - min_writes) >= CRITICAL_WRITES/2;
@@ -120,7 +120,7 @@ __TEMPLATE_HEADER__ inline size_t
 __TEMPLATE_CLASS__::get_tracker_entry(uint64_t address)
 {
     size_t ch = dram_channel(address);
-    size_t idx = get_bank_idx(address);
+    size_t idx = dram_bank_idx(address);
     return trackers_[ch][idx];
 }
 
@@ -128,7 +128,7 @@ __TEMPLATE_HEADER__ inline void
 __TEMPLATE_CLASS__::increment_tracker(uint64_t address)
 {
     size_t ch = dram_channel(address);
-    size_t idx = get_bank_idx(address);
+    size_t idx = dram_bank_idx(address);
     ++trackers_[ch][idx];
 }
 

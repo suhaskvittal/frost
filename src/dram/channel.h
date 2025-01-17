@@ -14,6 +14,7 @@
 #include "dram/state.h"
 #include "io_bus.h"
 #include "transaction.h"
+#include "util/numerics.h"
 
 #include <array>
 #include <deque>
@@ -25,10 +26,26 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+struct RWQueueEntry
+{
+    Transaction trans;
+    bool is_row_buffer_hit;
+
+    uint64_t cycle_entered_queue;
+
+    RWQueueEntry(Transaction t)
+        :trans(t),
+        cycle_entered_queue(GL_DRAM_CYCLE)
+    {}
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 class DRAMChannel
 {
 public:
-    using in_queue_type = IOBus::in_queue_type;
+    using in_queue_type = std::deque<RWQueueEntry>;
     using pending_type = IOBus::pending_type;
     using out_queue_type = IOBus::out_queue_type;
 
@@ -65,7 +82,6 @@ public:
     const size_t high_watermark_;
 private:
     using write_drain_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
-    using cmd_sch_ptr = std::unique_ptr<CommandScheduler>;
     /* 
      * Custom IO implementation
      * */
@@ -81,7 +97,6 @@ private:
     size_t tot_writes_to_drain_ =0;
 
     DRAMChannelState  state_{};
-    cmd_sch_ptr cmd_scheduler_;
     /*
      * Variables for tracking WR+W sequences:
      * */
@@ -101,20 +116,22 @@ private:
     std::stringstream tmp_logger_;
 public:
     DRAMChannel(size_t channel_id, double freq_ghz);
-    
-    void tick_mc(void);
-    void tick_dram(void);
+
+    void tick(void);
 
     bool add_incoming(Transaction);
 
     inline size_t read_queue_size(void) const { return read_queue_.size(); }
     inline size_t write_queue_size(void) const { return write_queue_.size(); }
 private:
+    using cmd_output_type = std::tuple<DRAMCommand, std::optional<RWQueueEntry>>;
+
+    cmd_output_type select_ready_command(void);
     /*
      * Updates `writes_to_drain_` depending on the size of the write queue.
      * */
     void try_switch_to_write_mode(void);
-    void issue_next_cmd(void);
+    void issue_next_command(void);
 
     void update_wrw_state(const DRAMCommand&);
     /*
@@ -122,6 +139,14 @@ private:
      * and updates the state of the logger in this mode.
      * */
     void log_write_read_write_sequence(const DRAMCommand&);
+
+    inline DRAMBankState& get_bank_ref_from_idx(size_t ii)
+    {
+        size_t i = fast_mod<DRAM_BANKS>(ii),
+               j = fast_mod<DRAM_BANKGROUPS>(ii >> numeric_traits<DRAM_BANKS>::log2),
+               k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
+        return state_[k][j][i];
+    }
 
     friend class DRAM;
 };

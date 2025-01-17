@@ -42,14 +42,14 @@ constexpr size_t dram_lowest_col_bit_index(void);
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline size_t get_bank_idx(uint64_t addr)
+inline size_t dram_bank_idx(uint64_t addr)
 {
     return dram_bank(addr) 
             + dram_bankgroup(addr)*DRAM_BANKS 
             + dram_rank(addr)*DRAM_BANKGROUPS*DRAM_BANKS;
 }
 
-inline size_t get_bankgroup_idx(uint64_t addr)
+inline size_t dram_bankgroup_idx(uint64_t addr)
 {
     return dram_bankgroup(addr) + dram_rank(addr)*DRAM_BANKGROUPS;
 }

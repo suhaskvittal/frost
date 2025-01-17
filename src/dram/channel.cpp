@@ -41,73 +41,13 @@ DRAMChannel::DRAMChannel(size_t channel_id, double freq_ghz)
 #else
     dram_logger_()
 #endif
-{
-    cmd_scheduler_ = cmd_sch_ptr(new CommandScheduler(state_));
-}
+{}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 void
-DRAMChannel::tick_mc()
-{
-    try_switch_to_write_mode();
-
-    auto& q = tot_writes_to_drain_ ? write_queue_ : read_queue_;
-    auto it = std::find_if(q.begin(), q.end(),
-                    [this, write_mode=(tot_writes_to_drain_>0)] (const Transaction& t)
-                    {
-                        if (write_mode)
-                        {
-                            if (this->pending_reads_.count(t.address))
-                                return false;
-                            if (this->writes_to_drain_per_bank_[ get_bank_idx(t.address) ] == 0)
-                                return false;
-                        }
-                        return this->cmd_scheduler_->can_accept(t.address, write_mode);
-                    });
-    if (it != q.end())
-    {
-        DRAMCommandType cmd_type = READ_CMD;
-        if (tot_writes_to_drain_ > 0)
-        {
-            // Check if this transaction has any hints.
-            if (it->dram_write_hint_valid)
-                cmd_type = it->dram_write_hint_do_autopre 
-                            ? DRAMCommandType::WRITE_PRECHARGE : DRAMCommandType::WRITE;
-            else
-                cmd_type = WRITE_CMD;
-
-            if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
-            {
-                uint64_t address = it->address;
-                size_t bank_idx = get_bank_idx(address);
-                size_t row = dram_row(address);
-
-                bool is_row_buffer_hit = !cmd_is_autopre(cmd_type)
-                                         && std::any_of(std::next(it), q.end(),
-                                                [bank_idx, row] (const Transaction& t)
-                                                {
-                                                    return get_bank_idx(t.address) == bank_idx
-                                                            && dram_row(t.address) == row;
-                                                });
-                size_t write_cost = is_row_buffer_hit ? OPT_DRAM_WRITE_SYNC_HIT_COST : OPT_DRAM_WRITE_SYNC_MISS_COST;
-                clampsub(writes_to_drain_per_bank_[bank_idx], write_cost);
-            }
-            --tot_writes_to_drain_;
-        } 
-        cmd_scheduler_->enqueue(std::move(*it), cmd_type);
-        q.erase(it);
-    }
-    else
-    {
-        tot_writes_to_drain_ = 0;
-        writes_to_drain_per_bank_.fill(0);
-    }
-}
-
-void
-DRAMChannel::tick_dram()
+DRAMChannel::tick()
 {
 #if defined(DRAM_ENABLE_LOGGER)
     tmp_logger_.str("");
@@ -147,7 +87,10 @@ DRAMChannel::tick_dram()
     if (ra_it != state_.end())
         try_and_issue_ref(*ra_it, s_refreshes_, s_precharges_);
     else
-        issue_next_cmd();
+    {
+        try_switch_to_write_mode();
+        issue_next_command();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -159,7 +102,7 @@ trans_add(DRAMChannel::in_queue_type& q, DRAMChannel::pending_type& p, Transacti
     if (q.size() >= qsize)
         return false;
     ++p[t.address];
-    q.push_back(std::move(t));
+    q.emplace_back(std::move(t));
     return true;
 }
 
@@ -177,21 +120,89 @@ DRAMChannel::add_incoming(Transaction t)
     if (trans_is_read(t.type) && pending_reads_.count(t.address))
     {
         auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
-                            [addr = t.address] (const Transaction& x)
+                            [addr = t.address] (const auto& x)
                             {
-                                return x.address == addr;
+                                return x.trans.address == addr;
                             });
-        if (rd_it != read_queue_.end())
-        {
-            rd_it->merge(t);
-            return true;
-        }
+        rd_it->trans.merge(t);
+        return true;
     }
     // Add to requisite queue
     if (trans_is_read(t.type))
         return trans_add(read_queue_, pending_reads_, std::move(t), DRAM_RQ_SIZE);
     else
         return trans_add(write_queue_, pending_writes_, std::move(t), DRAM_WQ_SIZE);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+typename DRAMChannel::cmd_output_type
+DRAMChannel::select_ready_command()
+{
+    auto& q = (tot_writes_to_drain_ > 0) ? write_queue_ : read_queue_;
+        
+    DRAMCommand ready_cmd;
+    std::optional<RWQueueEntry> q_entry;
+
+    SchedulerState algo_state{};
+    algo_state.is_write_mode = tot_writes_to_drain_ > 0;
+
+    bool any_write_is_possible = false;
+    for (auto q_it = q.begin(); q_it != q.end(); q_it++)
+    {
+        size_t bank_idx = dram_bank_idx(q_it->trans.address);
+        size_t row = dram_row(q_it->trans.address);
+
+        // If this is a write, check if it violates R->W dependency.
+        if (tot_writes_to_drain_ > 0)
+        {
+            if (pending_reads_.count(q_it->trans.address))
+            {
+                // Exit write mode
+                tot_writes_to_drain_ = 0;
+                writes_to_drain_per_bank_.fill(0);
+                break;
+            }
+            if (writes_to_drain_per_bank_[bank_idx] == 0)
+                continue;
+        }
+        any_write_is_possible = true;
+        // Otherwise, compute the ready command:
+        const auto& b = get_bank_ref_from_idx(bank_idx);
+        DRAMCommandType type = DRAMCommandType::INVALID;
+        if (b.open_row.has_value())
+        {
+            if (b.open_row == row)
+                type = scheduler_get_cas_command(q_it, q, algo_state, b);
+            else if (scheduler_allow_demand_precharge(q_it, q, algo_state, b))
+                type = DRAMCommandType::PRECHARGE;
+        }
+        else
+            type = DRAMCommandType::ACTIVATE;
+        ready_cmd = DRAMCommand(q_it->trans.address, type);
+
+        if (!cmd_is_invalid(type) && cmd_is_issuable(state_, ready_cmd))
+        {
+            if (cmd_is_cas(type))
+            {
+                q_it->is_row_buffer_hit = b.next_cas_is_row_buffer_hit;
+                q_entry.emplace(std::move(*q_it));
+                q.erase(q_it);
+            }
+            break;
+        }
+        else
+            ready_cmd.type = DRAMCommandType::INVALID;
+        algo_state.is_first[bank_idx] = false;
+    }
+
+    if (!any_write_is_possible)
+    {
+        tot_writes_to_drain_ = 0;
+        writes_to_drain_per_bank_.fill(0);
+    }
+    return std::make_tuple(ready_cmd, q_entry);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -205,25 +216,21 @@ DRAMChannel::try_switch_to_write_mode()
 #if defined(DRAM_USE_WATERMARKS_TO_DRAIN)
         bool drain_cond_1 = write_queue_.size() >= high_watermark_;
         bool drain_cond_2 = write_queue_.size() > low_watermark_
-                                && read_queue_.empty()
-                                && cmd_scheduler_->has_no_pending_reads();
+                                && read_queue_.empty();
 #else
         bool drain_cond_1 = write_queue_.size() >= DRAM_WQ_SIZE,
              drain_cond_2 = read_queue_.empty()
-                            && write_queue_.size() > 8
-                            && cmd_scheduler_->has_no_pending_reads();
+                            && write_queue_.size() > 8;
 #endif
         if (drain_cond_1 || drain_cond_2)
         {
             size_t num_writes = write_queue_.size() - low_watermark_;
-            size_t writes_per_bank;
+            size_t writes_per_bank = num_writes / DRAM_TOT_BANKS_PER_CHANNEL;
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
+                // Reocompute `writes_per_bank` accordingly:
                 if (OPT_DRAM_WRITE_SYNC_COUNT == 0)
-                {
-                    size_t mean_writes_per_bank = num_writes / DRAM_TOT_BANKS_PER_CHANNEL;
-                    writes_per_bank = std::max(static_cast<size_t>(1), mean_writes_per_bank);
-                }
+                    writes_per_bank = std::max(static_cast<size_t>(1), writes_per_bank);
                 else
                     writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
 
@@ -233,23 +240,22 @@ DRAMChannel::try_switch_to_write_mode()
 
                 writes_to_drain_per_bank_.fill(write_cost * writes_per_bank);
                 tot_writes_to_drain_ = std::min(num_writes, max_writes);
-                GL_LLC->sig_dram_write_drain(channel_id_, writes_per_bank);
             }
             else
             {
                 writes_to_drain_per_bank_.fill(num_writes);
                 tot_writes_to_drain_ = num_writes;
-
-                GL_LLC->sig_dram_write_drain(channel_id_, num_writes / DRAM_TOT_BANKS_PER_CHANNEL);
             }
             ++s_num_drains_;
             s_tot_read_occu_at_drain_ += read_queue_.size();
 
+            GL_LLC->sig_dram_write_drain(channel_id_, writes_per_bank);
+
 #if defined(DRAM_TRACK_ADVANCED_STATS)
             std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL> write_cnts{};
-            for (const auto& t : write_queue_)
+            for (const auto& e : write_queue_)
             {
-                size_t bank_idx = get_bank_idx(t.address);
+                size_t bank_idx = dram_bank_idx(e.trans.address);
                 ++write_cnts[bank_idx];
             }
             double mean_writes = static_cast<double>(write_queue_.size()) 
@@ -279,45 +285,45 @@ dec_pending(DRAMChannel::pending_type& m, uint64_t k)
 }
 
 void
-DRAMChannel::issue_next_cmd()
+DRAMChannel::issue_next_command()
 {
-#if defined(DRAM_ENABLE_LOGGER)
-    cmd_scheduler_->print_queue_state(tmp_logger_);
-#endif
-
-    auto [ready_cmd, opt_q_entry] = cmd_scheduler_->select_command();
+    auto [ready_cmd, opt_q_entry] = select_ready_command();
     if (cmd_is_invalid(ready_cmd.type))
         return;
     update_dram_state(state_, ready_cmd);
     if (cmd_is_cas(ready_cmd.type))
     {
-        auto q_entry = opt_q_entry.value();
+        auto& q_entry = opt_q_entry.value();
         Transaction& trans = q_entry.trans;
 
-        uint64_t latency = GL_DRAM_CYCLE - q_entry.cycle_entered_queue;
-        if (cmd_is_read(ready_cmd.type))
-        {
-            dec_pending(pending_reads_, trans.address);
-            ++s_reads_;
-            if (q_entry.is_row_buffer_hit)
-                ++s_read_row_hits_;
-            if (cmd_is_autopre(ready_cmd.type))
-                ++s_precharges_;
-            s_tot_read_latency_ += latency;
-            // Mark as outgoing.
+        bool is_read = cmd_is_read(ready_cmd.type);
+        auto& pending   = is_read ? pending_reads_      : pending_writes_;
+        auto& count     = is_read ? s_reads_            : s_writes_;
+        auto& row_hits  = is_read ? s_read_row_hits_    : s_write_row_hits_;
+        auto& latency   = is_read ? s_tot_read_latency_ : s_tot_write_latency_; 
+
+        dec_pending(pending, trans.address);
+        ++count;
+        if (q_entry.is_row_buffer_hit)
+            ++row_hits;
+        if (cmd_is_autopre(ready_cmd.type))
+            ++s_precharges_;
+        latency += GL_DRAM_CYCLE - q_entry.cycle_entered_queue;
+
+        if (is_read)
             outgoing_queue_.emplace(std::move(trans), GL_DRAM_CYCLE + CL);
-        } 
         else
         {
-            dec_pending(pending_writes_, trans.address);
-            // Update stats.
-            ++s_writes_;
-            if (q_entry.is_row_buffer_hit)
-                ++s_write_row_hits_;
-            if (cmd_is_autopre(ready_cmd.type))
-                ++s_precharges_;
-            s_tot_write_latency_ += latency;
-        } 
+            --tot_writes_to_drain_;
+            
+            if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
+            {
+                size_t bank_idx = dram_bank_idx(trans.address);
+                size_t write_cost = q_entry.is_row_buffer_hit ? OPT_DRAM_WRITE_SYNC_HIT_COST 
+                                                                  : OPT_DRAM_WRITE_SYNC_MISS_COST;
+                clampsub(writes_to_drain_per_bank_[bank_idx], write_cost);
+            }
+        }
     }
     else 
     {
