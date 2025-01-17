@@ -112,6 +112,7 @@ public:
 private:
     using mshr_type = std::unordered_multimap<uint64_t, MSHREntry>;
     using wb_queue_type = std::deque<WBQueueEntry>;
+    using eager_queue_type = std::deque<uint64_t>;
 
     next_ptr& next_;
     /*
@@ -125,8 +126,6 @@ private:
      * Specific implementations that are nonstandard:
      * */
     constexpr static size_t EAGER_QUEUE_SIZE = 32;
-
-    using eager_queue_type = std::deque<uint64_t>;
 
     eager_queue_type eager_queue_;
 

@@ -41,7 +41,12 @@ DRAMChannel::DRAMChannel(size_t channel_id, double freq_ghz)
 #else
     dram_logger_()
 #endif
-{}
+{
+    read_queue_.reserve(DRAM_RQ_SIZE);
+    write_queue_.reserve(DRAM_WQ_SIZE);
+    pending_reads_.reserve(DRAM_RQ_SIZE);
+    pending_writes_.reserve(DRAM_WQ_SIZE);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -64,33 +69,23 @@ DRAMChannel::tick()
                                         });
 
     tmp_logger_ 
-        << "========================= DRAM CYCLE " << GL_DRAM_CYCLE << " ===============================\n"
-        << "channel state: FAW = {";
-
-    for (uint64_t c : state_.faw)
-        tmp_logger_ << " " << ((c+tFAW) - GL_DRAM_CYCLE);
+        << "========================= DRAM CYCLE " << GL_DRAM_CYCLE << " ===============================\n";
 
     tmp_logger_ << " }, in REF: " << (any_ranks_in_refresh ? "y" : "n")
                       << ", in tRFC post REF: " << (any_ranks_in_trfc ? "y" : "n")
                       << "\n";
 #endif
     // Update FAW:
-    while (!state_.faw.empty() && GL_DRAM_CYCLE >= state_.faw.front() + tFAW)
-        state_.faw.pop_front();
-
-    // Handle refresh if any rank needs it.
-    auto ra_it = std::find_if(state_.begin(), state_.end(), 
-                        [] (const auto& ra)
-                        {
-                            return GL_DRAM_CYCLE >= ra.next_ref_cycle;
-                        });
-    if (ra_it != state_.end())
-        try_and_issue_ref(*ra_it, s_refreshes_, s_precharges_);
-    else
+    for (auto& ra : state_)
     {
-        try_switch_to_write_mode();
-        issue_next_command();
+        while (!ra.faw.empty() && GL_DRAM_CYCLE >= ra.faw.front() + tFAW)
+            ra.faw.pop_front();
+        if (GL_DRAM_CYCLE >= ra.next_ref_cycle)
+            try_and_issue_ref(ra, s_refreshes_, s_precharges_);
     }
+
+    try_switch_to_write_mode();
+    issue_next_command();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -113,7 +108,7 @@ DRAMChannel::add_incoming(Transaction t)
     if (pending_writes_.count(t.address))
     {
         if (trans_is_read(t.type))
-            outgoing_queue_.emplace(t, GL_DRAM_CYCLE);
+            outgoing_queue_.insert({ GL_DRAM_CYCLE, std::move(t) });
         return true;
     }
     // Check for common reads.
@@ -311,7 +306,7 @@ DRAMChannel::issue_next_command()
         latency += GL_DRAM_CYCLE - q_entry.cycle_entered_queue;
 
         if (is_read)
-            outgoing_queue_.emplace(std::move(trans), GL_DRAM_CYCLE + CL);
+            outgoing_queue_.insert({ GL_DRAM_CYCLE + CL, std::move(trans) });
         else
         {
             --tot_writes_to_drain_;

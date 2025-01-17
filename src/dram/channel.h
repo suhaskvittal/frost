@@ -17,7 +17,7 @@
 #include "util/numerics.h"
 
 #include <array>
-#include <deque>
+#include <vector>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -45,7 +45,7 @@ struct RWQueueEntry
 class DRAMChannel
 {
 public:
-    using in_queue_type = std::deque<RWQueueEntry>;
+    using in_queue_type = std::vector<RWQueueEntry>;
     using pending_type = IOBus::pending_type;
     using out_queue_type = IOBus::out_queue_type;
 

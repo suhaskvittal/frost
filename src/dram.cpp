@@ -74,13 +74,12 @@ DRAM::tick()
         for (channel_ptr& ch : channels_)
         {
             auto& q = ch->outgoing_queue_;
-            while (!q.empty())
+            if (q.count(GL_DRAM_CYCLE) > 0)
             {
-                const auto& [t, cycle_done] = q.top();
-                if (GL_DRAM_CYCLE < cycle_done)
-                    break;
-                GL_LLC->mark_load_as_done(t.address);
-                q.pop();
+                auto [begin, end] = q.equal_range(GL_DRAM_CYCLE);
+                for (auto it = begin; it != end; it++)
+                    GL_LLC->mark_load_as_done(it->second.address);
+                q.erase(begin, end);
             }
             ch->tick();
         }
@@ -136,7 +135,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "READ_LATENCY", read_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", num_drains);
-    print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain);
+    print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain, VecAccMode::GMEAN);
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)
     CREATE_VEC_STAT(tot_write_variance)

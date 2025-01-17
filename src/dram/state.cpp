@@ -26,10 +26,10 @@ bool
 cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
 {
     DRAMCommandType c = cmd.type;
-    if (cmd_is_act(c) && ch.faw.size() == 4)
-        return false;
 
     const auto& ra = ch.at(dram_rank(cmd.address));
+    if (cmd_is_act(c) && ra.faw.size() == 4)
+        return false;
     if (GL_DRAM_CYCLE >= ra.next_ref_cycle || GL_DRAM_CYCLE < ra.next_cmd_post_ref_cycle)
         return false;
     if (cmd_is_read(c) && GL_DRAM_CYCLE < ra.read_ok)
@@ -71,7 +71,7 @@ update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
     auto& ba = bg.at(dram_bank(addr));
 
     if (cmd_is_act(c))
-        ch.faw.push_back(GL_DRAM_CYCLE);
+        ra.faw.push_back(GL_DRAM_CYCLE);
     // Both rank and bankgroup states need to be updated for "other" ranks/bankgroups.
     update_dram_rank_states(ch, cmd);
     update_dram_bankgroup_states(ra, cmd);

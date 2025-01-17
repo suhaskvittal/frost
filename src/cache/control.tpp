@@ -416,13 +416,12 @@ drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>& c, const DRAIN_CALLBACK&
 {
     // Need to make sure queue is drained at the appropriate time (hence the second check).
     auto& out_queue = c->io_->outgoing_queue_;
-    while (!out_queue.empty())
+    if (out_queue.count(GL_CYCLE) > 0)
     {
-        auto& [t, cycle_done] = out_queue.top();
-        if (GL_CYCLE < cycle_done)
-            return;
-        handle_drain(t);
-        out_queue.pop();
+        auto [begin, end] = out_queue.equal_range(GL_CYCLE);
+        for (auto it = begin; it != end; it++)
+            handle_drain(it->second);
+        out_queue.erase(begin, end);
     }
 }
 

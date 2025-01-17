@@ -20,7 +20,10 @@ IOBus::IOBus(size_t r, size_t w, size_t p)
     :rq_size_(r),
     wq_size_(w),
     pq_size_(p)
-{}
+{
+    pending_reads_.reserve(r+p);
+    pending_writes_.reserve(w);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -118,7 +121,7 @@ void
 IOBus::add_outgoing(Transaction t, uint64_t latency)
 {
     if (t.type == TransactionType::READ || t.type == TransactionType::TRANSLATION)
-        outgoing_queue_.emplace(t, GL_CYCLE+latency);
+        outgoing_queue_.insert({ GL_CYCLE + latency, std::move(t) });
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -145,7 +148,7 @@ IOBus::deadlock_find_inst(const inst_ptr inst)
 }
 
 bool
-IOBus::deadlock_search_in_queue(std::string_view qname, const std::deque<Transaction>& q, const inst_ptr inst)
+IOBus::deadlock_search_in_queue(std::string_view qname, const in_queue_type& q, const inst_ptr inst)
 {
     auto q_it = std::find_if(q.cbegin(), q.cend(),
                             [inst] (const Transaction& t)

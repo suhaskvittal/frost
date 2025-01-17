@@ -38,9 +38,7 @@ public:
 
     using in_queue_type = std::deque<Transaction>;
     using pending_type = std::unordered_map<uint64_t, size_t>;
-    using out_queue_type = std::priority_queue<out_trans_type, 
-                                            std::vector<out_trans_type>,
-                                            out_queue_cmp>;
+    using out_queue_type = std::unordered_multimap<uint64_t, Transaction>;
     /*
      * This is a queue for outgoing transactions. It has
      * no size and only holds reads.

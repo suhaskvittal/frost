@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
                 {"dram_wm_high", "DRAM High Watermark", "1.0"},
                 {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"},
                 {"dram_wsync_hit_cost", "Cost of a write hit", "1"},
-                {"dram_wsync_miss_cost", "Cost of a write miss", "3"},
+                {"dram_wsync_miss_cost", "Cost of a write miss", "4"},
                 {"dram_wsync_read_divisor", "Inverse of read value", "100"},
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}

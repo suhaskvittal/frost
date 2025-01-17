@@ -41,19 +41,18 @@ struct DRAMBankgroupState : public std::array<DRAMBankState, DRAM_BANKS>
 
 struct DRAMRankState : public std::array<DRAMBankgroupState, DRAM_BANKGROUPS>
 {
+    using faw_type = std::deque<uint64_t>;
+
     uint64_t read_ok =0;
     uint64_t write_ok =0;
 
     uint64_t next_ref_cycle =tREFI;
     uint64_t next_cmd_post_ref_cycle =0;
+
+    faw_type faw;
 };
 
-struct DRAMChannelState : public std::array<DRAMRankState, DRAM_RANKS>
-{
-    using faw_t = std::deque<uint64_t>;
-
-    faw_t faw;
-};
+using DRAMChannelState = std::array<DRAMRankState, DRAM_RANKS>;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
