@@ -22,6 +22,7 @@
 #include <iostream>
 #include <sstream>
 #include <optional>
+#include <unordered_set>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -81,6 +82,9 @@ public:
     const size_t low_watermark_;
     const size_t high_watermark_;
 private:
+    enum class DRAMIssueMode { READING, TRANSITIONING, WRITING };
+
+    using active_buffer_type = std::unordered_set<size_t>;
     using write_drain_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     /* 
      * Custom IO implementation
@@ -89,12 +93,15 @@ private:
     in_queue_type write_queue_;
     pending_type pending_reads_;
     pending_type pending_writes_;
+
+    active_buffer_type active_buffer_;
     /*
      * `writes_to_drain_` holds the maximum number of writes that can be issued from the write queue
      * for each bank.
      * */
     write_drain_array_type writes_to_drain_per_bank_{};
     size_t tot_writes_to_drain_ =0;
+    DRAMIssueMode issue_mode_ =DRAMIssueMode::READING;
 
     DRAMChannelState  state_{};
     /*
@@ -126,12 +133,10 @@ public:
 private:
     using cmd_output_type = std::tuple<DRAMCommand, std::optional<RWQueueEntry>>;
 
-    cmd_output_type select_ready_command(void);
-    /*
-     * Updates `writes_to_drain_` depending on the size of the write queue.
-     * */
     void try_switch_to_write_mode(void);
+    void exit_write_mode(void);
     void issue_next_command(void);
+    cmd_output_type select_ready_command(void);
 
     void update_wrw_state(const DRAMCommand&);
     /*

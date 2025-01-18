@@ -101,7 +101,7 @@ pred_any_bank(DRAMRankState& ra, const PRED& pred)
             });
 }
 
-void
+bool
 try_and_issue_ref(DRAMRankState& ra, uint64_t& s_ref, uint64_t& s_pre)
 {
     bool preab_needed = pred_any_bank(ra, 
@@ -130,6 +130,7 @@ try_and_issue_ref(DRAMRankState& ra, uint64_t& s_ref, uint64_t& s_pre)
                     }
                 }
             }
+            return true;
         }
     }
     else  // Do refresh:
@@ -146,6 +147,7 @@ try_and_issue_ref(DRAMRankState& ra, uint64_t& s_ref, uint64_t& s_pre)
             ++s_ref;
         }
     }
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////

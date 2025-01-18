@@ -64,11 +64,12 @@ struct DRAMCommand;
  *
  * `try_and_issue_ref` is a special function for handling all-bank refresh.
  * If any bank has an open row, PREab is first issued. Once all banks have
- * closed rows, then REFab is issued.
+ * closed rows, then REFab is issued. This function returns true if PREab is
+ * issued.
  * */
 bool cmd_is_issuable(const DRAMChannelState&, const DRAMCommand&);
 void update_dram_state(DRAMChannelState&, const DRAMCommand&);
-void try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t& s_pre);
+bool try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t& s_pre);
 /*
  * These are just helper functions.
  * */
