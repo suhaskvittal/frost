@@ -82,8 +82,6 @@ public:
     const size_t low_watermark_;
     const size_t high_watermark_;
 private:
-    enum class DRAMIssueMode { READING, TRANSITIONING, WRITING };
-
     using active_buffer_type = std::unordered_set<size_t>;
     using write_drain_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     /* 
@@ -101,7 +99,8 @@ private:
      * */
     write_drain_array_type writes_to_drain_per_bank_{};
     size_t tot_writes_to_drain_ =0;
-    DRAMIssueMode issue_mode_ =DRAMIssueMode::READING;
+    bool in_write_mode_ =false;
+    bool in_transition_ =false;
 
     DRAMChannelState  state_{};
     /*
@@ -134,7 +133,6 @@ private:
     using cmd_output_type = std::tuple<DRAMCommand, std::optional<RWQueueEntry>>;
 
     void try_switch_to_write_mode(void);
-    void exit_write_mode(void);
     void issue_next_command(void);
     cmd_output_type select_ready_command(void);
 
