@@ -34,7 +34,7 @@ private:
     constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
     constexpr static size_t LEADER_SETS = 32;
     constexpr static size_t PSEL_WIDTH = 2*numeric_traits<LEADER_SETS>::log2;
-    constexpr static int16_t PSEL_THRESHOLD = (1 << PSEL_WIDTH/2);
+    constexpr static int16_t PSEL_THRESHOLD = (1 << (PSEL_WIDTH/2 - 1));
     constexpr static int16_t PSEL_LOW = 0;
     constexpr static int16_t PSEL_HIGH = (1 << PSEL_WIDTH)-1;
     constexpr static size_t PSEL_RESET_EPOCHS = 32;
@@ -44,7 +44,6 @@ private:
 
     write_tracker_array_type trackers_{};
     int16_t psel_ =PSEL_THRESHOLD-1;
-    size_t write_epochs_ =0;
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
     using typename __TEMPLATE_PARENT__::cset_type;
@@ -65,12 +64,6 @@ public:
     inline void decrement_write_counters(size_t channel_id, size_t amt)
     {
         trackers_[channel_id].fill(0);
-        ++write_epochs_;
-        if (write_epochs_ == PSEL_RESET_EPOCHS)
-        {
-            psel_ = PSEL_THRESHOLD-1;
-            write_epochs_ = 0;
-        }
     }
 protected:
     /*
