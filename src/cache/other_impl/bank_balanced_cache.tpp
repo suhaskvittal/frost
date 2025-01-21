@@ -42,24 +42,36 @@ __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
     size_t idx = __TEMPLATE_PARENT__::get_set_index(s[0].address);
-    SetDuelingRole r = get_set_role(idx);
-
-    SetDuelingRole tmp_r = r;  // Use `tmp_r` to reduce branches -- `r` is later used for `psel_` update.
-    if (tmp_r == SetDuelingRole::FOLLOWER)
-        tmp_r = psel_ < PSEL_THRESHOLD ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
-    
     auto v_it = s.end();
-    if (tmp_r == SetDuelingRole::LEADER_1)
+
+    size_t ch = dram_channel(idx),
+           bank_idx = dram_bank_idx(idx);
+    // Note that all entries in this set also belong to the same bank:
+    size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
+    bool is_critical = (trackers_[ch][bank_idx]-min_writes) >= CRITICAL_WRITES / 2;
+    if (is_critical)
     {
-        ++s_repl_pol1_;
-        v_it = __TEMPLATE_PARENT__::find_victim(s);
+        SetDuelingRole r = get_set_role(idx);
+
+        SetDuelingRole tmp_r = r;  // Use `tmp_r` to reduce branches -- `r` is later used for `psel_` update.
+        if (tmp_r == SetDuelingRole::FOLLOWER)
+            tmp_r = psel_ < PSEL_THRESHOLD ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
+        
+        if (tmp_r == SetDuelingRole::LEADER_1)
+        {
+            ++s_repl_pol1_;
+            v_it = __TEMPLATE_PARENT__::find_victim(s);
+        }
+        else
+        {
+            ++s_repl_pol2_;
+            v_it = find_victim_second_policy(s);
+        }
+
+        update_psel(static_cast<int16_t>(r));
     }
     else
-    {
-        ++s_repl_pol2_;
-        v_it = find_victim_second_policy(s, idx);
-    }
-    update_psel(static_cast<int16_t>(r));
+        v_it = __TEMPLATE_PARENT__::find_victim(s);
     return v_it;
 }
 
@@ -67,27 +79,17 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
-__TEMPLATE_CLASS__::find_victim_second_policy(cset_type& s, size_t idx)
+__TEMPLATE_CLASS__::find_victim_second_policy(cset_type& s)
 {
-    size_t ch = dram_channel(idx),
-           bank_idx = dram_bank_idx(idx);
-    // Note that all entries in this set also belong to the same bank:
-    bool is_critical = trackers_[ch][bank_idx] >= CRITICAL_WRITES;
-
     if constexpr (POL == CacheReplPolicy::LRU)
     {
         return std::min_element(s.begin(), s.end(),
-                        [is_critical] (const auto& x, const auto& y)
+                        [] (const auto& x, const auto& y)
                         {
-                            if (is_critical)
-                            {
-                                if (x.dirty == y.dirty)
-                                    return x.timestamp < y.timestamp;
-                                else
-                                    return y.dirty;  // Want to evict the clean element, so if y is dirty, evict x.
-                            }
-                            else
+                            if (x.dirty == y.dirty)
                                 return x.timestamp < y.timestamp;
+                            else
+                                return y.dirty;  // Want to evict the clean element, so if y is dirty, evict x.
                         });
     }
     else if constexpr (POL == CacheReplPolicy::RAND)
@@ -95,17 +97,12 @@ __TEMPLATE_CLASS__::find_victim_second_policy(cset_type& s, size_t idx)
     else if constexpr (POL == CacheReplPolicy::SRRIP)
     {
         auto v_it = std::min_element(s.begin(), s.end(),
-                                [is_critical] (const auto& x, const auto& y)
+                                [] (const auto& x, const auto& y)
                                 {
-                                    if (is_critical)
-                                    {
-                                        if (x.dirty == y.dirty)
-                                            return x.rrpv < y.rrpv;
-                                        else
-                                            return y.dirty;
-                                    }
-                                    else
+                                    if (x.dirty == y.dirty)
                                         return x.rrpv < y.rrpv;
+                                    else
+                                        return y.dirty;
                                 });
         if (v_it->rrpv > 0)
         {
@@ -147,7 +144,7 @@ __TEMPLATE_CLASS__::get_set_role(size_t idx) const
 {
     size_t grp = idx >> numeric_traits<LEADER_SETS>::log2,
            offset = fast_mod<LEADER_SETS>(idx);
-    size_t compl_offset = offset ^ mask(LEADER_SETS);
+    size_t compl_offset = offset ^ (LEADER_SETS-1);
 
     if (grp == offset)
         return SetDuelingRole::LEADER_1;

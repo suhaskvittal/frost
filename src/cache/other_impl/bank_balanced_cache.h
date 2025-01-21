@@ -32,17 +32,21 @@ private:
     enum class SetDuelingRole { LEADER_1 =1, LEADER_2 =-1, FOLLOWER =0 };
 
     constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
-    constexpr static size_t LEADER_SETS = 32;
+    constexpr static size_t LEADER_SETS = 16;
     constexpr static size_t PSEL_WIDTH = 2*numeric_traits<LEADER_SETS>::log2;
-    constexpr static int16_t PSEL_THRESHOLD = (1 << (PSEL_WIDTH/2 - 1));
+    constexpr static int16_t PSEL_THRESHOLD = (1 << PSEL_WIDTH)/2;
     constexpr static int16_t PSEL_LOW = 0;
     constexpr static int16_t PSEL_HIGH = (1 << PSEL_WIDTH)-1;
-    constexpr static size_t PSEL_RESET_EPOCHS = 32;
 
-    using write_tracker_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
+    constexpr static size_t RESET_EPOCHS = 1024;
+
+    using write_tracker_type = std::array<int32_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     using write_tracker_array_type = std::array<write_tracker_type, DRAM_CHANNELS>;
+    using write_epoch_array_type = std::array<size_t, DRAM_CHANNELS>;
 
     write_tracker_array_type trackers_{};
+    write_epoch_array_type write_epoch_{};
+
     int16_t psel_ =PSEL_THRESHOLD-1;
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
@@ -63,7 +67,20 @@ public:
 
     inline void decrement_write_counters(size_t channel_id, size_t amt)
     {
-        trackers_[channel_id].fill(0);
+        ++write_epoch_[channel_id];
+        if (write_epoch_[channel_id] == RESET_EPOCHS)
+        {
+            trackers_[channel_id].fill(0);
+            write_epoch_[channel_id] = 0;
+        }
+        else
+        {
+            for (int32_t& x : trackers_[channel_id])
+            {
+                x -= amt;
+                x = std::clamp(x, 0, std::numeric_limits<int32_t>::max());
+            }
+        }
     }
 protected:
     /*
@@ -71,7 +88,7 @@ protected:
      * on the counters in `trackers_`
      * */
     typename cset_type::iterator find_victim(cset_type&) override;
-    typename cset_type::iterator find_victim_second_policy(cset_type&, size_t set_idx);
+    typename cset_type::iterator find_victim_second_policy(cset_type&);
 private:
     size_t get_tracker_entry(uint64_t address) const;
     void increment_tracker(uint64_t address);
