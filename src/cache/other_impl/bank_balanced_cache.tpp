@@ -29,26 +29,9 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool as_dirty)
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::fill_result_type
 __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool mark_dirty)
 {
-    fill_result_type out;
-    if constexpr (POL == CacheReplPolicy::PERFECT)
-        return out;
-
-    cset_type& s = __TEMPLATE_PARENT__::get_set(address);
-    auto it = std::find_if_not(s.begin(), s.end(),
-                        [] (const CacheEntry& e)
-                        {
-                            return e.valid;
-                        });
-    if (it == s.end())
-    {
-        it = find_victim(s); 
-        if (it->dirty)
-        {
-            increment_tracker(it->address);
-        }
-        out = *it;
-    }
-    *it = CacheEntry(address, num_refs, mark_dirty);
+    auto out = __TEMPLATE_PARENT__::fill(address, num_refs, mark_dirty);
+    if (out.has_value() && out.value().dirty)
+        increment_tracker(out.value().address);
     return out;
 }
 
@@ -58,11 +41,38 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool mark_dirty)
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
-    size_t ch = dram_channel(s[0].address),
-           bank_idx = dram_bank_idx(s[0].address);
-    size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
+    size_t idx = __TEMPLATE_PARENT__::get_set_index(s[0].address);
+    SetDuelingRole r = get_set_role(idx);
+
+    SetDuelingRole tmp_r = r;  // Use `tmp_r` to reduce branches -- `r` is later used for `psel_` update.
+    if (tmp_r == SetDuelingRole::FOLLOWER)
+        tmp_r = psel_ < PSEL_THRESHOLD ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
+    
+    auto v_it = s.end();
+    if (tmp_r == SetDuelingRole::LEADER_1)
+    {
+        ++s_repl_pol1_;
+        v_it = __TEMPLATE_PARENT__::find_victim(s);
+    }
+    else
+    {
+        ++s_repl_pol2_;
+        v_it = find_victim_second_policy(s, idx);
+    }
+    update_psel(static_cast<int16_t>(r));
+    return v_it;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
+__TEMPLATE_CLASS__::find_victim_second_policy(cset_type& s, size_t idx)
+{
+    size_t ch = dram_channel(idx),
+           bank_idx = dram_bank_idx(idx);
     // Note that all entries in this set also belong to the same bank:
-    bool is_critical = (trackers_[ch][bank_idx] - min_writes) >= CRITICAL_WRITES/2;
+    bool is_critical = trackers_[ch][bank_idx] >= CRITICAL_WRITES;
 
     if constexpr (POL == CacheReplPolicy::LRU)
     {
@@ -117,7 +127,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline size_t
-__TEMPLATE_CLASS__::get_tracker_entry(uint64_t address)
+__TEMPLATE_CLASS__::get_tracker_entry(uint64_t address) const
 {
     size_t ch = dram_channel(address);
     size_t idx = dram_bank_idx(address);
@@ -130,6 +140,21 @@ __TEMPLATE_CLASS__::increment_tracker(uint64_t address)
     size_t ch = dram_channel(address);
     size_t idx = dram_bank_idx(address);
     ++trackers_[ch][idx];
+}
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::SetDuelingRole
+__TEMPLATE_CLASS__::get_set_role(size_t idx) const
+{
+    size_t grp = idx >> numeric_traits<LEADER_SETS>::log2,
+           offset = fast_mod<LEADER_SETS>(idx);
+    size_t compl_offset = offset ^ mask(LEADER_SETS);
+
+    if (grp == offset)
+        return SetDuelingRole::LEADER_1;
+    else if (grp == compl_offset)
+        return SetDuelingRole::LEADER_2;
+    else
+        return SetDuelingRole::FOLLOWER;
 }
 
 ////////////////////////////////////////////////////////////////////////////

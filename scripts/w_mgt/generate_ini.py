@@ -84,18 +84,11 @@ for page_mode in ['OPEN', 'CLOSE']:
 
 ############################################################
 ############################################################
-# WATERMARK
-for page_mode in ['OPEN', 'CLOSE']:
-    am = get_default_mapping(page_mode)
-    write_ini(make_filename('watermark', page_mode, am), address_mapping=am, page_mode=page_mode, other_defines='DRAM_USE_WATERMARKS_TO_DRAIN')
-
-############################################################
-############################################################
 # MOTIVATION: NO WRITES + SPEEDUP WITH WRITE BUFFER
 for page_mode in ['OPEN', 'CLOSE']:
     am = get_default_mapping(page_mode)
     write_ini(make_filename('no_writes', page_mode, am), page_mode=page_mode, address_mapping=am, other_defines='DRAM_DROP_WRITES')
-    for p in [9, 11]:
+    for p in [11]:
         write_ini(make_filename(f'write_queue_{p}', page_mode, am), page_mode=page_mode, address_mapping=am, write_queue_size=2**p)
 
 ############################################################

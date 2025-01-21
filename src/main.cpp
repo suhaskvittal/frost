@@ -131,6 +131,7 @@ int main(int argc, char* argv[])
 
         drain_llc_outgoing_queue();
 
+        all_done = true;
         size_t ii = curr_core_idx;
         for (size_t i = 0; i < NUM_THREADS; i++)
         {
@@ -141,15 +142,10 @@ int main(int argc, char* argv[])
                 c->checkpoint_stats();
                 c->done_ = true;
             }
+            all_done &= c->done_;
             fast_increment_and_mod_inplace<NUM_THREADS>(ii);
         }
         fast_increment_and_mod_inplace<NUM_THREADS>(curr_core_idx);
-
-        all_done = std::all_of(GL_CORES.begin(), GL_CORES.end(),
-                        [] (const core_ptr& c)
-                        {
-                            return c->done_;
-                        });
         ++GL_CYCLE;
     } while (!all_done);
 

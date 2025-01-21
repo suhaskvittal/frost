@@ -170,10 +170,8 @@ DRAMChannel::try_switch_to_write_mode()
             writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
 
         size_t max_writes = writes_per_bank * DRAM_TOT_BANKS_PER_CHANNEL;
-        size_t write_cost = (2*s_write_row_hits_ < s_writes_)
-                            ? OPT_DRAM_WRITE_SYNC_MISS_COST : OPT_DRAM_WRITE_SYNC_HIT_COST;
 
-        writes_to_drain_per_bank_.fill(write_cost * writes_per_bank);
+        writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_MISS_COST * writes_per_bank);
         tot_writes_to_drain_ = std::min(num_writes, max_writes);
     }
     else

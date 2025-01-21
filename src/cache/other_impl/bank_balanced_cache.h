@@ -9,6 +9,9 @@
 #include "constants.h"
 
 #include "cache.h"
+#include "util/numerics.h"
+
+#include <algorithm>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -22,13 +25,26 @@
 template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 class BankBalancedCache : public __TEMPLATE_PARENT__
 {
+public:
+    uint64_t s_repl_pol1_ =0;
+    uint64_t s_repl_pol2_ =0;
 private:
+    enum class SetDuelingRole { LEADER_1 =1, LEADER_2 =-1, FOLLOWER =0 };
+
     constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
+    constexpr static size_t LEADER_SETS = 32;
+    constexpr static size_t PSEL_WIDTH = 2*numeric_traits<LEADER_SETS>::log2;
+    constexpr static int16_t PSEL_THRESHOLD = (1 << PSEL_WIDTH/2);
+    constexpr static int16_t PSEL_LOW = 0;
+    constexpr static int16_t PSEL_HIGH = (1 << PSEL_WIDTH)-1;
+    constexpr static size_t PSEL_RESET_EPOCHS = 32;
 
     using write_tracker_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     using write_tracker_array_type = std::array<write_tracker_type, DRAM_CHANNELS>;
 
     write_tracker_array_type trackers_{};
+    int16_t psel_ =PSEL_THRESHOLD-1;
+    size_t write_epochs_ =0;
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
     using typename __TEMPLATE_PARENT__::cset_type;
@@ -48,8 +64,13 @@ public:
 
     inline void decrement_write_counters(size_t channel_id, size_t amt)
     {
-        for (size_t& ctr : trackers_[channel_id])
-            ctr = (ctr >= amt) ? ctr - amt : 0;
+        trackers_[channel_id].fill(0);
+        ++write_epochs_;
+        if (write_epochs_ == PSEL_RESET_EPOCHS)
+        {
+            psel_ = PSEL_THRESHOLD-1;
+            write_epochs_ = 0;
+        }
     }
 protected:
     /*
@@ -57,9 +78,17 @@ protected:
      * on the counters in `trackers_`
      * */
     typename cset_type::iterator find_victim(cset_type&) override;
+    typename cset_type::iterator find_victim_second_policy(cset_type&, size_t set_idx);
 private:
-    size_t get_tracker_entry(uint64_t address);
+    size_t get_tracker_entry(uint64_t address) const;
     void increment_tracker(uint64_t address);
+    SetDuelingRole get_set_role(size_t set_idx) const;
+
+    inline void update_psel(int16_t x)
+    {
+        psel_ += x;
+        psel_ = std::clamp(psel_, PSEL_LOW, PSEL_HIGH);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

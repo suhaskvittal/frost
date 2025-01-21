@@ -83,6 +83,7 @@ template <class IMPL, class CACHE, class NEXT_CONTROL>
 class CacheControl
 {
 public:
+    using cache_type = CACHE;
     using io_ptr = std::unique_ptr<IOBus>;
     using cache_ptr = std::unique_ptr<CACHE>;
     using next_ptr = std::unique_ptr<NEXT_CONTROL>;
