@@ -6,6 +6,7 @@
 ############################################################
 
 CORES = 8
+REPL_POLICY = 'LRU'
 
 def write_ini(filename: str,
               page_mode='CLOSE',
@@ -59,7 +60,7 @@ latency = 20
 read_queue_size = 64
 write_queue_size = 64
 prefetch_queue_size = 32
-replacement_policy = SRRIP
+replacement_policy = {REPL_POLICY}
 writeback_mode = {wb_mode}
 base_cache_type = {cache_type}
 ''')

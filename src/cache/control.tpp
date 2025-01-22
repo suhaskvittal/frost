@@ -178,10 +178,6 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
 
         s_tot_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
         ++s_num_penalty_[e.trans.coreid];
-
-        if constexpr (is_bank_balanced_cache<CACHE>::value)
-            // Send miss penalty for set dueling
-            cache_->update_access_timing(GL_CYCLE - e.cycle_fired, address);
     }
     mshr_.erase(begin, end);
 }
@@ -345,11 +341,6 @@ __TEMPLATE_CLASS__::handle_hit(Transaction&& t)
         cache_->invalidate(t.address);
         ++s_invalidates_[t.coreid];
     }
-    
-    if constexpr (is_bank_balanced_cache<CACHE>::value)
-        // Update cache latency for set dueling
-        cache_->update_access_timing(IMPL::CACHE_LATENCY, t.address);
-
     io_->add_outgoing(std::move(t), IMPL::CACHE_LATENCY);
 }
 

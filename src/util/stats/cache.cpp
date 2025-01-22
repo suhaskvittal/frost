@@ -41,6 +41,12 @@ print_llc_stats(std::ostream& out)
     print_stat(out, "LLC", "WRITEBACK_NEXT_LINE_IN_$", GL_LLC->s_dirty_victim_adj_lines_);
     print_stat(out, "LLC", "WRITEBACK_NEXT_LINE_IN_$_DIRTY", GL_LLC->s_dirty_victim_adj_lines_also_dirty_);
 
+    if (LLCache::cache_type::uses_set_dueling())
+    {
+        print_stat(out, "LLC", "SET_DUELING_POL1_INSTALLS", GL_LLC->cache_->s_dueling_pol1_installs_);
+        print_stat(out, "LLC", "SET_DUELING_POL2_INSTALLS", GL_LLC->cache_->s_dueling_pol2_installs_);
+    }
+
     print_bank_balanced_cache_stats(out, GL_LLC->cache_);
 
     if constexpr (LLCache::WRITEBACK_MODE == CacheWBMode::EAGER)

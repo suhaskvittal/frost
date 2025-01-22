@@ -126,7 +126,7 @@ for s in ['op','cp']:
     builds = [get_folder('BASELINE', s), get_folder('NO_WRITES', s)]
     for p in [9, 11]:
         builds.append(get_folder(f'WRITE_QUEUE_{p}', s))
-    create_csv_file_for_ipc(f'motivation_{s}.ipc.csv', *builds)
+#   create_csv_file_for_ipc(f'motivation_{s}.ipc.csv', *builds)
 
 ####################################################################
 ####################################################################

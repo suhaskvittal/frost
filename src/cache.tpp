@@ -42,7 +42,7 @@ __TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
         return false;
     else
     {
-        update(*it);
+        update_entry(*it);
         it->dirty |= write;
         return true;
     }
@@ -88,7 +88,7 @@ __TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs, bool mark_dirty)
         it = find_victim(s); 
         out = *it;
     }
-    *it = CacheEntry(addr, num_refs, mark_dirty);
+    init_entry(*it, addr, num_refs, mark_dirty);
     return out;
 }
 
@@ -187,24 +187,16 @@ __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
     if constexpr (POL == CacheReplPolicy::LRU)
-        return get_way_in_lru_pos(s);
+        return lru(s);
     else if constexpr (POL == CacheReplPolicy::RAND)
-        return std::next( s.begin(), fast_mod<WAYS>(rng_()) );
+        return rand(s);
     else if constexpr (POL == CacheReplPolicy::SRRIP)
+        return rrip(s);
+    else if constexpr (POL == CacheReplPolicy::DRRIP)
     {
-        auto v_it = std::min_element(s.begin(), s.end(),
-                                [] (const CacheEntry& x, const CacheEntry& y)
-                                {
-                                    return x.rrpv < y.rrpv;
-                                });
-        if (v_it->rrpv > 0)
-        {
-            // Reduce all entries' rrpv values.
-            for (CacheEntry& x : s)
-                x.rrpv -= v_it->rrpv;
-        }
-        return v_it;
-    } 
+        update_psel(get_set_index(s[0].address));
+        return rrip(s);
+    }
     else 
     {
         std::cerr << "unsupported cache replacement policy.\n";
@@ -215,11 +207,75 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::update(CacheEntry& e)
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
+__TEMPLATE_CLASS__::lru(cset_type& s)
+{
+    return get_way_in_lru_pos(s);
+}
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
+__TEMPLATE_CLASS__::rand(cset_type& s)
+{
+    return std::next(s.begin(), fast_mod<WAYS>(rng_()));
+}
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
+__TEMPLATE_CLASS__::rrip(cset_type& s)
+{
+    auto v_it = std::min_element(s.begin(), s.end(),
+                            [] (const CacheEntry& x, const CacheEntry& y)
+                            {
+                                return x.rrpv < y.rrpv;
+                            });
+    if (v_it->rrpv > 0)
+    {
+        // Reduce all entries' rrpv values.
+        for (CacheEntry& x : s)
+            x.rrpv -= v_it->rrpv;
+    }
+    return v_it;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
-    e.rrpv = SRRIP_MAX;
+    e.rrpv = RRIP_MAX;
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t addr, size_t num_refs, bool mark_dirty)
+{
+    e.valid = true;
+    e.dirty = mark_dirty;
+    e.address = addr;
+    e.timestamp = GL_CYCLE;
+
+    if constexpr (POL == CacheReplPolicy::DRRIP)
+    {
+        // Check whether or not to use BRRIP.
+        size_t s = get_set_index(addr);
+        SetDuelingRole r = get_set_role(s);
+        // Resolve `r` if it is a follower set:
+        if (r == SetDuelingRole::FOLLOWER)
+            r = psel_ < PSEL_THRESHOLD ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
+
+        uint8_t rrip_init = (r == SetDuelingRole::LEADER_1) ? 1 : (bimodal_ctr_ == BIMODAL_CTR_MAX ? 1 : 0);
+        e.rrpv = (num_refs > 1) ? RRIP_MAX : rrip_init;
+
+        if (r == SetDuelingRole::LEADER_2)
+        {
+            fast_increment_and_mod_inplace<BIMODAL_CTR_MAX>(bimodal_ctr_);
+            ++s_dueling_pol2_installs_;
+        }
+        else
+            ++s_dueling_pol1_installs_;
+    }
+    else
+        e.rrpv = (num_refs > 1) ? RRIP_MAX : 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -233,6 +289,32 @@ __TEMPLATE_CLASS__::get_way_in_lru_pos(cset_type& s)
                 {
                     return x.timestamp < y.timestamp;
                 });
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::SetDuelingRole
+__TEMPLATE_CLASS__::get_set_role(size_t s) const
+{
+    size_t grp = s >> numeric_traits<LEADER_SETS>::log2,
+           off = fast_mod<LEADER_SETS>(s);
+    size_t coff = off ^ (LEADER_SETS-1);
+
+    if (grp == off)
+        return SetDuelingRole::LEADER_1;
+    else if (grp == coff)
+        return SetDuelingRole::LEADER_2;
+    else
+        return SetDuelingRole::FOLLOWER;
+}
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::update_psel(size_t idx)
+{
+    SetDuelingRole r = get_set_role(idx);
+    psel_ += static_cast<int16_t>(r);
+    psel_ = std::clamp(psel_, PSEL_MIN, PSEL_MAX);
 }
 
 ////////////////////////////////////////////////////////////////////////////

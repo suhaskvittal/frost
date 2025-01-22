@@ -29,23 +29,15 @@ public:
     uint64_t s_repl_pol1_ =0;
     uint64_t s_repl_pol2_ =0;
 private:
-    enum class SetDuelingRole { LEADER_1 =0, LEADER_2 =1, FOLLOWER =2 };
-
     constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
-    constexpr static size_t LEADER_SETS = 32;
-
-    constexpr static size_t RESET_EPOCHS = 1024;
+    constexpr static size_t RESET_EPOCHS = 128;
 
     using write_tracker_type = std::array<int32_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     using write_tracker_array_type = std::array<write_tracker_type, DRAM_CHANNELS>;
     using write_epoch_array_type = std::array<size_t, DRAM_CHANNELS>;
-    using stat_array_type = std::array<uint64_t, 2>;
 
     write_tracker_array_type trackers_{};
     write_epoch_array_type write_epoch_{};
-    
-    stat_array_type duel_accesses_{};
-    stat_array_type duel_latencies_{};
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
     using typename __TEMPLATE_PARENT__::cset_type;
@@ -62,17 +54,6 @@ public:
      *  (2) Increments the corresponding write counter.
      * */
     fill_result_type fill(uint64_t, size_t num_refs, bool mark_dirty=false) override;
-
-    inline void update_access_timing(uint64_t latency, uint64_t address)
-    {
-        SetDuelingRole r = get_set_role(__TEMPLATE_PARENT__::get_set_index(address));
-        if (r != SetDuelingRole::FOLLOWER)
-        {
-            size_t ii = static_cast<size_t>(r);
-            ++duel_accesses_[ii];
-            duel_latencies_[ii] += latency;
-        }
-    }
 
     inline void decrement_write_counters(size_t channel_id, size_t amt)
     {
@@ -101,7 +82,6 @@ protected:
 private:
     size_t get_tracker_entry(uint64_t address) const;
     void increment_tracker(uint64_t address);
-    SetDuelingRole get_set_role(size_t set_idx) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////

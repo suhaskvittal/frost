@@ -54,7 +54,7 @@ def append_all_defaults(base: str):
 which = argv[1]
 
 if which == 'all':
-    for w in ['baseline', 'no_writes', 'motivation', 'sync-scan', 'sync', 'bank-balanced-cache']:
+    for w in ['baseline', 'no_writes', 'motivation', 'sync', 'bank-balanced-cache']:
         os.system(f'python scripts/w_mgt/run.py {w}')
         if WHERE == 'PACE':
             print('sleeping for 15 minutes...')

@@ -42,38 +42,16 @@ __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
     size_t idx = __TEMPLATE_PARENT__::get_set_index(s[0].address);
-    auto v_it = s.end();
-
     size_t ch = dram_channel(idx),
            bank_idx = dram_bank_idx(idx);
     // Note that all entries in this set also belong to the same bank:
     size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
     bool is_critical = (trackers_[ch][bank_idx]-min_writes) >= CRITICAL_WRITES / 2;
-    if (is_critical)
-    {
-        SetDuelingRole r = get_set_role(idx);
 
-        if (r == SetDuelingRole::FOLLOWER)
-        {
-            uint64_t lhs = duel_latencies_[0]*duel_accesses_[1],
-                     rhs = duel_latencies_[1]*duel_accesses_[0];
-            r = (lhs < rhs) ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
-        }
-        
-        if (r == SetDuelingRole::LEADER_1)
-        {
-            ++s_repl_pol1_;
-            v_it = __TEMPLATE_PARENT__::find_victim(s);
-        }
-        else
-        {
-            ++s_repl_pol2_;
-            v_it = find_victim_second_policy(s);
-        }
-    }
+    if (is_critical)
+        return find_victim_second_policy(s);
     else
-        v_it = __TEMPLATE_PARENT__::find_victim(s);
-    return v_it;
+        return __TEMPLATE_PARENT__::find_victim(s);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -138,21 +116,6 @@ __TEMPLATE_CLASS__::increment_tracker(uint64_t address)
     size_t ch = dram_channel(address);
     size_t idx = dram_bank_idx(address);
     ++trackers_[ch][idx];
-}
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::SetDuelingRole
-__TEMPLATE_CLASS__::get_set_role(size_t idx) const
-{
-    size_t grp = idx >> numeric_traits<LEADER_SETS>::log2,
-           offset = fast_mod<LEADER_SETS>(idx);
-    size_t compl_offset = offset ^ (LEADER_SETS-1);
-
-    if (grp == offset)
-        return SetDuelingRole::LEADER_1;
-    else if (grp == compl_offset)
-        return SetDuelingRole::LEADER_2;
-    else
-        return SetDuelingRole::FOLLOWER;
 }
 
 ////////////////////////////////////////////////////////////////////////////
