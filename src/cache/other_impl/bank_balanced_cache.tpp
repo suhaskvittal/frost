@@ -53,11 +53,14 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
     {
         SetDuelingRole r = get_set_role(idx);
 
-        SetDuelingRole tmp_r = r;  // Use `tmp_r` to reduce branches -- `r` is later used for `psel_` update.
-        if (tmp_r == SetDuelingRole::FOLLOWER)
-            tmp_r = psel_ < PSEL_THRESHOLD ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
+        if (r == SetDuelingRole::FOLLOWER)
+        {
+            uint64_t lhs = duel_latencies_[0]*duel_accesses_[1],
+                     rhs = duel_latencies_[1]*duel_accesses_[0];
+            r = (lhs < rhs) ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
+        }
         
-        if (tmp_r == SetDuelingRole::LEADER_1)
+        if (r == SetDuelingRole::LEADER_1)
         {
             ++s_repl_pol1_;
             v_it = __TEMPLATE_PARENT__::find_victim(s);
@@ -67,8 +70,6 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
             ++s_repl_pol2_;
             v_it = find_victim_second_policy(s);
         }
-
-        update_psel(static_cast<int16_t>(r));
     }
     else
         v_it = __TEMPLATE_PARENT__::find_victim(s);
