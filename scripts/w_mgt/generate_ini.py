@@ -59,7 +59,7 @@ latency = 20
 read_queue_size = 64
 write_queue_size = 64
 prefetch_queue_size = 32
-replacement_policy = LRU
+replacement_policy = SRRIP
 writeback_mode = {wb_mode}
 base_cache_type = {cache_type}
 ''')
