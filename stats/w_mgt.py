@@ -27,7 +27,7 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017','mtf/gap']
+SUITES = ['mtf/spec2017']
 
 def create_csv_file_for_ipc(output_file: str, *builds):
     wr = open(f'data/{output_file}', 'w')

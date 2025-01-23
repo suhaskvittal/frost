@@ -54,7 +54,7 @@ def append_all_defaults(base: str):
 which = argv[1]
 
 if which == 'all':
-    for w in ['baseline', 'no_writes', 'motivation', 'sync', 'bank-balanced-cache']:
+    for w in ['baseline', 'no_writes', 'random', 'sync', 'bank-balanced-cache']:
         os.system(f'python scripts/w_mgt/run.py {w}')
         if WHERE == 'PACE':
             print('sleeping for 15 minutes...')
@@ -68,8 +68,8 @@ elif which == 'no_writes':
 elif which == 'motivation':
     for p in [9,11]:
         append_all_defaults(f'WRITE_QUEUE_{p}')
-elif which == 'watermark-scan':
-    append_all_defaults('WATERMARK')
+elif which == 'random':
+    builds = ['BASELINE_OP_RANDOM', 'BASELINE_CP_RANDOM']
 elif which == 'sync' or which == 'sync-scan':
     append_all_defaults('WRITE_SYNC')
 elif which == 'bank-balanced-cache' or which == 'bank-balanced-cache-scan':
