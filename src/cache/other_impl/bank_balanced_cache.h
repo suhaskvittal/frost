@@ -78,7 +78,10 @@ protected:
      * on the counters in `trackers_`
      * */
     typename cset_type::iterator find_victim(cset_type&) override;
-    typename cset_type::iterator find_victim_second_policy(cset_type&);
+    typename cset_type::iterator find_victim_modified_policy(cset_type&);
+
+    typename cset_type::iterator lru_mod(cset_type&);
+    typename cset_type::iterator rrip_mod(cset_type&);
 private:
     size_t get_tracker_entry(uint64_t address) const;
     void increment_tracker(uint64_t address);

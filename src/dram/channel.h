@@ -43,6 +43,27 @@ struct RWQueueEntry
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+struct BankUsageStats
+{
+    template <class T>
+    using vec_stat_type = std::array<T, DRAM_TOT_BANKS_PER_CHANNEL>;
+
+    using counts_type = vec_stat_type<uint64_t>;
+
+    counts_type reads{};
+    counts_type writes{};
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+using write_counts_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
+
+void dram_update_write_distribution_stats(const write_counts_array_type&, double& s_std, uint64_t& s_diff);
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 class DRAMChannel
 {
 public:
@@ -68,6 +89,9 @@ public:
 
     uint64_t s_num_drains_ =0;
     uint64_t s_tot_read_occu_at_drain_ =0;
+    uint64_t s_tot_write_occu_at_drain_ =0;
+
+    BankUsageStats s_bank_usage_;
     /*
      * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
      *  these are stats that are computationally intensive to compute, and thus can be disabled.
@@ -75,7 +99,10 @@ public:
     using wrw_stat_type = std::array<uint64_t, 4>;
 
     wrw_stat_type s_num_seq_{};
-    double s_tot_write_variance_ =0.0;
+    double s_tot_write_queue_std_ =0.0;
+    double s_tot_write_issue_std_ =0.0;
+    uint64_t s_tot_write_queue_minmax_diff_ =0;
+    uint64_t s_tot_write_issue_minmax_diff_ =0;
 
     const double freq_ghz_;
     const size_t channel_id_;
@@ -83,7 +110,7 @@ public:
     const size_t high_watermark_;
 private:
     using active_buffer_type = std::unordered_set<size_t>;
-    using write_drain_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
+    using write_drain_array_type = std::array<ssize_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     /* 
      * Custom IO implementation
      * */
@@ -94,13 +121,18 @@ private:
 
     active_buffer_type active_buffer_;
     /*
-     * `writes_to_drain_` holds the maximum number of writes that can be issued from the write queue
-     * for each bank.
+     * `writes_to_drain_per_bank_`: number of writes that can be issued (max) by a bank. Only used if
+     *      `DRAM_WRITE_POLICY` is `SYNC`
+     *  `tot_writes_to_drain_`: number of writes to issue from `write_queue_`
+     *  `writes_issued_per_bank_`: purely for stats -- this is the writes issued from each bank in actuality.
      * */
     write_drain_array_type writes_to_drain_per_bank_{};
     size_t tot_writes_to_drain_ =0;
     bool in_write_mode_ =false;
     bool in_transition_ =false;
+    write_counts_array_type writes_issued_per_bank_{};
+
+    size_t starting_bank_idx_for_ready_cmd_ =0;
 
     DRAMChannelState  state_{};
     /*

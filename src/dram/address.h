@@ -30,13 +30,25 @@ constexpr size_t dram_lowest_col_bit_index(void);
 ////////////////////////////////////////////////////////////////////////////
 
 #if defined(DRAM_AM_MOP)
+
 #include "address/mop.inl"
+
 #elif defined(DRAM_AM_COFFEELAKE)
+
 #include "address/coffeelake.inl"
+
 #elif defined(DRAM_AM_SKYLAKE)
+
 #include "address/skylake.inl"
+
 #elif defined(DRAM_AM_ZEN)
+
 #include "address/zen.inl"
+
+#elif defined(DRAM_AM_RANDOM)
+
+#include "address/random.inl"
+
 #endif
 
 ////////////////////////////////////////////////////////////////////////////

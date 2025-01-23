@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <numeric>
@@ -86,6 +87,25 @@ vec_min(const VecStat<T,N>& arr)
     return *std::min_element(arr.begin(), arr.end());
 }
 
+template <class T, size_t N> inline T
+vec_variance(const VecStat<T,N>& arr)
+{
+    double amean = vec_amean(arr);
+    return std::transform_reduce(arr.begin(), arr.end(), 0.0,
+                            std::plus<double>{},
+                            [amean] (const T& x)
+                            {
+                                double y = static_cast<double>(x) - amean;
+                                return y*y;
+                            }) / static_cast<double>(N);
+}
+
+template <class T, size_t N> inline T
+vec_std(const VecStat<T,N>& arr)
+{
+    return std::sqrt(vec_variance(arr));
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -105,7 +125,7 @@ vec_elwise_mean(const VecStat<T,N>& x, const VecStat<T,N>& y)
 ////////////////////////////////////////////////////////////////////////////
 
 constexpr size_t HEADER_WIDTH = 12;
-constexpr size_t STAT_NAME_WIDTH = 32;
+constexpr size_t STAT_NAME_WIDTH = 48;
 constexpr size_t STAT_WIDTH = 16;
 
 template <class T>

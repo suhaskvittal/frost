@@ -49,7 +49,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
     bool is_critical = (trackers_[ch][bank_idx]-min_writes) >= CRITICAL_WRITES / 2;
 
     if (is_critical)
-        return find_victim_second_policy(s);
+        return find_victim_modified_policy(s);
     else
         return __TEMPLATE_PARENT__::find_victim(s);
 }
@@ -57,46 +57,61 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
-__TEMPLATE_CLASS__::find_victim_second_policy(cset_type& s)
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_PARENT__::cset_type::iterator
+__TEMPLATE_CLASS__::find_victim_modified_policy(cset_type& s)
 {
     if constexpr (POL == CacheReplPolicy::LRU)
-    {
-        return std::min_element(s.begin(), s.end(),
-                        [] (const auto& x, const auto& y)
-                        {
-                            if (x.dirty == y.dirty)
-                                return x.timestamp < y.timestamp;
-                            else
-                                return y.dirty;  // Want to evict the clean element, so if y is dirty, evict x.
-                        });
-    }
-    else if constexpr (POL == CacheReplPolicy::RAND)
-        return __TEMPLATE_PARENT__::find_victim(s);
+        return lru_mod(s);
     else if constexpr (POL == CacheReplPolicy::SRRIP)
-    {
-        auto v_it = std::min_element(s.begin(), s.end(),
-                                [] (const auto& x, const auto& y)
-                                {
-                                    if (x.dirty == y.dirty)
-                                        return x.rrpv < y.rrpv;
-                                    else
-                                        return y.dirty;
-                                });
-        if (v_it->rrpv > 0)
-        {
-            for (auto& x : s)
-            {
-                if (x.rrpv > v_it->rrpv)
-                    x.rrpv -= v_it->rrpv;
-                else
-                    x.rrpv = 0;
-            }
-        }
-        return v_it;
-    }
+        return rrip_mod(s);
     else
         return __TEMPLATE_PARENT__::find_victim(s);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_PARENT__::cset_type::iterator
+__TEMPLATE_CLASS__::lru_mod(cset_type& s)
+{
+    return std::min_element(s.begin(), s.end(),
+                [] (const auto& x, const auto& y)
+                {
+                    if (x.dirty == y.dirty)
+                        return x.timestamp < y.timestamp;
+                    else
+                        return y.dirty;
+                });
+}
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_PARENT__::cset_type::iterator
+__TEMPLATE_CLASS__::rrip_mod(cset_type& s)
+{
+    constexpr size_t RRPV_TOL = WAYS/4;
+
+    auto v_it = std::min_element(s.begin(), s.end(),
+                    [] (const auto& x, const auto& y)
+                    {
+                        if (x.dirty == y.dirty)
+                            return x.rrpv < y.rrpv;
+                        else
+                        {
+                            // Check if the `rrpv` is comparable. If so, choose dirty line.
+                            // If not, default to `rrpv` comparison.
+                            if (x.dirty && x.rrpv < y.rrpv)
+                                return x.rrpv + RRPV_TOL < y.rrpv;
+                            else if (y.dirty && y.rrpv < x.rrpv)
+                                return y.rrpv + RRPV_TOL < x.rrpv;
+                            else
+                                return false;
+                        }
+                    });
+    if (v_it->rrpv > 0)
+    {
+        for (auto& e : s)
+            e.rrpv = (e.rrpv < v_it->rrpv) ? 0 : e.rrpv - v_it->rrpv;
+    }
+    return v_it;
 }
 
 ////////////////////////////////////////////////////////////////////////////
