@@ -29,14 +29,20 @@ public:
     uint64_t s_repl_pol1_ =0;
     uint64_t s_repl_pol2_ =0;
 private:
-    constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
+    constexpr static size_t CRITICAL_WRITES = (DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL) / 2;
+    constexpr static size_t CRITICAL_READS = 2;
     constexpr static size_t RESET_EPOCHS = 128;
 
-    using write_tracker_type = std::array<int32_t, DRAM_TOT_BANKS_PER_CHANNEL>;
-    using write_tracker_array_type = std::array<write_tracker_type, DRAM_CHANNELS>;
+    struct RWCounter
+    {
+        ssize_t reads =0;
+        ssize_t writes =0;
+    };
+
+    using rw_counter_array_type = std::array<std::array<RWCounter, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
     using write_epoch_array_type = std::array<size_t, DRAM_CHANNELS>;
 
-    write_tracker_array_type trackers_{};
+    rw_tracker_array_type counters_{};
     write_epoch_array_type write_epoch_{};
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
@@ -55,23 +61,8 @@ public:
      * */
     fill_result_type fill(uint64_t, size_t num_refs, bool mark_dirty=false) override;
 
-    inline void decrement_write_counters(size_t channel_id, size_t amt)
-    {
-        ++write_epoch_[channel_id];
-        if (write_epoch_[channel_id] == RESET_EPOCHS)
-        {
-            trackers_[channel_id].fill(0);
-            write_epoch_[channel_id] = 0;
-        }
-        else
-        {
-            for (int32_t& x : trackers_[channel_id])
-            {
-                x -= amt;
-                x = std::clamp(x, 0, std::numeric_limits<int32_t>::max());
-            }
-        }
-    }
+    void handle_mshr_init(uint64_t address);
+    void handle_dram_write_drain(size_t channel_id, size_t amt);
 protected:
     /*
      * This class modifies standard eviction policies to operate based
@@ -83,8 +74,7 @@ protected:
     typename cset_type::iterator lru_mod(cset_type&);
     typename cset_type::iterator rrip_mod(cset_type&);
 private:
-    size_t get_tracker_entry(uint64_t address) const;
-    void increment_tracker(uint64_t address);
+    RWCounter& get_counter(uint64_t address);
 };
 
 ////////////////////////////////////////////////////////////////////////////

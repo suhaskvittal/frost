@@ -4,6 +4,7 @@
  * */
 
 #include "dram/address.h"
+#include "dram/enums.h"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -19,7 +20,7 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool as_dirty)
 {
     bool hit = __TEMPLATE_PARENT__::mark(address, as_dirty);
     if (hit && !as_dirty)
-        increment_tracker(address);
+        ++get_counter(address).writes;
     return hit;
 }
 
@@ -30,9 +31,48 @@ __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::fill_result_type
 __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool mark_dirty)
 {
     auto out = __TEMPLATE_PARENT__::fill(address, num_refs, mark_dirty);
+
+    if (!mark_dirty)
+        --get_counter(address).reads;
+
     if (out.has_value() && out.value().dirty)
-        increment_tracker(out.value().address);
+        ++get_counter(out.value().address).writes;
+
     return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::handle_mshr_init(uint64_t miss_address)
+{
+    ++get_counter(miss_address).reads;
+}
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::handle_dram_write_drain(size_t ch, size_t amt)
+{
+    // In an open page policy, it is possible for the counters to become out of sync
+    // with DRAM due to row buffer hits. To handle this behavior, we simply reset the
+    // counters.
+    if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
+    {
+        ++write_epoch_[ch];
+        if (write_epoch_[ch] == RESET_EPOCHS)
+        {
+            for (auto& c : counters_[ch])
+                c.writes = 0;
+            write_epoch_[ch] = 0;
+            return;
+        }
+    }
+
+    for (auto& c : counters_[ch])
+    {
+        c.writes -= amt;
+        c.writes = std::clamp(c.writes, 0, std::numeric_limits<ssize_t>::max());
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -44,9 +84,18 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
     size_t idx = __TEMPLATE_PARENT__::get_set_index(s[0].address);
     size_t ch = dram_channel(idx),
            bank_idx = dram_bank_idx(idx);
-    // Note that all entries in this set also belong to the same bank:
-    size_t min_writes = *std::min_element(trackers_[ch].begin(), trackers_[ch].end());
-    bool is_critical = (trackers_[ch][bank_idx]-min_writes) >= CRITICAL_WRITES / 2;
+    // We want the bank with >=`CRITICAL_READS` reads that has the minimum number of writes.
+    const auto& ctrs = counters_[ch];
+
+    auto ctr_it = std::min_element(ctrs.begin(), ctrs.end(),
+                        [] (const auto& ctrx, const auto& ctry)
+                        {
+                            if ((ctrx.reads >= CRITICAL_READS) == (ctry.reads >= CRITICAL_READS))
+                                return ctrx.writes < ctry.writes;
+                            else
+                                return ctry.reads < CRITICAL_READS;
+                        });
+    bool is_critical = (counters_[ch][bank_idx] - ctr_it->writes) >= CRITICAL_WRITES;
 
     if (is_critical)
         return find_victim_modified_policy(s);
@@ -117,20 +166,12 @@ __TEMPLATE_CLASS__::rrip_mod(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline size_t
-__TEMPLATE_CLASS__::get_tracker_entry(uint64_t address) const
+__TEMPLATE_HEADER__ inline RWCounter&
+__TEMPLATE_CLASS__::get_counter(uint64_t address)
 {
     size_t ch = dram_channel(address);
     size_t idx = dram_bank_idx(address);
-    return trackers_[ch][idx];
-}
-
-__TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::increment_tracker(uint64_t address)
-{
-    size_t ch = dram_channel(address);
-    size_t idx = dram_bank_idx(address);
-    ++trackers_[ch][idx];
+    return counters_[ch][idx];
 }
 
 ////////////////////////////////////////////////////////////////////////////
