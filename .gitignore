@@ -17,5 +17,8 @@ out/*
 stats/__pycache__
 stats/__pycache__/*
 
+data/excel
+data/excel/*
+
 ini
 ini/*
