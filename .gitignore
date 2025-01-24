@@ -20,5 +20,8 @@ stats/__pycache__/*
 data/excel
 data/excel/*
 
+tools/build
+tools/build/*
+
 ini
 ini/*
