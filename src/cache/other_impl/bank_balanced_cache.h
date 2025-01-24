@@ -42,7 +42,7 @@ private:
     using rw_counter_array_type = std::array<std::array<RWCounter, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
     using write_epoch_array_type = std::array<size_t, DRAM_CHANNELS>;
 
-    rw_tracker_array_type counters_{};
+    rw_counter_array_type counters_{};
     write_epoch_array_type write_epoch_{};
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
@@ -66,7 +66,7 @@ public:
 protected:
     /*
      * This class modifies standard eviction policies to operate based
-     * on the counters in `trackers_`
+     * on the counters in `counters_`
      * */
     typename cset_type::iterator find_victim(cset_type&) override;
     typename cset_type::iterator find_victim_modified_policy(cset_type&);

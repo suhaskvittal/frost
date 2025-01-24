@@ -284,7 +284,7 @@ __TEMPLATE_HEADER__ inline void
 __TEMPLATE_CLASS__::sig_dram_write_drain(size_t channel_id, size_t writes_per_bank)
 {
     if constexpr (is_bank_balanced_cache<CACHE>::value)
-        cache_->decrement_write_counters(channel_id, writes_per_bank);
+        cache_->handle_dram_write_drain(channel_id, writes_per_bank);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -355,10 +355,19 @@ __TEMPLATE_CLASS__::handle_miss(Transaction&& t, bool write_miss)
     // Need to switch transaction type in case of write allocate.
     if (write_miss)
         e.trans.type = TransactionType::READ;
-    e.is_fired = mshr_.count(address) > 0 
-                  || (next_->io_->can_accept(address, e.trans.type) && next_->io_->add_incoming(e.trans));
+
+    if (mshr_.count(address) == 0)
+    {
+        if constexpr (is_bank_balanced_cache<CACHE>::value)
+            cache_->handle_mshr_init(address);
+        e.is_fired = (next_->io_->can_accept(address, e.trans.type) && next_->io_->add_incoming(e.trans));
+    }
+    else
+        e.is_fired = true;
+
     if (!e.is_fired)
         ++num_mshr_asleep_;
+
     mshr_.insert({address, e});
 }
 

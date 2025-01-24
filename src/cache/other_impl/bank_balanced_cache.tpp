@@ -71,7 +71,7 @@ __TEMPLATE_CLASS__::handle_dram_write_drain(size_t ch, size_t amt)
     for (auto& c : counters_[ch])
     {
         c.writes -= amt;
-        c.writes = std::clamp(c.writes, 0, std::numeric_limits<ssize_t>::max());
+        c.writes = std::clamp(c.writes, static_cast<ssize_t>(0), std::numeric_limits<ssize_t>::max());
     }
 }
 
@@ -84,18 +84,20 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
     size_t idx = __TEMPLATE_PARENT__::get_set_index(s[0].address);
     size_t ch = dram_channel(idx),
            bank_idx = dram_bank_idx(idx);
-    // We want the bank with >=`CRITICAL_READS` reads that has the minimum number of writes.
-    const auto& ctrs = counters_[ch];
 
-    auto ctr_it = std::min_element(ctrs.begin(), ctrs.end(),
+    const auto& ctrs = counters_[ch];
+    auto r_it = std::min_element(ctrs.begin(), ctrs.end(),
                         [] (const auto& ctrx, const auto& ctry)
                         {
-                            if ((ctrx.reads >= CRITICAL_READS) == (ctry.reads >= CRITICAL_READS))
-                                return ctrx.writes < ctry.writes;
-                            else
-                                return ctry.reads < CRITICAL_READS;
+                            return ctrx.reads < ctry.reads;
                         });
-    bool is_critical = (counters_[ch][bank_idx] - ctr_it->writes) >= CRITICAL_WRITES;
+    auto w_it = std::min_element(ctrs.begin(), ctrs.end(),
+                        [] (const auto& ctrx, const auto& ctry)
+                        {
+                            return ctrx.writes < ctry.writes;
+                        });
+    bool is_critical = (counters_[ch][bank_idx].reads - r_it->reads < CRITICAL_READS)
+                        && (counters_[ch][bank_idx].writes - w_it->writes >= CRITICAL_WRITES);
 
     if (is_critical)
         return find_victim_modified_policy(s);
@@ -166,7 +168,7 @@ __TEMPLATE_CLASS__::rrip_mod(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline RWCounter&
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::RWCounter&
 __TEMPLATE_CLASS__::get_counter(uint64_t address)
 {
     size_t ch = dram_channel(address);
