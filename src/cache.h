@@ -42,6 +42,8 @@ struct CacheEntry
     uint64_t timestamp;
     uint8_t  rrpv;
 
+    bool used_after_install =false;
+
     CacheEntry(void) =default;
 };
 

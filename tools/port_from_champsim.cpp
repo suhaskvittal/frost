@@ -5,6 +5,10 @@
 
 #include <cstdint>
 
+#if !defined(TRACE_FORMAT)
+#define TRACE_FORMAT MTF
+#endif
+
 uint64_t GL_CYCLE = 0;
 
 ////////////////////////////////////////////////////////////
@@ -110,20 +114,30 @@ probe_and_install_on_miss(
 ////////////////////////////////////////////////////////////
 
 void
-write_to_mtfout(gzFile& mtfout, const l2_miss_output_type& out, uint64_t inst_num)
+write_trace_info(gzFile& out, uint64_t inst_num, uint64_t ip, bool is_write, uint64_t address)
+{
+    gzwrite(out, &inst_num, 5);
+#if TRACE_FORMAT == IMAT
+    gzwrite(out, &ip, 4);
+#endif
+    gzputc(out, static_cast<int>(is_write));
+    gzwrite(out, &address, 4);
+#if TRACE_FORMAT == IMAT
+    // Need 2 bytes of padding (dhits is unused).
+    gzputc(out, 0);
+    gzputc(out, 0);
+#endif
+}
+
+void
+write_miss_to_trace(gzFile& out, const l2_miss_output_type& out, uint64_t inst_num, uint64_t ip)
 {
     if (out.has_value())
     {
         const L2MissData& m = out.value();
-        gzwrite(mtfout, &inst_num, 5);
-        gzputc(mtfout, 0);
-        gzwrite(mtfout, &m.address, 4);
+        write_trace_info(out, inst_num, ip, false, m.address);
         if (m.victim_is_dirty)
-        {
-            gzwrite(mtfout, &inst_num, 5);
-            gzputc(mtfout, 1);
-            gzwrite(mtfout, &m.victim, 4);
-        }
+            write_trace_info(out, inst_num, ip, true, m.victim);
     }
 }
 
@@ -137,7 +151,7 @@ using if_buffer_type = Cache<1, IF_BUFFER_SIZE, CacheReplPolicy::LRU>;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-using champsim_reader_type = TraceReader<ChampsimTraceFormat>;
+using champsim_reader_type = TraceReader<CTF>;
 using l1i_ptr = std::unique_ptr<L1ICache>;
 using l1d_ptr = std::unique_ptr<L1DCache>;
 using l2_ptr = std::unique_ptr<L2Cache>;
@@ -146,14 +160,14 @@ int main(int argc, char* argv[])
 {
     if (argc < 2)
     {
-        std::cerr << "usage: ./port_champsim_to_mtf <champsim-trace-path> <mtf-trace-path>\n";
+        std::cerr << "usage: ./port_champsim_to_mtf <champsim-trace-path> <output-trace-path>\n";
         return 1;
     }
 
     std::string input_trace(argv[1]);
 
     champsim_reader_type csreader(input_trace);
-    gzFile mtfout = gzopen(argv[2], "w");
+    gzFile out = gzopen(argv[2], "w");
     /*
      * Initialize caches:
      * */
@@ -183,15 +197,15 @@ int main(int argc, char* argv[])
         if (!if_buffer.probe(ip))
         {
             // Do L1i$ access and update `if_buffer`
-            write_to_mtfout(mtfout, probe_and_install_on_miss(l1i, l2, ip, false), inst_num);
+            write_miss_to_trace(out, probe_and_install_on_miss(l1i, l2, ip, false), inst_num, ip);
             // Install `ip` into `if_buffer`
             if_buffer.fill(ip, 1, false);
         }
         // Perform data cache accesses:
         for (uint64_t x : loads)
-            write_to_mtfout(mtfout, probe_and_install_on_miss(l1d, l2, x, false), inst_num);
+            write_miss_to_trace(out, probe_and_install_on_miss(l1d, l2, x, false), inst_num, ip);
         for (uint64_t x : stores)
-            write_to_mtfout(mtfout, probe_and_install_on_miss(l1d, l2, x, true), inst_num);
+            write_miss_to_trace(out, probe_and_install_on_miss(l1d, l2, x, true), inst_num, ip);
         
         ++inst_num;
         ++GL_CYCLE;
