@@ -133,7 +133,17 @@ Core::operate_rob()
     {
         inst_ptr inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done)
+        {
+            if (GL_CYCLE - rob_stall_start_cycle_ > 1'000'000)
+            {
+                // Simulator is deadlocked:
+                std::cerr << "\nCore " << (coreid_+0) << " deadlock in cycle " << GL_CYCLE << " detected:\n";
+                GL_LLC->deadlock_find_inst(inst);
+                GL_DRAM->deadlock_find_inst(inst);
+                rob_stall_start_cycle_ = GL_CYCLE;
+            }
             break;
+        }
         size_t rob_ref_updates = std::min(CORE_FETCH_WIDTH-i, inst->rob_refs);
 
         inst->rob_refs -= rob_ref_updates;
@@ -146,6 +156,7 @@ Core::operate_rob()
         }
 
         i += rob_ref_updates;
+        rob_stall_start_cycle_ = GL_CYCLE;
     }
 }
 

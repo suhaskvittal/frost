@@ -86,21 +86,9 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
            bank_idx = dram_bank_idx(idx);
 
     const auto& ctrs = counters_[ch];
-    auto r_it = std::min_element(ctrs.begin(), ctrs.end(),
-                        [] (const auto& ctrx, const auto& ctry)
-                        {
-                            return ctrx.reads < ctry.reads;
-                        });
-    auto w_it = std::min_element(ctrs.begin(), ctrs.end(),
-                        [] (const auto& ctrx, const auto& ctry)
-                        {
-                            return ctrx.writes < ctry.writes;
-                        });
-    bool is_critical = (counters_[ch][bank_idx].reads - r_it->reads < CRITICAL_READS)
-                        && (counters_[ch][bank_idx].writes - w_it->writes >= CRITICAL_WRITES);
-
-    if (is_critical)
-        return find_victim_modified_policy(s);
+    BalanceLevel b = compute_balance_level(ctrs[bank_idx], ctrs);
+    if (b != BalanceLevel::OK)
+        return find_victim_modified_policy(s, b);
     else
         return __TEMPLATE_PARENT__::find_victim(s);
 }
@@ -109,12 +97,12 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_PARENT__::cset_type::iterator
-__TEMPLATE_CLASS__::find_victim_modified_policy(cset_type& s)
+__TEMPLATE_CLASS__::find_victim_modified_policy(cset_type& s, BalanceLevel b)
 {
     if constexpr (POL == CacheReplPolicy::LRU)
-        return lru_mod(s);
+        return lru_mod(s, b);
     else if constexpr (POL == CacheReplPolicy::SRRIP)
-        return rrip_mod(s);
+        return rrip_mod(s, b);
     else
         return __TEMPLATE_PARENT__::find_victim(s);
 }
@@ -122,40 +110,33 @@ __TEMPLATE_CLASS__::find_victim_modified_policy(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_PARENT__::cset_type::iterator
-__TEMPLATE_CLASS__::lru_mod(cset_type& s)
+__TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
+__TEMPLATE_CLASS__::lru_mod(cset_type& s, BalanceLevel b)
 {
     return std::min_element(s.begin(), s.end(),
-                [] (const auto& x, const auto& y)
+                [b] (const auto& x, const auto& y)
                 {
                     if (x.dirty == y.dirty)
                         return x.timestamp < y.timestamp;
-                    else
+                    else if (b == BalanceLevel::REPL_CLEAN)
                         return y.dirty;
+                    else
+                        return x.dirty;
                 });
 }
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_PARENT__::cset_type::iterator
-__TEMPLATE_CLASS__::rrip_mod(cset_type& s)
+__TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
+__TEMPLATE_CLASS__::rrip_mod(cset_type& s, BalanceLevel b)
 {
-    constexpr size_t RRPV_TOL = WAYS/4;
-
     auto v_it = std::min_element(s.begin(), s.end(),
-                    [] (const auto& x, const auto& y)
+                    [b] (const auto& x, const auto& y)
                     {
                         if (x.dirty == y.dirty)
                             return x.rrpv < y.rrpv;
+                        else if (b == BalanceLevel::REPL_CLEAN)
+                            return y.dirty;
                         else
-                        {
-                            // Check if the `rrpv` is comparable. If so, choose dirty line.
-                            // If not, default to `rrpv` comparison.
-                            if (x.dirty && x.rrpv < y.rrpv)
-                                return x.rrpv + RRPV_TOL < y.rrpv;
-                            else if (y.dirty && y.rrpv < x.rrpv)
-                                return y.rrpv + RRPV_TOL < x.rrpv;
-                            else
-                                return false;
-                        }
+                            return x.dirty;
                     });
     if (v_it->rrpv > 0)
     {
@@ -163,6 +144,38 @@ __TEMPLATE_CLASS__::rrip_mod(cset_type& s)
             e.rrpv = (e.rrpv < v_it->rrpv) ? 0 : e.rrpv - v_it->rrpv;
     }
     return v_it;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::BalanceLevel
+__TEMPLATE_CLASS__::compute_balance_level(const RWCounter& c, const rw_counter_subarray_type& ctrs)
+{
+    auto [w_min_it, w_max_it] = std::minmax_element(ctrs.begin(), ctrs.end(),
+                                    [] (const auto& x, const auto& y)
+                                    {
+                                        return x.writes < y.writes;
+                                    });
+    BalanceLevel bw = compute_balance_level_given_minmax(c.writes, w_min_it->writes, w_max_it->writes, true);
+
+    return bw;
+}
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::BalanceLevel
+__TEMPLATE_CLASS__::compute_balance_level_given_minmax(ssize_t x, ssize_t min, ssize_t max, bool write)
+{
+    const ssize_t crit = write ? CRITICAL_WRITES : CRITICAL_READS;
+
+    bool lower_cond = (x - min) >= crit,    // too many
+         upper_cond = (max - x) >= crit;    // too few
+
+    if (lower_cond && upper_cond)
+        return BalanceLevel::OK;
+    else if (lower_cond)
+        return write ? BalanceLevel::REPL_CLEAN : BalanceLevel::REPL_DIRTY;
+    else
+        return write ? BalanceLevel::REPL_DIRTY : BalanceLevel::REPL_CLEAN;
 }
 
 ////////////////////////////////////////////////////////////////////////////

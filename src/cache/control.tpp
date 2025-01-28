@@ -249,7 +249,7 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::deadlock_find_inst(const inst_ptr inst)
+__TEMPLATE_CLASS__::deadlock_find_inst(const inst_ptr inst) const
 {
     std::cerr << "searching in " << cache_name_ << "...\n";
     if (!io_->deadlock_find_inst(inst)) 

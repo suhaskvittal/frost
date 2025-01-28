@@ -164,6 +164,54 @@ DRAMChannel::add_incoming(Transaction t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+bool
+DRAMChannel::deadlock_find_inst(const inst_ptr inst) const
+{
+    std::cerr << "searching in DRAM channel " << channel_id_ << "...\n";
+    auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
+                        [&inst] (const auto& x)
+                        {
+                            const auto& inst_list = x.trans.inst_list;
+                            return std::find(inst_list.begin(), inst_list.end(), inst) != inst_list.end();
+                        });
+    if (rd_it != read_queue_.end())
+    {
+        size_t rd_pos = std::distance(read_queue_.begin(), rd_it);
+        std::cerr << "\tfound in read queue: position = " << rd_pos
+                << ", read queue occupancy = " << read_queue_.size()
+                << ", write queue occupancy = " << write_queue_.size()
+                << ", active buffer occupancy = " << active_buffer_.size()
+                << ", in write mode = " << in_write_mode_
+                << ", in transition = " << in_transition_ << "\n";
+        for (size_t b : active_buffer_)
+        {
+            auto q_it = std::find_if(write_queue_.begin(), write_queue_.end(),
+                                    [b, row=get_bank_const_ref_from_idx(b).open_row.value()] (const auto& x)
+                                    {
+                                        return b == dram_bank_idx(x.trans.address) && row == dram_row(x.trans.address);
+                                    });
+            if (q_it == write_queue_.end())
+            {
+                std::cerr << "\tactive buffer entry B" << b << " not in write queue!\n";
+            }
+            else
+            {
+                size_t q_pos = std::distance(write_queue_.begin(), q_it);
+                std::cerr << "\tactive buffer entry B" << b << " found in write queue position " << q_pos << "\n";
+            }
+        }
+        return true;
+    }
+    else
+    {
+        std::cerr << "\tnothing found\n";
+        return false;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 void
 DRAMChannel::try_switch_to_write_mode()
 {
@@ -176,7 +224,8 @@ DRAMChannel::try_switch_to_write_mode()
     if (!drain_cond_1 && !drain_cond_2)
         return;
 
-    size_t num_writes = write_queue_.size();
+    const size_t num_writes = write_queue_.size();
+
     size_t writes_per_bank = num_writes / DRAM_TOT_BANKS_PER_CHANNEL;
     if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
     {
