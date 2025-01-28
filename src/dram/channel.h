@@ -158,6 +158,7 @@ public:
     void tick(void);
 
     bool add_incoming(Transaction);
+    bool deadlock_find_inst(const inst_ptr) const;
 
     inline size_t read_queue_size(void) const { return read_queue_.size(); }
     inline size_t write_queue_size(void) const { return write_queue_.size(); }
@@ -181,6 +182,14 @@ private:
                j = fast_mod<DRAM_BANKGROUPS>(ii >> numeric_traits<DRAM_BANKS>::log2),
                k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
         return state_[k][j][i];
+    }
+
+    inline const DRAMBankState& get_bank_const_ref_from_idx(size_t ii) const
+    {
+        size_t i = fast_mod<DRAM_BANKS>(ii),
+               j = fast_mod<DRAM_BANKGROUPS>(ii >> numeric_traits<DRAM_BANKS>::log2),
+               k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
+        return state_.at(k).at(j).at(i);
     }
 
     friend class DRAM;

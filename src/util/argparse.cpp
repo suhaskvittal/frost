@@ -30,7 +30,7 @@ ArgParseResult::ArgParseResult(
     {
         std::string descs = "\"" + std::string(desc) + "\"";
         std::string defs = default_value.empty() ? "" : "default: " + std::string(default_value);
-        ss << "\t-" << std::setw(48) << std::left << flag
+        ss << "\t-" << std::setw(32) << std::left << flag
             << std::setw(120) << std::left << descs
             << std::setw(16) << std::left << defs << "\n";
     }
@@ -61,10 +61,8 @@ ArgParseResult::ArgParseResult(
         ++ii;
         // Get value
         if (parse_data[opt].empty())
-        {
             // This is a flag
             parse_data[opt] = "y";
-        } 
         else
         {
             if (ii > argc)
@@ -73,7 +71,7 @@ ArgParseResult::ArgParseResult(
                 print_help_and_die();
             }
 
-            if (argv[ii][0] == '-')
+            if (argv[ii][0] == '-' && !(argv[ii][1] >= '0' && argv[ii][1] <= '9'))
             {
                 std::cerr << "Expected value for argument \"-" << opt 
                     << "\" but got new argument \"" << argv[ii] << "\".\n";

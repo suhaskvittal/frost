@@ -38,10 +38,9 @@ uint64_t OPT_INST_WARMUP;
 double OPT_DRAM_LOW_WATERMARK;
 double OPT_DRAM_HIGH_WATERMARK;
 
-uint64_t OPT_DRAM_WRITE_SYNC_COUNT;
-uint64_t OPT_DRAM_WRITE_SYNC_HIT_COST;
-uint64_t OPT_DRAM_WRITE_SYNC_MISS_COST;
-uint64_t OPT_DRAM_WRITE_SYNC_READ_DIVISOR;
+uint8_t OPT_DRAM_WRITE_SYNC_COUNT;
+uint8_t OPT_DRAM_WRITE_SYNC_HIT_COST;
+uint8_t OPT_DRAM_WRITE_SYNC_MISS_COST;
 
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
@@ -74,19 +73,19 @@ int main(int argc, char* argv[])
                 {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"},
                 {"dram_wsync_hit_cost", "Cost of a write hit", "0"},
                 {"dram_wsync_miss_cost", "Cost of a write miss", "1"},
-                {"dram_wsync_read_divisor", "Inverse of read value", "100"},
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
             });
     ARGS("trace", OPT_TRACE_FILE);
     ARGS("w", OPT_INST_WARMUP);
     ARGS("s", OPT_INST_SIM);
+
     ARGS("dram_wm_low", OPT_DRAM_LOW_WATERMARK);
     ARGS("dram_wm_high", OPT_DRAM_HIGH_WATERMARK);
+
     ARGS("dram_wsync_count", OPT_DRAM_WRITE_SYNC_COUNT);
     ARGS("dram_wsync_hit_cost", OPT_DRAM_WRITE_SYNC_HIT_COST);
     ARGS("dram_wsync_miss_cost", OPT_DRAM_WRITE_SYNC_MISS_COST);
-    ARGS("dram_wsync_read_divisor", OPT_DRAM_WRITE_SYNC_READ_DIVISOR);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 

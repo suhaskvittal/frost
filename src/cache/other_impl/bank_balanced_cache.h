@@ -39,7 +39,8 @@ private:
         ssize_t writes =0;
     };
 
-    using rw_counter_array_type = std::array<std::array<RWCounter, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
+    using rw_counter_subarray_type = std::array<RWCounter, DRAM_TOT_BANKS_PER_CHANNEL>;
+    using rw_counter_array_type = std::array<rw_counter_subarray_type, DRAM_CHANNELS>;
     using write_epoch_array_type = std::array<size_t, DRAM_CHANNELS>;
 
     rw_counter_array_type counters_{};
@@ -64,15 +65,19 @@ public:
     void handle_mshr_init(uint64_t address);
     void handle_dram_write_drain(size_t channel_id, size_t amt);
 protected:
+    enum class BalanceLevel { OK, REPL_CLEAN, REPL_DIRTY };
     /*
      * This class modifies standard eviction policies to operate based
      * on the counters in `counters_`
      * */
     typename cset_type::iterator find_victim(cset_type&) override;
-    typename cset_type::iterator find_victim_modified_policy(cset_type&);
+    typename cset_type::iterator find_victim_modified_policy(cset_type&, BalanceLevel);
 
-    typename cset_type::iterator lru_mod(cset_type&);
-    typename cset_type::iterator rrip_mod(cset_type&);
+    typename cset_type::iterator lru_mod(cset_type&, BalanceLevel);
+    typename cset_type::iterator rrip_mod(cset_type&, BalanceLevel);
+
+    BalanceLevel compute_balance_level(const RWCounter&, const rw_counter_subarray_type&);
+    BalanceLevel compute_balance_level_given_minmax(ssize_t, ssize_t min, ssize_t max, bool is_write);
 private:
     RWCounter& get_counter(uint64_t address);
 };

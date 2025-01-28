@@ -146,7 +146,7 @@ public:
      * Searches for an instruction in this cache. If it is found, a message
      * is printed to `stderr` and this function returns true.
      * */
-    bool deadlock_find_inst(const inst_ptr);
+    bool deadlock_find_inst(const inst_ptr) const;
     /*
      * Signals the cache that DRAM has drained its writes. This will do whatever
      * it wants with the information.

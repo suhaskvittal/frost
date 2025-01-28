@@ -59,6 +59,15 @@ public:
 
     void tick(void);
     void print_stats(std::ostream&);
+
+    inline bool deadlock_find_inst(const inst_ptr inst) const
+    {
+        return std::any_of(channels_.begin(), channels_.end(),
+                    [inst] (const auto& ch)
+                    {
+                        return ch->deadlock_find_inst(inst);
+                    });
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

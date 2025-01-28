@@ -40,10 +40,10 @@ using inst_ptr = Instruction*;
  * */
 struct Transaction
 {
-    using inst_list_t = std::vector<inst_ptr>;
+    using inst_list_type = std::vector<inst_ptr>;
 
     uint8_t         coreid;
-    inst_list_t     inst_list;
+    inst_list_type  inst_list;
     TransactionType type;
 
     uint64_t address;

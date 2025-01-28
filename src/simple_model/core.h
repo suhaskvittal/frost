@@ -29,6 +29,7 @@ private:
 
     rob_type rob_;
     size_t rob_size_ =0;
+    uint64_t rob_stall_start_cycle_ =0;
     inst_ptr asleep_inst_ =nullptr;
 
     std::string      trace_file_;
