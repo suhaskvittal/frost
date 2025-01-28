@@ -51,6 +51,7 @@ set(COMPLEX_CORE_MODEL_FILES
     src/complex_model/os/vmem.cpp)
 
 file(READ _generated/${BUILD_ID}/core_model.txt CORE_MODEL)
+file(READ _generated/${BUILD_ID}/trace_format.txt TRACE_FORMAT)
 file(READ _generated/${BUILD_ID}/defines.txt CUSTOM_DEFINES)
 
 if (CORE_MODEL MATCHES "simple")
@@ -69,7 +70,6 @@ message("========================================================")
 ########################################################################
 
 set(MAIN_SIM_FILES
-    src/instruction.cpp
     src/io_bus.cpp
     src/os/free_list.cpp
     src/transaction.cpp
@@ -110,7 +110,7 @@ add_executable(sim src/main.cpp ${MAIN_SIM_FILES})
 target_compile_options(sim PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(sim PRIVATE "src" "_generated/${BUILD_ID}")
 target_link_libraries(sim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
-target_compile_definitions(sim PRIVATE ${CUSTOM_DEFINES})
+target_compile_definitions(sim PRIVATE TRACE_FORMAT=${TRACE_FORMAT} ${CUSTOM_DEFINES})
 if (CMAKE_BUILD_TYPE MATCHES "Profile")
     target_link_libraries(sim PRIVATE -pg)
 endif()

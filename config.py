@@ -55,6 +55,8 @@ dram_timing.write(cfg, build_id)
 # Core model:
 with open(f'{GEN_DIR}/{build_id}/core_model.txt', 'w') as wr:
     wr.write(cfg['SYSTEM']['model'])
+with open(f'{GEN_DIR}/{build_id}/trace_format.txt', 'w') as wr:
+    wr.write(cfg['SYSTEM']['trace_format'])
 # Custom defines:
 custom_defines = ''
 defined_values = cfg['SYSTEM']['defines'].split(',')

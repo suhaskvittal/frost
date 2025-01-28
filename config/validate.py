@@ -20,6 +20,11 @@ def validate_system_section(cfg) -> bool:
         ('defines', '')
     ]
     update_cfg_with_optionals(cfg, optionals)
+    if 'trace_format' not in cfg:
+        default_fmt = 'CTF'
+        if cfg['model'] == 'simple':
+            default_fmt = 'MTF'
+        cfg['trace_format'] = default_fmt
     return True
 
 ####################################################################

@@ -25,7 +25,7 @@ public:
     const uint8_t coreid_;
 private:
     using rob_type = std::deque<inst_ptr>;
-    using tracereader_type = TraceReader<MemsimTraceFormat>;
+    using tracereader_type = TraceReader<TRACE_FORMAT>;
 
     rob_type rob_;
     size_t rob_size_ =0;
