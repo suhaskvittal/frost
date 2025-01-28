@@ -83,13 +83,15 @@ else:
 ############################################################
 ############################################################
 
-for suite in ['mtf/spec2017', 'mtf/gap']:
+for suite in ['mtf/spec2017', 'mtf/gap', 'mtf/ligra', 'mtf/parsec']:
+    inst_warmup = 250_000_000 if suite == 'mtf/gap' else INST_WARMUP
+
     benchmarks = [f for f in os.listdir(f'TRACES/{suite}') if f.endswith('.xz') or f.endswith('.gz')]
     for build in builds:
         os.system(f'mkdir -p out/{suite}/{build}')
         for b in benchmarks:
             name = get_name(suite, b)
-            base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {INST_WARMUP}'
+            base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {inst_warmup}'
             if which == 'watermark-scan':
                 for x in [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]:
                     cmd = f'{base_cmd} -dram_wm_low {x} -dram_wm_high 1.0'

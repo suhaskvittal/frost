@@ -27,15 +27,16 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017', 'mtf/gap']
+SUITES = ['mtf/spec2017', 'mtf/gap', 'mtf/parsec', 'mtf/ligra']
 
 def create_csv_file_for_ipc(output_file: str, *builds):
     wr = open(f'data/{output_file}', 'w')
 
     header = ','.join(f'{b}' for b in builds)
-    wr.write(f'{header}\n')
+    wr.write(f',{header}\n')
     ipc_list = {b: [] for b in builds}
     for suite in SUITES:
+        wr.write('\n')
         workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.mtf.gz')]
         local_ipc_list = {b: [] for b in builds}
         for w in workloads:
@@ -63,7 +64,7 @@ def create_csv_file_for_ipc(output_file: str, *builds):
             wr.write(f',{ipc:.3f}')
         wr.write('\n')
     # Write gmean data
-    wr.write('gmean')
+    wr.write('\ngmean')
     for (_, arr) in ipc_list.items():
         ipc = gmean(arr)
         wr.write(f',{ipc:.3f}')
@@ -116,25 +117,24 @@ def create_csv_file_for_ipc_scan(output_file: str, scans: list[int], folder: str
 ####################################################################
 ####################################################################
 
-def get_folder(base: str, page_mode: str):
-    return f'{base}_OP_MOP4' if page_mode == 'op' else f'{base}_CP_ZEN'
+def get_folder(base: str, page_mode: str, random=False):
+    if random:
+        return f'{base}_OP_RANDOM' if page_mode == 'op' else f'{base}_CP_RANDOM'
+    else:
+        return f'{base}_OP_MOP4' if page_mode == 'op' else f'{base}_CP_ZEN'
 
 ####################################################################
 ####################################################################
-# MOTIVATION
-for s in ['op','cp']:
-    builds = [get_folder('BASELINE', s), get_folder('NO_WRITES', s)]
-    for p in [9, 11]:
-        builds.append(get_folder(f'WRITE_QUEUE_{p}', s))
-#   create_csv_file_for_ipc(f'motivation_{s}.ipc.csv', *builds)
+# COMPARE OPEN VS CLOSE PAGE
+create_csv_file_for_ipc(f'baseline_comparison.ipc.csv', get_folder('BASELINE', 'op'), get_folder('BASELINE', 'cp'))
 
 ####################################################################
 ####################################################################
 # WRITE SYNCHRONIZATION SCAN
 for s in ['op','cp']:
-#   create_csv_file_for_ipc_scan(f'balanced_cache_{s}.ipc.csv', [1,2,4,8], get_folder('WRITE_SYNC_BALANCED_CACHE', s), get_folder('BASELINE', s))
     create_csv_file_for_ipc(f'main_results_1_{s}.ipc.csv',
                             get_folder('BASELINE', s), 
+                            get_folder('BASELINE', s, random=True), 
                             get_folder('NO_WRITES', s), 
                             get_folder('WRITE_SYNC', s),
                             get_folder('WRITE_SYNC_BALANCED_CACHE', s))

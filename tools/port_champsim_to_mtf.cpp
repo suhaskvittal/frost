@@ -31,7 +31,7 @@ constexpr size_t PAGESIZE = 4096;
 constexpr size_t LINESIZE = 64;
 
 constexpr size_t L1I_SIZE_KB = 32;
-constexpr size_t L1D_SIZE_KB = 64;
+constexpr size_t L1D_SIZE_KB = 48;
 
 constexpr size_t L2_SIZE_KB = 512;
 constexpr size_t L2_ASSOC = 8;
@@ -166,6 +166,9 @@ int main(int argc, char* argv[])
     uint64_t inst_num = 0;
     while (!csreader.eof_)
     {
+        if (inst_num % 10'000'000 == 0)
+            std::cout << "[ status ] instruction number " << inst_num << "\n";
+
         std::vector<uint64_t> loads, stores;
 
         // Get trace data:
