@@ -130,11 +130,11 @@ write_trace_info(gzFile& out, uint64_t inst_num, uint64_t ip, bool is_write, uin
 }
 
 void
-write_miss_to_trace(gzFile& out, const l2_miss_output_type& out, uint64_t inst_num, uint64_t ip)
+write_miss_to_trace(gzFile& out, const l2_miss_output_type& miss_data, uint64_t inst_num, uint64_t ip)
 {
-    if (out.has_value())
+    if (miss_data.has_value())
     {
-        const L2MissData& m = out.value();
+        const L2MissData& m = miss_data.value();
         write_trace_info(out, inst_num, ip, false, m.address);
         if (m.victim_is_dirty)
             write_trace_info(out, inst_num, ip, true, m.victim);
@@ -180,9 +180,6 @@ int main(int argc, char* argv[])
     uint64_t inst_num = 0;
     while (!csreader.eof_)
     {
-        if (inst_num % 10'000'000 == 0)
-            std::cout << "[ status ] instruction number " << inst_num << "\n";
-
         std::vector<uint64_t> loads, stores;
 
         // Get trace data:
@@ -196,11 +193,12 @@ int main(int argc, char* argv[])
         for (uint64_t& x : stores)
             x >>= numeric_traits<LINESIZE>::log2;
 
-        uint64_t ip = b.ip >> numeric_traits<LINESIZE>::log2;
+        uint64_t ip = b.ip,
+                 ip_line = b.ip >> numeric_traits<LINESIZE>::log2;
         if (!if_buffer.probe(ip))
         {
             // Do L1i$ access and update `if_buffer`
-            write_miss_to_trace(out, probe_and_install_on_miss(l1i, l2, ip, false), inst_num, ip);
+            write_miss_to_trace(out, probe_and_install_on_miss(l1i, l2, ip_line, false), inst_num, ip);
             // Install `ip` into `if_buffer`
             if_buffer.fill(ip, 1, false);
         }
@@ -213,7 +211,7 @@ int main(int argc, char* argv[])
         ++inst_num;
         ++GL_CYCLE;
     }
-    gzclose(mtfout);
+    gzclose(out);
     return 0;
 }
 

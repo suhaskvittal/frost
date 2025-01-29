@@ -11,6 +11,8 @@ import os
 #######################################################################################
 #######################################################################################
 
+SPEC_TRACES = [ f'/traces/champsim/{f}' for f in os.listdir('/traces/champsim') if f.endswith('.xz') ]
+
 LIGRA_TRACES = [
     '/traces/champsim/Ligra/ligra_BC.com-lj.ungraph.gcc_6.3.0_O3.drop_15500M.length_250M.champsimtrace.xz',
     '/traces/champsim/Ligra/ligra_BellmanFord.com-lj.ungraph.gcc_6.3.0_O3.drop_33750M.length_250M.champsimtrace.xz',
@@ -30,11 +32,18 @@ PARSEC_TRACES = [
 #######################################################################################
 #######################################################################################
 
-PORTING_EXECUTABLE = './build/port_champsim_to_mtf'
-OUTPUT_DIRECTORY = '../TRACES/mtf'
+PORTING_EXECUTABLE = './build/port_from_champsim'
+OUTPUT_DIRECTORY = '../TRACES'
 
 #######################################################################################
 #######################################################################################
+
+def get_spec_name(file):
+    path_parts = file.split('/')
+    filename = path_parts[-1]
+    left = filename.find('.')+1
+    right = filename.find('_s')
+    return filename[left:right]
 
 def get_ligra_name(file):
     path_parts = file.split('/')
@@ -53,19 +62,30 @@ def get_parsec_name(file):
 #######################################################################################
 #######################################################################################
 
-def convert(output_dir: str, trace_list: list[str], name_function):
+def convert(output_dir: str, trace_list: list[str], name_function, fmt: str):
     for t in trace_list:
-        if not os.path.isdir(f'{OUTPUT_DIRECTORY}/{output_dir}'):
-            os.mkdir(f'{OUTPUT_DIRECTORY}/{output_dir}')
+        if not os.path.isdir(f'{OUTPUT_DIRECTORY}/{fmt}/{output_dir}'):
+            os.mkdir(f'{OUTPUT_DIRECTORY}/{fmt}/{output_dir}')
         name = name_function(t)
-        out = f'{OUTPUT_DIRECTORY}/{output_dir}/{name}.mtf.gz'
+        out = f'{OUTPUT_DIRECTORY}/{fmt}/{output_dir}/{name}.{fmt}.gz'
         print(f'{PORTING_EXECUTABLE} {t} {out}')
 
 #######################################################################################
 #######################################################################################
 
-convert('ligra', LIGRA_TRACES, get_ligra_name)
-convert('parsec', PARSEC_TRACES, get_parsec_name)
+from sys import argv
+
+if len(argv) > 1:
+    fmt = argv[1]
+else:
+    fmt = 'mtf'
+
+if not os.path.isdir(f'{OUTPUT_DIRECTORY}/{fmt}'):
+    os.mkdir(f'{OUTPUT_DIRECTORY}/{fmt}')
+
+convert('spec', SPEC_TRACES, get_spec_name, fmt)
+convert('ligra', LIGRA_TRACES, get_ligra_name, fmt)
+convert('parsec', PARSEC_TRACES, get_parsec_name, fmt)
 
 #######################################################################################
 #######################################################################################

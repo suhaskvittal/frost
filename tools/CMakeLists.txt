@@ -75,10 +75,14 @@ target_compile_definitions(cachesim PRIVATE CACHE_SIZE_MB=${CACHESIM_SIZE_MB}
 ########################################################################
 ### PORT_CHAMPSIM_TO_MTF ###
 
-add_executable(port_champsim_to_mtf port_champsim_to_mtf.cpp)
-target_compile_options(port_champsim_to_mtf PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(port_champsim_to_mtf PRIVATE "src" "../src")
-target_link_libraries(port_champsim_to_mtf PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
+add_executable(port_from_champsim port_from_champsim.cpp)
+target_compile_options(port_from_champsim PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(port_from_champsim PRIVATE "src" "../src")
+target_link_libraries(port_from_champsim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
+
+if (PORT_CTF_OUTPUT_FORMAT)
+    target_compile_definitions(port_from_champsim PRIVATE TRACE_FORMAT=${PORT_CTF_OUTPUT_FORMAT})
+endif()
 
 ########################################################################
 ########################################################################

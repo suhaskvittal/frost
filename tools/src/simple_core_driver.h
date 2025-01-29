@@ -19,7 +19,7 @@
 template <class CACHE_TYPE>
 struct SimpleCoreDriver
 {
-    using tracereader_type = TraceReader<MemsimTraceFormat>;
+    using tracereader_type = TraceReader<MTF>;
     using cache_ptr = std::unique_ptr<CACHE_TYPE>;
 
     uint64_t s_misses =0;
