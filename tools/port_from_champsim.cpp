@@ -117,12 +117,12 @@ void
 write_trace_info(gzFile& out, uint64_t inst_num, uint64_t ip, bool is_write, uint64_t address)
 {
     gzwrite(out, &inst_num, 5);
-#if TRACE_FORMAT == IMAT
+#if TRACE_FORMAT_IMAT
     gzwrite(out, &ip, 4);
 #endif
     gzputc(out, static_cast<int>(is_write));
     gzwrite(out, &address, 4);
-#if TRACE_FORMAT == IMAT
+#if TRACE_FORMAT_IMAT
     // Need 2 bytes of padding (dhits is unused).
     gzputc(out, 0);
     gzputc(out, 0);
@@ -195,12 +195,12 @@ int main(int argc, char* argv[])
 
         uint64_t ip = b.ip,
                  ip_line = b.ip >> numeric_traits<LINESIZE>::log2;
-        if (!if_buffer.probe(ip))
+        if (!if_buffer.probe(ip_line))
         {
             // Do L1i$ access and update `if_buffer`
             write_miss_to_trace(out, probe_and_install_on_miss(l1i, l2, ip_line, false), inst_num, ip);
-            // Install `ip` into `if_buffer`
-            if_buffer.fill(ip, 1, false);
+            // Install `ip_line` into `if_buffer`
+            if_buffer.fill(ip_line, 1, false);
         }
         // Perform data cache accesses:
         for (uint64_t x : loads)

@@ -81,7 +81,7 @@ target_include_directories(port_from_champsim PRIVATE "src" "../src")
 target_link_libraries(port_from_champsim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
 
 if (PORT_CTF_OUTPUT_FORMAT)
-    target_compile_definitions(port_from_champsim PRIVATE TRACE_FORMAT=${PORT_CTF_OUTPUT_FORMAT})
+    target_compile_definitions(port_from_champsim PRIVATE TRACE_FORMAT_${PORT_CTF_OUTPUT_FORMAT})
 endif()
 
 ########################################################################
