@@ -23,7 +23,7 @@ class SamplingPredictor : public DeadBlockPredictor
 public:
 private:
     constexpr static size_t SAMPLER_SETS = 32*NUM_THREADS;
-    constexpr static size_t SAMPLER_ASSOC = 13;
+    constexpr static size_t SAMPLER_ASSOC = 16;
     constexpr static CacheReplPolicy SAMPLER_REPL = CacheReplPolicy::LRU;
     constexpr static size_t SAMPLER_SET_GAP = BASE_CACHE_TYPE::num_sets() / SAMPLER_SETS;
 
@@ -36,8 +36,9 @@ private:
     };
 
     constexpr static size_t PREDICTOR_WIDTH = 2;
-    constexpr static size_t PREDICTOR_ENTRIES = (1 << 12) * NUM_THREADS;
-    constexpr static int8_t PREDICTOR_THRESHOLD = 8;
+    constexpr static size_t PREDICTOR_ENTRIES = (1 << 14) * NUM_THREADS;
+    constexpr static int8_t PREDICTOR_LOWER_THRESHOLD = 2;
+    constexpr static int8_t PREDICTOR_UPPER_THRESHOLD = 8;
 
     using sampler_ptr = std::unique_ptr<Sampler>;
     using sampler_data_type = std::tuple<uint64_t, uint8_t>;  // <PC, thread-id>
@@ -58,9 +59,9 @@ public:
     SamplingPredictor(void);
 
     void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid) override;
-    bool predict_if_dead(uint64_t ip, uint64_t address, uint8_t coreid) const override;
+    void handle_writeback(uint64_t address) override;
 
-    void update_predictor_and_invalidate(uint64_t address);
+    DeadBlockPrediction predict(uint64_t ip, uint64_t address, uint8_t coreid) const override;
 private:
     void update_predictor_counters(uint64_t ip, uint8_t coreid, bool inc);
 

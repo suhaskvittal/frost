@@ -9,13 +9,23 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+enum class DeadBlockPrediction { LIKELY_DEAD, LIKELY_ALIVE, UNSURE };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 class DeadBlockPredictor
 {
 public:
     constexpr static uint64_t DIRTY_IP = 0xffff'ffff'ffff'ffff;
 
     virtual void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid) {}
-    virtual bool predict_if_dead(uint64_t ip, uint64_t address, uint8_t coreid) const { return false; };
+    virtual void handle_writeback(uint64_t address) {}
+
+    virtual DeadBlockPrediction predict(uint64_t ip, uint64_t address, uint8_t coreid) const
+    {
+        return DeadBlockPrediction::UNSURE;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

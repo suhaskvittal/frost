@@ -9,6 +9,7 @@
 #include "constants.h"
 
 #include "cache.h"
+#include "cache/dead_block/base_predictor.h"
 #include "io_bus.h"
 #include "transaction.h"
 #include "util/stats.h"
@@ -182,8 +183,10 @@ private:
     bool do_writeback(uint64_t addr);
     bool do_writeback_with_dram_write_hint(uint64_t addr, bool autopre);
 
-    bool dead_block_handle_fill(const Transaction&);
-    void dead_block_handle_hit(const Transaction&);
+    DeadBlockPrediction dead_block_handle_fill(const Transaction&);
+    void                dead_block_handle_hit(const Transaction&);
+
+    void consume_dead_block_prediction(uint64_t address, DeadBlockPrediction);
 };
 
 ////////////////////////////////////////////////////////////////////////////

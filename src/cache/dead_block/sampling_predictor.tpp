@@ -46,16 +46,31 @@ __TEMPLATE_CLASS__::update_on_access(uint64_t ip, uint64_t address, uint8_t core
             sampler_contents_.erase(v_it);
         }
     }
-    if (predict_if_dead(ip, address, coreid))
+    /*
+    if (predict(ip, address, coreid) == DeadBlockPrediction::LIKELY_DEAD)
         sampler_->mark_likely_dead(address);
+    */
     sampler_contents_[address] = sampler_data_type{ip, coreid};
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::handle_writeback(uint64_t address)
+{
+    if (fast_mod<SAMPLER_SET_GAP>(address) != 0)
+        return;
+    if (sampler_->probe(address))
+    {
+        const auto& [curr_ip, curr_coreid] = sampler_contents_[address];
+        // Then existing `ip` for `address` should be predicted as not dead.
+        update_predictor_counters(curr_ip, curr_coreid, false);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::predict_if_dead(uint64_t ip, uint64_t address, uint8_t coreid) const
+__TEMPLATE_HEADER__ DeadBlockPrediction
+__TEMPLATE_CLASS__::predict(uint64_t ip, uint64_t address, uint8_t coreid) const
 {
     int8_t tot = 0;
     for (size_t i = 0; i < 3; i++)
@@ -63,23 +78,13 @@ __TEMPLATE_CLASS__::predict_if_dead(uint64_t ip, uint64_t address, uint8_t corei
         const auto& pt = predictor_tables_.at(i);
         tot += pt.at(hash(ip, coreid, i));
     }
-    return tot >= PREDICTOR_THRESHOLD;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::update_predictor_and_invalidate(uint64_t address)
-{
-    if (!sampler_->probe(address))
-        return;
     
-    const auto& [curr_ip, curr_coreid] = sampler_contents_[address];
-    // Then existing `ip` for `address` should be predicted as not dead.
-    update_predictor_counters(curr_ip, curr_coreid, false);
-    sampler_->invalidate(address);
-    sampler_contents_.erase(address);
+    if (tot < PREDICTOR_LOWER_THRESHOLD)
+        return DeadBlockPrediction::LIKELY_ALIVE;
+    else if (tot >= PREDICTOR_UPPER_THRESHOLD)
+        return DeadBlockPrediction::LIKELY_DEAD;
+    else
+        return DeadBlockPrediction::UNSURE;
 }
 
 ////////////////////////////////////////////////////////////////////////////

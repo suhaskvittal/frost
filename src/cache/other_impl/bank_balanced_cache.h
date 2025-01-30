@@ -63,7 +63,10 @@ public:
     fill_result_type fill(uint64_t, size_t num_refs, bool mark_dirty=false) override;
 
     void handle_mshr_init(uint64_t address);
+    void handle_write_bypass(uint64_t address);
     void handle_dram_write_drain(size_t channel_id, size_t amt);
+
+    bool allow_write_bypass(uint64_t address);
 protected:
     enum class BalanceLevel { OK, REPL_CLEAN, REPL_DIRTY };
     /*

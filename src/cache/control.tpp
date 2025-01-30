@@ -141,15 +141,11 @@ __TEMPLATE_CLASS__::mark_load_as_done(uint64_t address)
     
     // Try and use DBP to bypass the cache:
     const Transaction& front_trans = begin->second.trans;
-    bool dead_on_arrival = dead_block_handle_fill(front_trans);
-    if (!dead_on_arrival || cache_->fill_will_replace_invalid_victim(address))
+    DeadBlockPrediction p = dead_block_handle_fill(front_trans);
+    if (p != DeadBlockPrediction::LIKELY_DEAD || cache_->fill_will_replace_invalid_victim(address))
     {
         demand_fill(address, refcnt);
-        if (dead_on_arrival)
-        {
-            cache_->mark_likely_dead(address);
-            ++s_dead_block_predicts_;
-        }
+        consume_dead_block_prediction(address, p);
     }
     else
         ++s_bypasses_;
@@ -309,12 +305,26 @@ __TEMPLATE_CLASS__::next_access()
         }
         else
         {
+            // Update dead block predictor:
+            dead_block_pred_->handle_writeback(t.address);
+            // On a writeback miss, forward the line to the MC.
             if (!cache_->mark(t.address, true))
             {
-                ++s_writebacks_;
-                ++s_writeback_bypasses_;
-                if (!do_writeback(t.address))
-                    writeback_queue_.emplace_back(t.address);
+                if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
+                {
+                    ++s_writebacks_;
+                    ++s_writeback_bypasses_;
+                    if (!do_writeback(t.address))
+                        writeback_queue_.emplace_back(t.address);
+                    cache_->handle_write_bypass(t.address);
+                }
+                else
+                {
+                    ++s_writebacks_;
+                    ++s_writeback_bypasses_;
+                    if (!do_writeback(t.address))
+                        writeback_queue_.emplace_back(t.address);
+                }
             }
         }
     }
@@ -409,18 +419,18 @@ __TEMPLATE_CLASS__::do_writeback_with_dram_write_hint(uint64_t address, bool aut
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ bool
+__TEMPLATE_HEADER__ DeadBlockPrediction
 __TEMPLATE_CLASS__::dead_block_handle_fill(const Transaction& trans)
 {
 #if defined(TRACE_FORMAT_MTF)
     return false;
 #endif
     if (trans.type != TransactionType::READ)
-        return false;
+        return DeadBlockPrediction::UNSURE;
 
     uint64_t ip = trans.get_front_ip();
     dead_block_pred_->update_on_access(ip, trans.address, trans.coreid);
-    return dead_block_pred_->predict_if_dead(ip, trans.address, trans.coreid);
+    return dead_block_pred_->predict(ip, trans.address, trans.coreid);
 }
 
 __TEMPLATE_HEADER__ void
@@ -434,10 +444,28 @@ __TEMPLATE_CLASS__::dead_block_handle_hit(const Transaction& trans)
 
     uint64_t ip = trans.get_front_ip();
     dead_block_pred_->update_on_access(ip, trans.address, trans.coreid);
-    if (dead_block_pred_->predict_if_dead(ip, trans.address, trans.coreid))
+    
+    DeadBlockPrediction p = dead_block_pred_->predict(ip, trans.address, trans.coreid);
+    consume_dead_block_prediction(trans.address, p);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::consume_dead_block_prediction(uint64_t address, DeadBlockPrediction p)
+{
+    switch (p)
     {
-        cache_->mark_likely_dead(trans.address);
+    case DeadBlockPrediction::LIKELY_ALIVE:
+        cache_->mark_likely_alive(address);
+        break;
+    case DeadBlockPrediction::LIKELY_DEAD:
+        cache_->mark_likely_dead(address);
         ++s_dead_block_predicts_;
+        break;
+    default:
+        break;
     }
 }
 

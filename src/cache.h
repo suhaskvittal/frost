@@ -125,11 +125,19 @@ public:
         fill_with_eager_writeback(uint64_t, size_t, bool mark_dirty=false);
     virtual next_line_fill_result_type 
         fill_with_next_line_writeback(uint64_t, size_t dram_col_bit, size_t, bool mark_dirty=false);
-
+    /*
+     * These functions probe the associated cache set and checks if there are any victims that meet
+     * the given criteria:
+     *  `invalid_victim` -- any entry with `valid == false`
+     *  `noncritical_victim` -- any entry with `valid == false || likely_dead == true`
+     * */
     bool fill_will_replace_invalid_victim(uint64_t address) const;
+    bool fill_will_replace_noncritical_victim(uint64_t address) const;
 
     virtual void invalidate(uint64_t);
-    virtual void mark_likely_dead(uint64_t, bool clear=false);
+
+    virtual void mark_likely_dead(uint64_t);
+    virtual void mark_likely_alive(uint64_t);
     /*
      * Counts number of elements in cache meeting criteria. If `get_occupancy(void)` is
      * used, then this just counts the number of valid elements in the cache.
@@ -141,6 +149,7 @@ public:
     inline static constexpr size_t num_ways(void) { return WAYS; }
     inline static constexpr size_t num_sets(void) { return SETS; }
     inline static constexpr size_t size(void) { return WAYS*SETS; }
+    inline static constexpr CacheReplPolicy repl(void) { return POL; }
 
     inline static constexpr bool uses_set_dueling(void) 
     {
@@ -165,6 +174,7 @@ protected:
     /*
      * Gets way in the given LRU position.
      * */
+    typename cset_type::iterator get_likely_dead_line(cset_type&);
     typename cset_type::iterator get_way_in_lru_pos(cset_type&);
 
     virtual SetDuelingRole get_set_role(size_t idx) const;
