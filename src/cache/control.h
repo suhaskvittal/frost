@@ -121,6 +121,8 @@ private:
     using eager_queue_type = std::deque<uint64_t>;
     using dead_block_ptr = std::unique_ptr<DEAD_BLOCK_PREDICTOR_TYPE>;
 
+    constexpr static size_t EAGER_QUEUE_SIZE = 32;
+
     next_ptr&      next_;
     dead_block_ptr dead_block_pred_;
     /*
@@ -133,8 +135,6 @@ private:
     /*
      * Support for eager writeback and similar policies:
      * */
-    constexpr static size_t EAGER_QUEUE_SIZE = 32;
-
     eager_queue_type eager_queue_;
 
     std::mt19937_64 rng_{0};
@@ -170,21 +170,25 @@ private:
      *
      * Write misses are handled differently depending on whether or not `IMPL::WRITE_ALLOCATE` is set.
      *  (1) If `WRITE_ALLOCATE`, then writes will require a read before marking the line dirty upon fill.
+     *      -- see `handle_miss` with `write_miss = true`
      *  (2) Otherwise, the write miss is treated as a fill.
+     *      -- see `handle_writeback_miss`
      * */
     void next_access(void);
     void handle_hit(Transaction&&);
     void handle_miss(Transaction&&, bool write_miss=false);
+    void handle_writeback_miss(Transaction&&);
     /*
      * Updates the `eager_queue_`.
      * */
     void handle_eager_writeback(const CacheEntry&);
 
-    bool do_writeback(uint64_t addr);
-    bool do_writeback_with_dram_write_hint(uint64_t addr, bool autopre);
+    bool do_writeback(uint64_t address);
+    bool do_writeback_with_dram_write_hint(uint64_t address, bool autopre);
 
     DeadBlockPrediction dead_block_handle_fill(const Transaction&);
     void                dead_block_handle_hit(const Transaction&);
+    bool                dead_block_early_exit(const Transaction&);
 
     void consume_dead_block_prediction(uint64_t address, DeadBlockPrediction);
 };

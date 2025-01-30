@@ -116,6 +116,12 @@ __TEMPLATE_CLASS__::tick()
         if (success)
             eager_queue_.pop_front();
     }
+
+    if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
+    {
+        if (fast_mod<CACHE_TYPE::COUNTER_REDUCE_CYCLES>(GL_CYCLE) == 0)
+            cache_->reduce_hit_rate_counters();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -308,21 +314,7 @@ __TEMPLATE_CLASS__::next_access()
             // Update dead block predictor:
             // On a writeback miss, forward the line to the MC.
             if (!cache_->mark(t.address, true))
-            {
-                DeadBlockPrediction p = dead_block_handle_fill(t);
-                if (p != DeadBlockPrediction::LIKELY_DEAD || cache_->fill_will_replace_invalid_victim(t.address))
-                {
-                    demand_fill(t.address, 1, true);
-                    consume_dead_block_prediction(t.address, p);
-                }
-                else
-                {
-                    ++s_writebacks_;
-                    ++s_writeback_bypasses_;
-                    if (!do_writeback(t.address))
-                        writeback_queue_.emplace_back(t.address);
-                }
-            }
+                handle_writeback_miss(std::move(t));
         }
     }
 }
@@ -340,7 +332,7 @@ __TEMPLATE_CLASS__::handle_hit(Transaction&& t)
     io_->add_outgoing(std::move(t), IMPL::CACHE_LATENCY);
 }
 
-__TEMPLATE_HEADER__ inline void
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::handle_miss(Transaction&& t, bool write_miss)
 {
     ++s_misses_[t.coreid];
@@ -365,6 +357,52 @@ __TEMPLATE_CLASS__::handle_miss(Transaction&& t, bool write_miss)
         ++num_mshr_asleep_;
 
     mshr_.insert({address, e});
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::handle_writeback_miss(Transaction&& t)
+{
+    DeadBlockPrediction p = dead_block_handle_fill(t);
+    bool do_fill = (p != DeadBlockPrediction::LIKELY_DEAD) 
+                    || cache_->fill_will_replace_invalid_victim(t.address);
+    
+    // Update `do_fill` depending on the cache type:
+    if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
+    {
+        auto b = cache_->get_write_balance_level(t.address);
+        switch (b)
+        {
+        case CACHE_TYPE::BalanceLevel::REPL_CLEAN:
+            // strong preference towards a fill
+            do_fill = (p != DeadBlockPrediction::LIKELY_DEAD)
+                        || cache_->fill_will_replace_noncritical_victim(t.address, b);
+            break;
+        case CACHE_TYPE::BalanceLevel::REPL_DIRTY:
+            // strong preference towards a bypass
+            do_fill = (p == DeadBlockPrediction::LIKELY_ALIVE)
+                        || cache_->fill_will_replace_invalid_victim(t.address); 
+            break;
+        }
+    }
+
+    if (do_fill)
+    {
+        demand_fill(t.address, 1, true);
+        consume_dead_block_prediction(t.address, p);
+    }
+    else
+    {
+        ++s_writebacks_;
+        ++s_writeback_bypasses_;
+        if (!do_writeback(t.address))
+            writeback_queue_.emplace_back(t.address);
+
+        if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
+            cache_->handle_write_bypass(t.address);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -422,7 +460,7 @@ __TEMPLATE_CLASS__::dead_block_handle_fill(const Transaction& trans)
 #if defined(TRACE_FORMAT_MTF)
     return DeadBlockPrediction::UNSURE;
 #endif
-    if (trans.type != TransactionType::READ && trans.type != TransactionType::WRITE)
+    if (dead_block_early_exit(trans))
         return DeadBlockPrediction::UNSURE;
 
     uint64_t ip = trans.get_front_ip();
@@ -439,7 +477,7 @@ __TEMPLATE_CLASS__::dead_block_handle_hit(const Transaction& trans)
 #if defined(TRACE_FORMAT_MTF)
     return;
 #endif
-    if (trans.type != TransactionType::READ && trans.type != TransactionType::WRITE)
+    if (dead_block_early_exit(trans))
         return;
 
     uint64_t ip = trans.get_front_ip();
@@ -449,6 +487,19 @@ __TEMPLATE_CLASS__::dead_block_handle_hit(const Transaction& trans)
     dead_block_pred_->update_on_access(ip, trans.address, coreid, writeback);
     DeadBlockPrediction p = dead_block_pred_->predict(ip, trans.address, coreid, writeback);
     consume_dead_block_prediction(trans.address, p);
+}
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::dead_block_early_exit(const Transaction& trans)
+{
+    if (trans.type != TransactionType::READ && trans.type != TransactionType::WRITE)
+        return true;
+
+    bool override = false;
+    // Check if we should override the dead block predictor:
+    if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
+        override = cache_->should_override_dead_block_predictor();
+    return override;
 }
 
 ////////////////////////////////////////////////////////////////////////////

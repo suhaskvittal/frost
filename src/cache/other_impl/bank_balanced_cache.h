@@ -26,6 +26,11 @@ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
 class BankBalancedCache : public __TEMPLATE_PARENT__
 {
 public:
+    enum class BalanceLevel { OK, REPL_CLEAN, REPL_DIRTY };
+
+    constexpr static uint64_t COUNTER_REDUCE_CYCLES = 1024*1024;
+    constexpr static size_t   COUNTER_REDUCE_SHIFT = 4;  // Reduces counters by 1/16 (right shift by 4).
+
     uint64_t s_repl_pol1_ =0;
     uint64_t s_repl_pol2_ =0;
 private:
@@ -45,6 +50,13 @@ private:
 
     rw_counter_array_type counters_{};
     write_epoch_array_type write_epoch_{};
+    /*
+     * `hit_counter_` and `access_counter_` are used to override the dead block prediction policy.
+     * If the miss rate is high (hit rate is low), the policy is overridden, and the LLC is used 
+     * as a staging area for writebacks.
+     * */
+    uint64_t hit_counter_ =0;
+    uint64_t access_counter_ =0;
 public:
     using __TEMPLATE_PARENT__::Cache; // inherit constructors and useful typedefs:
     using typename __TEMPLATE_PARENT__::cset_type;
@@ -52,6 +64,7 @@ public:
     /*
      * On a `mark` clean, `trackers_` is updated.
      * */
+    bool probe(uint64_t, bool write=false) override;
     bool mark(uint64_t, bool as_dirty) override;
     /*
      * The new `fill` does two things:
@@ -66,9 +79,22 @@ public:
     void handle_write_bypass(uint64_t address);
     void handle_dram_write_drain(size_t channel_id, size_t amt);
 
-    bool allow_write_bypass(uint64_t address);
+    BalanceLevel get_write_balance_level(uint64_t address);
+
+    bool fill_will_replace_noncritical_victim(uint64_t address, BalanceLevel);
+
+    inline bool should_override_dead_block_predictor(void) const
+    {
+        return access_counter_ >= 1024  // Ensure that we have enough "samples"
+                && hit_counter_ < (access_counter_ >> 6);  // This means hit rate < 1/64
+    }
+
+    inline void reduce_hit_rate_counters(void)
+    {
+        hit_counter_ >>= COUNTER_REDUCE_SHIFT;
+        access_counter_ >>= COUNTER_REDUCE_SHIFT;
+    }
 protected:
-    enum class BalanceLevel { OK, REPL_CLEAN, REPL_DIRTY };
     /*
      * This class modifies standard eviction policies to operate based
      * on the counters in `counters_`

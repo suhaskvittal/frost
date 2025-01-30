@@ -12,24 +12,6 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-/*
- * Some of the stats need to be in template to avoid `if constexpr` evaluation when condition
- * is false.
- * */
-
-template <class CACHE_TYPE> inline void
-print_bank_balanced_cache_stats(std::ostream& out, std::unique_ptr<CACHE_TYPE>& c)
-{
-    if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
-    {
-        print_stat(out, "LLC", "BB$_REPL_POLICY_1", c->s_repl_pol1_);
-        print_stat(out, "LLC", "BB$_REPL_POLICY_2", c->s_repl_pol2_);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 void
 print_llc_stats(std::ostream& out)
 {
@@ -49,8 +31,6 @@ print_llc_stats(std::ostream& out)
         print_stat(out, "LLC", "SET_DUELING_POL1_INSTALLS", GL_LLC->cache_->s_dueling_pol1_installs_);
         print_stat(out, "LLC", "SET_DUELING_POL2_INSTALLS", GL_LLC->cache_->s_dueling_pol2_installs_);
     }
-
-    print_bank_balanced_cache_stats(out, GL_LLC->cache_);
 
     if constexpr (LLCache::WRITEBACK_MODE == CacheWBMode::EAGER)
         print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);
