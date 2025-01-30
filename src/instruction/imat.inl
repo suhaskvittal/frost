@@ -22,20 +22,20 @@ struct Instruction : public INST_BASE
     {
         memcpy(&inst_num, t.inst_num, sizeof(t.inst_num));
         memcpy(&ip, t.ip, sizeof(t.ip));
-        memcpy(&v_lineaddr, &t.v_lineaddr, sizeof(t.v_lineaddr));
+        memcpy(&v_lineaddr, t.v_lineaddr, sizeof(t.v_lineaddr));
         is_store = t.is_write;
     }
 
-    inline bool is_mem_inst(void) const
+    inline bool is_mem_inst(void) const override
     {
         return true;
     }
 
-    inline bool is_done(void) const
+    inline bool is_done(void) const override
     {
         return is_store ? (state == AccessState::IN_CACHE) : (state == AccessState::DONE);
     }
-}
+};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

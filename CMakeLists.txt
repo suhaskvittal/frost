@@ -63,6 +63,7 @@ endif()
 message("================== CONFIGURATION =======================")
 message("build id = ${BUILD_ID}")
 message("core model = ${CORE_MODEL}")
+message("trace format = ${TRACE_FORMAT}")
 message("defines = ${CUSTOM_DEFINES}")
 message("========================================================")
 
@@ -72,7 +73,6 @@ message("========================================================")
 set(MAIN_SIM_FILES
     src/io_bus.cpp
     src/os/free_list.cpp
-    src/transaction.cpp
     src/util/argparse.cpp
     src/util/stats/cache.cpp
     # Generated files
@@ -110,7 +110,7 @@ add_executable(sim src/main.cpp ${MAIN_SIM_FILES})
 target_compile_options(sim PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(sim PRIVATE "src" "_generated/${BUILD_ID}")
 target_link_libraries(sim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
-target_compile_definitions(sim PRIVATE TRACE_FORMAT=${TRACE_FORMAT} ${CUSTOM_DEFINES})
+target_compile_definitions(sim PRIVATE TRACE_FORMAT_${TRACE_FORMAT} ${CUSTOM_DEFINES})
 if (CMAKE_BUILD_TYPE MATCHES "Profile")
     target_link_libraries(sim PRIVATE -pg)
 endif()

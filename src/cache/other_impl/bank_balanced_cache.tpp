@@ -16,6 +16,16 @@
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::probe(uint64_t address, bool write)
+{
+    bool hit = __TEMPLATE_PARENT__::probe(address, write);
+    if (hit)
+        ++hit_counter_;
+    ++access_counter_;
+    return hit;
+}
+
+__TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::mark(uint64_t address, bool as_dirty)
 {
     bool hit = __TEMPLATE_PARENT__::mark(address, as_dirty);
@@ -45,12 +55,18 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool mark_dirty)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::handle_mshr_init(uint64_t miss_address)
+__TEMPLATE_CLASS__::handle_mshr_init(uint64_t address)
 {
-    ++get_counter(miss_address).reads;
+    ++get_counter(address).reads;
 }
 
 __TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::handle_write_bypass(uint64_t address)
+{
+    ++get_counter(address).writes;
+}
+
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::handle_dram_write_drain(size_t ch, size_t amt)
 {
     // In an open page policy, it is possible for the counters to become out of sync
@@ -78,6 +94,37 @@ __TEMPLATE_CLASS__::handle_dram_write_drain(size_t ch, size_t amt)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::BalanceLevel
+__TEMPLATE_CLASS__::get_write_balance_level(uint64_t address)
+{
+    size_t ch = dram_channel(address),
+           bank_idx = dram_bank_idx(address);
+
+    const auto& ctrs = counters_[ch];
+    BalanceLevel b = compute_balance_level(ctrs[bank_idx], ctrs);
+    return b;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::fill_will_replace_noncritical_victim(uint64_t address, BalanceLevel b)
+{
+    if (b == BalanceLevel::OK)
+        return __TEMPLATE_PARENT__::fill_will_replace_noncritical_victim(address);
+    else
+    {
+        const cset_type& s = __TEMPLATE_PARENT__::get_const_set(address);
+        return std::any_of(s.begin(), s.end(),
+                            [want_dirty = (b==BalanceLevel::REPL_DIRTY)] 
+                            (const auto& e) { return !e.valid || (e.likely_dead && e.dirty == want_dirty); });
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
@@ -87,8 +134,26 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 
     const auto& ctrs = counters_[ch];
     BalanceLevel b = compute_balance_level(ctrs[bank_idx], ctrs);
+
     if (b != BalanceLevel::OK)
-        return find_victim_modified_policy(s, b);
+    {
+        auto v_it = std::find_if(s.begin(), s.end(),
+                        [want_dirty = (b == BalanceLevel::REPL_DIRTY)] 
+                        (const auto& e) { return e.likely_dead && (e.dirty == want_dirty); });
+        if (v_it != s.end())
+            return v_it;
+
+        // Otherwise, use the normal replacement policy:
+        if constexpr (POL == CacheReplPolicy::LRU)
+            return lru_mod(s, b);
+        else if constexpr (POL == CacheReplPolicy::SRRIP)
+            return rrip_mod(s, b);
+        else
+        {
+            std::cerr << "bank balanced cache currently does not support the given replacement policy.\n";
+            exit(1);
+        }
+    }
     else
         return __TEMPLATE_PARENT__::find_victim(s);
 }
@@ -138,11 +203,8 @@ __TEMPLATE_CLASS__::rrip_mod(cset_type& s, BalanceLevel b)
                         else
                             return x.dirty;
                     });
-    if (v_it->rrpv > 0)
-    {
-        for (auto& e : s)
-            e.rrpv = (e.rrpv < v_it->rrpv) ? 0 : e.rrpv - v_it->rrpv;
-    }
+    for (auto& e : s)
+        e.rrpv = (e.rrpv < v_it->rrpv) ? 0 : e.rrpv - v_it->rrpv;
     return v_it;
 }
 

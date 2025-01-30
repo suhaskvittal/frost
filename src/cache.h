@@ -42,7 +42,7 @@ struct CacheEntry
     uint64_t timestamp;
     uint8_t  rrpv;
 
-    bool used_after_install =false;
+    bool likely_dead =false;
 
     CacheEntry(void) =default;
 };
@@ -64,14 +64,6 @@ template <
 class Cache 
 {
 public:
-    /*
-     * Syntax of this function: returns index, inputs are the line-address and number of sets.
-     * Number of sets is supplied by this class.
-     * */
-    using index_function_type = size_t(*)(uint64_t, size_t);
-
-    const index_function_type index_function_ =nullptr;
-
     uint64_t s_dueling_pol1_installs_ =0;
     uint64_t s_dueling_pol2_installs_ =0;
 protected:
@@ -103,9 +95,6 @@ public:
     using next_line_fill_result_type = std::tuple<fill_result_type, fill_result_type, size_t>;
 
     Cache(void) =default;
-    Cache(index_function_type custom_index_function)
-        :index_function_(custom_index_function)
-    {}
     /*
      * Searches for the given line. Does not update any metadata. This is
      * like peeking into the cache.
@@ -136,8 +125,19 @@ public:
         fill_with_eager_writeback(uint64_t, size_t, bool mark_dirty=false);
     virtual next_line_fill_result_type 
         fill_with_next_line_writeback(uint64_t, size_t dram_col_bit, size_t, bool mark_dirty=false);
+    /*
+     * These functions probe the associated cache set and checks if there are any victims that meet
+     * the given criteria:
+     *  `invalid_victim` -- any entry with `valid == false`
+     *  `noncritical_victim` -- any entry with `valid == false || likely_dead == true`
+     * */
+    bool fill_will_replace_invalid_victim(uint64_t address) const;
+    bool fill_will_replace_noncritical_victim(uint64_t address) const;
 
     virtual void invalidate(uint64_t);
+
+    virtual void mark_likely_dead(uint64_t);
+    virtual void mark_likely_alive(uint64_t);
     /*
      * Counts number of elements in cache meeting criteria. If `get_occupancy(void)` is
      * used, then this just counts the number of valid elements in the cache.
@@ -149,18 +149,16 @@ public:
     inline static constexpr size_t num_ways(void) { return WAYS; }
     inline static constexpr size_t num_sets(void) { return SETS; }
     inline static constexpr size_t size(void) { return WAYS*SETS; }
+    inline static constexpr CacheReplPolicy repl(void) { return POL; }
 
     inline static constexpr bool uses_set_dueling(void) 
     {
         return POL == CacheReplPolicy::DRRIP;
     }
 
-    inline size_t get_set_index(uint64_t x) const
+    inline virtual size_t get_set_index(uint64_t x) const
     {
-        if (index_function_ == nullptr)
-            return fast_mod<SETS>(x);
-        else
-            return index_function_(x, SETS);
+        return fast_mod<SETS>(x);
     }
 protected:
     virtual typename cset_type::iterator find_victim(cset_type&);
@@ -176,12 +174,18 @@ protected:
     /*
      * Gets way in the given LRU position.
      * */
+    typename cset_type::iterator get_likely_dead_line(cset_type&);
     typename cset_type::iterator get_way_in_lru_pos(cset_type&);
 
     virtual SetDuelingRole get_set_role(size_t idx) const;
     virtual void update_psel(size_t idx);
 
     inline cset_type& get_set(uint64_t x)
+    {
+        return csets_[get_set_index(x)];
+    }
+
+    inline const cset_type& get_const_set(uint64_t x) const
     {
         return csets_.at(get_set_index(x));
     }

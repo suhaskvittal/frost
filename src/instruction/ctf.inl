@@ -4,6 +4,7 @@
  * */
 
 #include "branch.h"
+#include "util/numerics.h"
 
 #include <algorithm>
 #include <array>
@@ -39,7 +40,7 @@ struct MemopList
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-struct Instruction
+struct Instruction : INST_BASE
 {
 
     uint64_t   ip;
@@ -58,12 +59,12 @@ struct Instruction
 
     Instruction(uint64_t inst_num, const CTF&);
 
-    inline bool is_mem_inst(void) const
+    inline bool is_mem_inst(void) const override
     {
         return !loads.args.empty() || !stores.args.empty();
     }
 
-    inline bool is_done(void) const
+    inline bool is_done(void) const override
     {
         constexpr size_t DONE_IDX = static_cast<size_t>(AccessState::DONE);
         constexpr size_t IN_CACHE_IDX = static_cast<size_t>(AccessState::IN_CACHE);
@@ -77,11 +78,12 @@ struct Instruction
 ////////////////////////////////////////////////////////////////////////////
 
 inline
-Instruction::Instruction(uint64_t inst_num, const CTF& t)
-    :inst_num(inst_num),
-    ip(t.ip),
-    branch_taken(t.branch_taken)
+Instruction::Instruction(uint64_t ii, const CTF& t)
 {
+    inst_num = ii;
+    ip = t.ip;
+    branch_taken = t.branch_taken;
+
     std::vector<uint64_t> dst_regs,
                           src_regs;
     // First resolve branch data.
@@ -144,14 +146,18 @@ Instruction::Instruction(uint64_t inst_num, const CTF& t)
         branch_type = BranchType::INVALID;
 
     // Now resolve load/store data.
-
-    std::copy_if(std::begin(t.dst_mem), std::end(t.dst_mem), std::back_inserter(stores.args));
-    std::copy_if(std::begin(t.src_mem), std::end(t.src_mem), std::back_inserter(loads.args));
-
-    for (uint64_t& x : stores.args)
-        x >>= numeric_traits<LINESIZE>::log2;
-    for (uint64_t& x : loads.args)
-        x >>= numeric_traits<LINESIZE>::log2;
+    constexpr size_t LINESIZE = 64;
+    for (uint64_t x : t.dst_mem)
+    {
+        if (x != 0)
+            stores.args.emplace_back(x >> numeric_traits<LINESIZE>::log2);
+    }
+    
+    for (uint64_t x : t.src_mem)
+    {
+        if (x != 0)
+            stores.args.emplace_back(x >> numeric_traits<LINESIZE>::log2);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -170,13 +176,6 @@ inst_do_func_dependent_on_state(MemopList& m, const FUNC& func)
                                     return static_cast<size_t>(x.state) >= N;
                                 });
     }
-}
-
-template <AccessState STATE, class FUNC> inline void
-inst_do_func_dependent_on_state(inst_ptr inst, const FUNC& func)
-{
-    inst_do_func_dependent_on_state<STATE, FUNC>(inst->loads, func);
-    inst_do_func_dependent_on_state<STATE, FUNC>(inst->stores, func);
 }
 
 ////////////////////////////////////////////////////////////////////////////

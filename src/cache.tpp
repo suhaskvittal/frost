@@ -79,10 +79,7 @@ __TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs, bool mark_dirty)
 
     cset_type& s = get_set(addr);
     auto it = std::find_if_not(s.begin(), s.end(),
-                        [] (const CacheEntry& e)
-                        {
-                            return e.valid;
-                        });
+                        [] (const auto& e) { return e.valid; });
     if (it == s.end())
     {
         it = find_victim(s); 
@@ -149,12 +146,58 @@ __TEMPLATE_CLASS__::fill_with_next_line_writeback(uint64_t addr, size_t column_b
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+__TEMPLATE_HEADER__  inline bool
+__TEMPLATE_CLASS__::fill_will_replace_invalid_victim(uint64_t address) const
+{
+    const cset_type& s = get_const_set(address);
+    return std::any_of(s.begin(), s.end(), 
+                        [] (const auto& e) { return !e.valid; });
+}
+
+__TEMPLATE_HEADER__  inline bool
+__TEMPLATE_CLASS__::fill_will_replace_noncritical_victim(uint64_t address) const
+{
+    const cset_type& s = get_const_set(address);
+    return std::any_of(s.begin(), s.end(), 
+                        [] (const auto& e) { return !e.valid || e.likely_dead; });
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::invalidate(uint64_t addr)
 {
     auto [s_p, it] = find(addr);
     if (it != s_p->end())
         it->valid = false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::mark_likely_dead(uint64_t address)
+{
+    auto [s_p, it] = find(address);
+    if (it != s_p->end())
+    {
+        it->likely_dead = true;
+        // Update `rrpv` as well:
+        it->rrpv = 0;
+    }
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::mark_likely_alive(uint64_t address)
+{
+    auto [s_p, it] = find(address);
+    if (it != s_p->end())
+    {
+        it->likely_dead = false;
+        // Update `rrpv` as well:
+        it->rrpv = RRIP_MAX;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -186,6 +229,10 @@ __TEMPLATE_CLASS__::get_occupancy()
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
+    auto v_it = get_likely_dead_line(s);
+    if (v_it != s.end())
+        return v_it;
+
     if constexpr (POL == CacheReplPolicy::LRU)
         return lru(s);
     else if constexpr (POL == CacheReplPolicy::RAND)
@@ -227,12 +274,9 @@ __TEMPLATE_CLASS__::rrip(cset_type& s)
                             {
                                 return x.rrpv < y.rrpv;
                             });
-    if (v_it->rrpv > 0)
-    {
-        // Reduce all entries' rrpv values.
-        for (CacheEntry& x : s)
-            x.rrpv -= v_it->rrpv;
-    }
+    // Reduce all entries' rrpv values.
+    for (CacheEntry& x : s)
+        x.rrpv -= v_it->rrpv;
     return v_it;
 }
 
@@ -244,7 +288,7 @@ __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = RRIP_MAX;
-    e.used_after_install = true;
+    e.likely_dead = false;
 }
 
 __TEMPLATE_HEADER__ void
@@ -254,6 +298,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t addr, size_t num_refs, bo
     e.dirty = mark_dirty;
     e.address = addr;
     e.timestamp = GL_CYCLE;
+    e.likely_dead = false;
 
     if constexpr (POL == CacheReplPolicy::DRRIP)
     {
@@ -283,13 +328,17 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t addr, size_t num_refs, bo
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
+__TEMPLATE_CLASS__::get_likely_dead_line(cset_type& s)
+{
+    return std::find_if(s.begin(), s.end(),
+                [] (const auto& x) { return x.likely_dead; });
+}
+
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
 __TEMPLATE_CLASS__::get_way_in_lru_pos(cset_type& s)
 {
     return std::min_element(s.begin(), s.end(),
-                [] (const auto& x, const auto& y)
-                {
-                    return x.timestamp < y.timestamp;
-                });
+                [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
 }
 
 ////////////////////////////////////////////////////////////////////////////
