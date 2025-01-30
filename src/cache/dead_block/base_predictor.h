@@ -19,10 +19,9 @@ class DeadBlockPredictor
 public:
     constexpr static uint64_t DIRTY_IP = 0xffff'ffff'ffff'ffff;
 
-    virtual void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid) {}
-    virtual void handle_writeback(uint64_t address) {}
+    virtual void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid, bool writeback) {}
 
-    virtual DeadBlockPrediction predict(uint64_t ip, uint64_t address, uint8_t coreid) const
+    virtual DeadBlockPrediction predict(uint64_t ip, uint64_t address, uint8_t coreid, bool writeback) const
     {
         return DeadBlockPrediction::UNSURE;
     }

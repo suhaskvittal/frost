@@ -306,17 +306,14 @@ __TEMPLATE_CLASS__::next_access()
         else
         {
             // Update dead block predictor:
-            dead_block_pred_->handle_writeback(t.address);
             // On a writeback miss, forward the line to the MC.
             if (!cache_->mark(t.address, true))
             {
-                if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
+                DeadBlockPrediction p = dead_block_handle_fill(t);
+                if (p != DeadBlockPrediction::LIKELY_DEAD || cache_->fill_will_replace_invalid_victim(t.address))
                 {
-                    ++s_writebacks_;
-                    ++s_writeback_bypasses_;
-                    if (!do_writeback(t.address))
-                        writeback_queue_.emplace_back(t.address);
-                    cache_->handle_write_bypass(t.address);
+                    demand_fill(t.address, 1, true);
+                    consume_dead_block_prediction(t.address, p);
                 }
                 else
                 {
@@ -423,14 +420,17 @@ __TEMPLATE_HEADER__ DeadBlockPrediction
 __TEMPLATE_CLASS__::dead_block_handle_fill(const Transaction& trans)
 {
 #if defined(TRACE_FORMAT_MTF)
-    return false;
+    return DeadBlockPrediction::UNSURE;
 #endif
-    if (trans.type != TransactionType::READ)
+    if (trans.type != TransactionType::READ && trans.type != TransactionType::WRITE)
         return DeadBlockPrediction::UNSURE;
 
     uint64_t ip = trans.get_front_ip();
-    dead_block_pred_->update_on_access(ip, trans.address, trans.coreid);
-    return dead_block_pred_->predict(ip, trans.address, trans.coreid);
+    uint8_t coreid = trans.coreid;
+    bool writeback = (trans.type == TransactionType::WRITE);
+    
+    dead_block_pred_->update_on_access(ip, trans.address, coreid, writeback);
+    return dead_block_pred_->predict(ip, trans.address, coreid, writeback);
 }
 
 __TEMPLATE_HEADER__ void
@@ -439,13 +439,15 @@ __TEMPLATE_CLASS__::dead_block_handle_hit(const Transaction& trans)
 #if defined(TRACE_FORMAT_MTF)
     return;
 #endif
-    if (trans.type != TransactionType::READ)
+    if (trans.type != TransactionType::READ && trans.type != TransactionType::WRITE)
         return;
 
     uint64_t ip = trans.get_front_ip();
-    dead_block_pred_->update_on_access(ip, trans.address, trans.coreid);
-    
-    DeadBlockPrediction p = dead_block_pred_->predict(ip, trans.address, trans.coreid);
+    uint8_t coreid = trans.coreid;
+    bool writeback = (trans.type == TransactionType::WRITE);
+
+    dead_block_pred_->update_on_access(ip, trans.address, coreid, writeback);
+    DeadBlockPrediction p = dead_block_pred_->predict(ip, trans.address, coreid, writeback);
     consume_dead_block_prediction(trans.address, p);
 }
 

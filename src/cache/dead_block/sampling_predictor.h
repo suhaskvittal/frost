@@ -22,8 +22,8 @@ class SamplingPredictor : public DeadBlockPredictor
 {
 public:
 private:
-    constexpr static size_t SAMPLER_SETS = 32*NUM_THREADS;
-    constexpr static size_t SAMPLER_ASSOC = 16;
+    constexpr static size_t SAMPLER_SETS = 64*NUM_THREADS;
+    constexpr static size_t SAMPLER_ASSOC = 13;
     constexpr static CacheReplPolicy SAMPLER_REPL = CacheReplPolicy::LRU;
     constexpr static size_t SAMPLER_SET_GAP = BASE_CACHE_TYPE::num_sets() / SAMPLER_SETS;
 
@@ -58,10 +58,8 @@ private:
 public:
     SamplingPredictor(void);
 
-    void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid) override;
-    void handle_writeback(uint64_t address) override;
-
-    DeadBlockPrediction predict(uint64_t ip, uint64_t address, uint8_t coreid) const override;
+    void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid, bool writeback) override;
+    DeadBlockPrediction predict(uint64_t ip, uint64_t address, uint8_t coreid, bool writeback) const override;
 private:
     void update_predictor_counters(uint64_t ip, uint8_t coreid, bool inc);
 
