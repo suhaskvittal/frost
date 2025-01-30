@@ -6,6 +6,9 @@
 #ifndef TRANSACTION_h
 #define TRANSACTION_h
 
+#include "instruction.h"
+
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -28,8 +31,6 @@ inline bool trans_is_write(TransactionType t)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-struct Instruction;
-using inst_ptr = Instruction*;
 /*
  * This struct should have all information for routing cache/memory requests
  * through the memory hierarchy.
@@ -55,11 +56,34 @@ struct Transaction
     bool dram_write_hint_valid =false;
     bool dram_write_hint_do_autopre =false;
 
-    Transaction(uint8_t cid, inst_ptr, TransactionType, uint64_t addr, bool addr_is_ip=false);
+    Transaction(uint8_t cid, inst_ptr inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
+        :coreid(cid),
+        inst_list({inst}),
+        type(t),
+        address(addr),
+        address_is_ip(addr_is_ip)
+    {}
+
     Transaction(const Transaction&) =default;
 
-    bool contains_inst(inst_ptr) const;
-    void merge(Transaction&);
+    inline bool contains_inst(inst_ptr inst) const
+    {
+        return std::find(inst_list.begin(), inst_list.end(), inst) != inst_list.end();
+    }
+
+    inline void merge(Transaction& t)
+    {
+        std::move(t.inst_list.begin(), t.inst_list.end(), std::back_inserter(inst_list));
+    }
+
+    inline uint64_t get_front_ip(void) const
+    {
+#if defined(TRACE_FORMAT_MTF)
+        return 0;
+#else
+        return inst_list.at(0)->ip;
+#endif
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////

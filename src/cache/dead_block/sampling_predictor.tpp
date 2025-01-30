@@ -1,0 +1,138 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   28 January 2025
+ * */
+
+#include "util/numerics.h"
+
+#include <algorithm>
+
+#define __TEMPLATE_HEADER__ template <class BASE_CACHE_TYPE>
+#define __TEMPLATE_CLASS__ SamplingPredictor<BASE_CACHE_TYPE>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__
+__TEMPLATE_CLASS__::SamplingPredictor()
+    :sampler_(new Sampler)
+{}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::update_on_access(uint64_t ip, uint64_t address, uint8_t coreid)
+{
+    if (fast_mod<SAMPLER_SET_GAP>(address) != 0)
+        return;
+
+    if (sampler_->probe(address))
+    {
+        const auto& [curr_ip, curr_coreid] = sampler_contents_[address];
+        // Then existing `ip` for `address` should be predicted as not dead.
+        update_predictor_counters(curr_ip, curr_coreid, false);
+    }
+    else
+    {
+        // Need to evict something.
+        auto v = sampler_->fill(address, 1, false);
+        if (v.has_value())
+        {
+            const auto& e = v.value();
+            auto v_it = sampler_contents_.find(e.address);
+            const auto& [v_ip, v_coreid] = v_it->second;
+            update_predictor_counters(v_ip, v_coreid, true);
+            sampler_contents_.erase(v_it);
+        }
+    }
+    if (predict_if_dead(ip, address, coreid))
+        sampler_->mark_likely_dead(address);
+    sampler_contents_[address] = sampler_data_type{ip, coreid};
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::predict_if_dead(uint64_t ip, uint64_t address, uint8_t coreid) const
+{
+    int8_t tot = 0;
+    for (size_t i = 0; i < 3; i++)
+    {
+        const auto& pt = predictor_tables_.at(i);
+        tot += pt.at(hash(ip, coreid, i));
+    }
+    return tot >= PREDICTOR_THRESHOLD;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::update_predictor_and_invalidate(uint64_t address)
+{
+    if (!sampler_->probe(address))
+        return;
+    
+    const auto& [curr_ip, curr_coreid] = sampler_contents_[address];
+    // Then existing `ip` for `address` should be predicted as not dead.
+    update_predictor_counters(curr_ip, curr_coreid, false);
+    sampler_->invalidate(address);
+    sampler_contents_.erase(address);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::update_predictor_counters(uint64_t ip, uint8_t coreid, bool inc)
+{
+    constexpr int8_t CTR_MAX = (1<<PREDICTOR_WIDTH)-1;
+
+    for (size_t i = 0; i < 3; i++)
+    {
+        auto& pt = predictor_tables_[i];
+        int8_t& bits = pt[hash(ip, coreid, i)];
+
+        if (i & 1)
+            bits = inc ? (bits+1) : (bits>>1);
+        else
+            bits = inc ? (bits+1) : (bits-1);
+        bits = std::clamp(bits, static_cast<int8_t>(0), CTR_MAX);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline uint32_t mix(uint32_t a, uint32_t b, uint32_t c)
+{
+    a -= b;
+    a -= c;
+    a ^= (c >> 13);
+    b -= a;
+    b -= c;
+    b ^= (a << 8);
+    c -= a;
+    c -= b;
+    c ^= (b >> 13);
+    return c;
+}
+
+__TEMPLATE_HEADER__ inline uint16_t
+__TEMPLATE_CLASS__::hash(uint64_t ip, uint8_t coreid, size_t table_idx) const
+{
+    uint32_t x = (ip & ((1<<15)-1)) ^ (coreid << 2);
+    uint32_t h = mix(0xfeedface, 0xdeadb10c, x) + (mix(0xc001d00d, 0xfade2b1c, x) >> table_idx);
+    return static_cast<uint16_t>(fast_mod<PREDICTOR_ENTRIES>(h));
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#undef __TEMPLATE_HEADER__
+#undef __TEMPLATE_CLASS__
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////

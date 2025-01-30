@@ -37,47 +37,27 @@ struct INST_BASE
     size_t   rob_refs =1;
     uint64_t cycle_done =std::numeric_limits<uint64_t>::max();
 
-    virtual bool is_mem_inst(void) =0 const;
-    virtual bool is_done(void) =0 const;
+    virtual ~INST_BASE(void) {}
+    virtual bool is_mem_inst(void) const =0;
+    virtual bool is_done(void) const =0;
 };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#if   TRACE_FORMAT == CTF
+#if   defined(TRACE_FORMAT_CTF)
 
 #include "instruction/ctf.inl"
 
-#elif TRACE_FORMAT == MTF
+#elif defined(TRACE_FORMAT_MTF)
 
 #include "instruction/mtf.inl"
 
-#elif TRACE_FORMAT == IMAT
+#elif defined(TRACE_FORMAT_IMAT)
 
 #include "instruction/imat.inl"
 
 #endif
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-struct Instruction
-{
-    uint64_t inst_num =0;
-    uint64_t v_lineaddr =0;
-    bool     is_store;
-
-    uint64_t p_lineaddr;
-
-    size_t rob_refs =1;
-    AccessState state =AccessState::READY;
-    uint64_t cycle_done =std::numeric_limits<uint64_t>::max();
-
-    Instruction(const MemsimTraceFormat&);
-
-    bool is_mem_inst(void) const;
-    bool is_done(void) const;
-};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

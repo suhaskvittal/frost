@@ -56,7 +56,8 @@ def validate_cache_section(cfg) -> bool:
         ('operate_mode', ''),
         ('writeback_mode', 'FORCED'),
         ('replacement_policy', 'LRU'),
-        ('base_cache_type', 'Cache')
+        ('base_cache_type', 'Cache'),
+        ('dead_block_predictor', 'DeadBlockPredictor')
     ]
     # Now check if the number of sets or the size of the cache
     # is specified.

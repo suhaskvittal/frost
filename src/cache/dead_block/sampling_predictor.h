@@ -7,29 +7,41 @@
 #define CACHE_DEAD_BLOCK_SAMPLING_PREDICTOR_h
 
 #include "cache.h"
+#include "cache/dead_block/base_predictor.h"
 
 #include <array>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+template <class BASE_CACHE_TYPE>
 class SamplingPredictor : public DeadBlockPredictor
 {
 public:
 private:
-    constexpr static size_t SAMPLER_SETS = 32;
-    constexpr static size_t SAMPLER_ASSOC = 12;
+    constexpr static size_t SAMPLER_SETS = 32*NUM_THREADS;
+    constexpr static size_t SAMPLER_ASSOC = 13;
     constexpr static CacheReplPolicy SAMPLER_REPL = CacheReplPolicy::LRU;
+    constexpr static size_t SAMPLER_SET_GAP = BASE_CACHE_TYPE::num_sets() / SAMPLER_SETS;
+
+    struct Sampler : Cache<SAMPLER_SETS, SAMPLER_ASSOC, SAMPLER_REPL>
+    {
+        inline size_t get_set_index(uint64_t x) const override
+        {
+            return fast_mod<SAMPLER_SETS>(x >> numeric_traits<SAMPLER_SET_GAP>::log2);
+        }
+    };
 
     constexpr static size_t PREDICTOR_WIDTH = 2;
-    constexpr static size_t PREDICTOR_ENTRIES = 4096;
+    constexpr static size_t PREDICTOR_ENTRIES = (1 << 12) * NUM_THREADS;
     constexpr static int8_t PREDICTOR_THRESHOLD = 8;
 
-    using sampler_type = Cache<SAMPLER_SETS, SAMPLER_ASSOC, SAMPLER_REPL>;
-    using sampler_ptr = std::unique_ptr<sampler_type>;
-    using sampler_data_map_type = std::unordered_map<uint64_t, uint16_t>;
+    using sampler_ptr = std::unique_ptr<Sampler>;
+    using sampler_data_type = std::tuple<uint64_t, uint8_t>;  // <PC, thread-id>
+    using sampler_data_map_type = std::unordered_map<uint64_t, sampler_data_type>;
 
     using predictor_table_type = std::array<int8_t, PREDICTOR_ENTRIES>;
     using predictor_table_array_type = std::array<predictor_table_type, 3>;
@@ -41,17 +53,30 @@ private:
      * */
     sampler_ptr sampler_{};
     sampler_data_map_type sampler_contents_;
-    predictor_table_array_type predictor_tables_;
+    predictor_table_array_type predictor_tables_{};
 public:
     SamplingPredictor(void);
 
-    void update_on_probe(uint64_t ip, uint64_t address, size_t set_idx) override;
-    bool predict_if_dead(uint64_t ip, uint64_t address) const override;
-private:
-    bool is_set_tracked_by_sampler(size_t idx) const;
+    void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid) override;
+    bool predict_if_dead(uint64_t ip, uint64_t address, uint8_t coreid) const override;
 
-    void update_predictor_counters(uint64_t ip, uint64_t address, bool inc);
+    void update_predictor_and_invalidate(uint64_t address);
+private:
+    void update_predictor_counters(uint64_t ip, uint8_t coreid, bool inc);
+
+    uint16_t hash(uint64_t ip, uint8_t coreid, size_t table_idx) const;
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class> struct is_sampling_predictor : std::false_type {};
+template <class B> struct is_sampling_predictor<SamplingPredictor<B>> : std::true_type {};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#include "sampling_predictor.tpp"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

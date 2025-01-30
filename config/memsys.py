@@ -20,9 +20,14 @@ def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
     wb_mode = cfg['writeback_mode']
     cache_type = cfg['base_cache_type']
 
+    base_cache_typename = f'base_{typename.lower()}_type'
+    dbp_type = cfg['dead_block_predictor'].replace('$base', base_cache_typename)
+
     cache_decl =\
 f'''
-struct {typename} : public CacheControl<{typename}, {cache_type}<{sets},{ways},CacheReplPolicy::{repl}>, {next_typename}>
+using {base_cache_typename} = {cache_type}<{sets},{ways},CacheReplPolicy::{repl}>;
+
+struct {typename} : public CacheControl<{typename}, {base_cache_typename}, {next_typename}, {dbp_type}>
 {{
     constexpr static size_t RQ_SIZE = {rq_size};
     constexpr static size_t WQ_SIZE = {wq_size};
@@ -63,10 +68,11 @@ f'''{AUTOGEN_HEADER}
 #define MEMSYS_h
 
 #include "cache/control.h"
+#include "cache/dead_block/all.h"
+#include "cache/other_impl/all.h"
+
 #include "dram.h"
 {ptw_inc}
-// Other cache implementations that may be potentially used:
-#include "cache/other_impl/bank_balanced_cache.h"
 
 #include <memory>
 

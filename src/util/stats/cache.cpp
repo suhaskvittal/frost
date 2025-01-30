@@ -37,9 +37,12 @@ print_llc_stats(std::ostream& out)
     print_stat(out, "LLC", "READS", GL_LLC->io_->s_reads_);
     print_stat(out, "LLC", "WRITES", GL_LLC->io_->s_writes_);
 
+    print_stat(out, "LLC", "LOAD_BYPASSES", GL_LLC->s_bypasses_);
+    print_stat(out, "LLC", "WRITEBACK_BYPASSES", GL_LLC->s_writeback_bypasses_);
+    print_stat(out, "LLC", "EVICTIONS", GL_LLC->s_evictions_);
+    print_stat(out, "LLC", "DEAD_BLOCK_PREDICTS", GL_LLC->s_dead_block_predicts_);
+    print_stat(out, "LLC", "EVICTIONS_DEAD_BLOCKS", GL_LLC->s_evictions_due_to_dead_block_predictor_);
     print_stat(out, "LLC", "WRITEBACKS", GL_LLC->s_writebacks_);
-    print_stat(out, "LLC", "WRITEBACK_NEXT_LINE_IN_$", GL_LLC->s_dirty_victim_adj_lines_);
-    print_stat(out, "LLC", "WRITEBACK_NEXT_LINE_IN_$_DIRTY", GL_LLC->s_dirty_victim_adj_lines_also_dirty_);
 
     if (LLCache::cache_type::uses_set_dueling())
     {

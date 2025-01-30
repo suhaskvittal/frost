@@ -66,26 +66,27 @@ struct WBQueueEntry
  * `IMPL` operates as a traits class that defines
  *      (1) `NUM_MSHR`,
  *      (2) `WRITE_ALLOCATE` (whether or not to handle write misses)
- *      (3) `INVALIDATE_ON_HIT`
- *      (4) `NEXT_IS_INVALIDATE_ON_HIT`
- *      (5) `NUM_RW_PORTS`
- *      (6) `CACHE_LATENCY`
+ *      (3) `NUM_RW_PORTS`
+ *      (4) `CACHE_LATENCY`
  *  DEFINED BY USER:
  *      (1) `WRITEBACK_MODE` -- by default, this should be `FORCED`
  *      (2) `LAZY_EARLY_WRITEBACK` -- if using any other policy than `FORCED`, then if a early writeback
  *                                      cannot be issued, the line remains dirty and writeback does not
  *                                      take up an MSHR.
  *
- *  Each setting determines how `CacheControl` operates `CACHE`
+ *  Each setting determines how `CacheControl` operates `CACHE_TYPE`
  *  and `NEXT_CONTROL`.
  * */
-template <class IMPL, class CACHE, class NEXT_CONTROL>
+template <class IMPL, 
+         class CACHE_TYPE, 
+         class NEXT_CONTROL, 
+         class DEAD_BLOCK_PREDICTOR_TYPE>
 class CacheControl
 {
 public:
-    using cache_type = CACHE;
+    using cache_type = CACHE_TYPE;
     using io_ptr = std::unique_ptr<IOBus>;
-    using cache_ptr = std::unique_ptr<CACHE>;
+    using cache_ptr = std::unique_ptr<CACHE_TYPE>;
     using next_ptr = std::unique_ptr<NEXT_CONTROL>;
 
     using stat_type = VecStat<uint64_t, NUM_THREADS>;
@@ -100,11 +101,14 @@ public:
     stat_type s_invalidates_{};
     stat_type s_write_alloc_{};
 
+    uint64_t s_bypasses_ =0;
+    uint64_t s_writeback_bypasses_ =0;
+    uint64_t s_evictions_ =0;
     uint64_t s_writebacks_ =0;
-    uint64_t s_dirty_victim_adj_lines_ =0;
-    uint64_t s_dirty_victim_adj_lines_also_dirty_ =0;
-
     uint64_t s_eager_writebacks_ =0;
+
+    uint64_t s_dead_block_predicts_ =0;
+    uint64_t s_evictions_due_to_dead_block_predictor_ =0;
 
     uint64_t s_tot_next_line_lru_pos_ =0;
     uint64_t s_tot_next_lines_ =0;
@@ -114,8 +118,10 @@ private:
     using mshr_type = std::unordered_multimap<uint64_t, MSHREntry>;
     using wb_queue_type = std::deque<WBQueueEntry>;
     using eager_queue_type = std::deque<uint64_t>;
+    using dead_block_ptr = std::unique_ptr<DEAD_BLOCK_PREDICTOR_TYPE>;
 
-    next_ptr& next_;
+    next_ptr&      next_;
+    dead_block_ptr dead_block_pred_;
     /*
      * MSHR space is split between `mshr_` and `writeback_queue_`. Note that
      * in a real system, pending writebacks would be stored in the MSHR.
@@ -124,7 +130,7 @@ private:
     wb_queue_type writeback_queue_;
     size_t num_mshr_asleep_ =0;
     /*
-     * Specific implementations that are nonstandard:
+     * Support for eager writeback and similar policies:
      * */
     constexpr static size_t EAGER_QUEUE_SIZE = 32;
 
@@ -155,14 +161,29 @@ public:
 
     inline size_t curr_mshr_size(void) const { return mshr_.size() + writeback_queue_.size(); }
 private:
+    /*
+     * `next_access` fetches the next pending transaction from the IO bus and updates
+     * the `cache_` state accordingly.
+     *
+     * `handle_hit` and `handle_miss` may be called depending on how the access goes.
+     *
+     * Write misses are handled differently depending on whether or not `IMPL::WRITE_ALLOCATE` is set.
+     *  (1) If `WRITE_ALLOCATE`, then writes will require a read before marking the line dirty upon fill.
+     *  (2) Otherwise, the write miss is treated as a fill.
+     * */
     void next_access(void);
     void handle_hit(Transaction&&);
     void handle_miss(Transaction&&, bool write_miss=false);
-
+    /*
+     * Updates the `eager_queue_`.
+     * */
     void handle_eager_writeback(const CacheEntry&);
 
     bool do_writeback(uint64_t addr);
     bool do_writeback_with_dram_write_hint(uint64_t addr, bool autopre);
+
+    bool dead_block_handle_fill(const Transaction&);
+    void dead_block_handle_hit(const Transaction&);
 };
 
 ////////////////////////////////////////////////////////////////////////////

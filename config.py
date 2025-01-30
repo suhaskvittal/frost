@@ -37,6 +37,8 @@ validate_core_section(cfg['CORE'])
 # add `size_kb` now.
 if 'size_kb_per_core' in cfg['LLC']:
     cfg['LLC']['size_kb'] = str(int(cfg['LLC']['size_kb_per_core']) * int(cfg['CORE']['num_threads']))
+if 'num_mshr_per_core' in cfg['LLC']:
+    cfg['LLC']['num_mshr'] = str(int(cfg['LLC']['num_mshr_per_core']) * int(cfg['CORE']['num_threads']))
 for c in caches:
     validate_cache_section(cfg[c])
 validate_dram_section(cfg['DRAM'])

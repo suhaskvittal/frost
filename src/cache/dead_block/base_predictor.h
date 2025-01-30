@@ -12,9 +12,16 @@
 class DeadBlockPredictor
 {
 public:
-    virtual void update_on_access(uint64_t ip, uint64_t address) =0;
-    virtual bool predict_if_dead(uint64_t ip) =0;
+    constexpr static uint64_t DIRTY_IP = 0xffff'ffff'ffff'ffff;
+
+    virtual void update_on_access(uint64_t ip, uint64_t address, uint8_t coreid) {}
+    virtual bool predict_if_dead(uint64_t ip, uint64_t address, uint8_t coreid) const { return false; };
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+using NoDeadBlockPredictor = DeadBlockPredictor;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

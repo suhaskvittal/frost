@@ -195,12 +195,12 @@ int main(int argc, char* argv[])
 
         uint64_t ip = b.ip,
                  ip_line = b.ip >> numeric_traits<LINESIZE>::log2;
-        if (!if_buffer.probe(ip))
+        if (!if_buffer.probe(ip_line))
         {
             // Do L1i$ access and update `if_buffer`
             write_miss_to_trace(out, probe_and_install_on_miss(l1i, l2, ip_line, false), inst_num, ip);
             // Install `ip` into `if_buffer`
-            if_buffer.fill(ip, 1, false);
+            if_buffer.fill(ip_line, 1, false);
         }
         // Perform data cache accesses:
         for (uint64_t x : loads)

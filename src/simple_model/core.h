@@ -16,6 +16,23 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+#if defined(TRACE_FORMAT_MTF)
+
+using trace_format_type = MTF;
+
+#elif defined(TRACE_FORMAT_CTF)
+
+using trace_format_type = CTF;
+
+#elif defined(TRACE_FORMAT_IMAT)
+
+using trace_format_type = IMAT;
+
+#endif
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 class Core
 {
 public:
@@ -25,7 +42,7 @@ public:
     const uint8_t coreid_;
 private:
     using rob_type = std::deque<inst_ptr>;
-    using tracereader_type = TraceReader<TRACE_FORMAT>;
+    using tracereader_type = TraceReader<trace_format_type>;
 
     rob_type rob_;
     size_t rob_size_ =0;
