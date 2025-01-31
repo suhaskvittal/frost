@@ -42,6 +42,9 @@ uint8_t OPT_DRAM_WRITE_SYNC_COUNT;
 uint8_t OPT_DRAM_WRITE_SYNC_HIT_COST;
 uint8_t OPT_DRAM_WRITE_SYNC_MISS_COST;
 
+size_t OPT_DRAM_ADDRESS_AWARE_CACHE_SKIP_BITS;
+size_t OPT_DRAM_ADDRESS_AWARE_CACHE_NUM_BITS;
+
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -73,6 +76,8 @@ int main(int argc, char* argv[])
                 {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"},
                 {"dram_wsync_hit_cost", "Cost of a write hit", "0"},
                 {"dram_wsync_miss_cost", "Cost of a write miss", "1"},
+                {"dram_aware_cache_skip", "When computing set index, number of dram column bits to keep in index", "0"},
+                {"dram_aware_cache_width", "When computing set index, number of dram column bits to remove from index", "2"},
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
             });
@@ -86,6 +91,9 @@ int main(int argc, char* argv[])
     ARGS("dram_wsync_count", OPT_DRAM_WRITE_SYNC_COUNT);
     ARGS("dram_wsync_hit_cost", OPT_DRAM_WRITE_SYNC_HIT_COST);
     ARGS("dram_wsync_miss_cost", OPT_DRAM_WRITE_SYNC_MISS_COST);
+
+    ARGS("dram_aware_cache_skip", OPT_DRAM_ADDRESS_AWARE_CACHE_SKIP_BITS);
+    ARGS("dram_aware_cache_width", OPT_DRAM_ADDRESS_AWARE_CACHE_NUM_BITS);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 

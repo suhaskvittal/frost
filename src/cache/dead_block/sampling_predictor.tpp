@@ -24,7 +24,7 @@ __TEMPLATE_CLASS__::SamplingPredictor()
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::update_on_access(uint64_t ip, uint64_t address, uint8_t coreid, bool writeback)
 {
-    if (fast_mod<SAMPLER_SET_GAP>(address) != 0)
+    if (fast_mod<SAMPLER_SET_GAP>(BASE_CACHE_TYPE::_get_set_index(address)) != 0)
         return;
     
     // Modify `ip` and `coreid` if this is writeback.

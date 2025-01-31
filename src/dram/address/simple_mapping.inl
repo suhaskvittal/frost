@@ -55,7 +55,7 @@ inline bool bit_is_in_region(size_t x)
     return x >= FROM && x < FROM + numeric_traits<SIZE>::log2;
 }
 
-inline constexpr size_t dram_lowest_col_bit_index(void)
+inline constexpr size_t dram_col_bit_index(size_t ii)
 {
     for (size_t i = 0; i < numeric_traits<DRAM_SIZE_MB*1024*1024>::log2; i++)
     {
@@ -67,7 +67,10 @@ inline constexpr size_t dram_lowest_col_bit_index(void)
         {
             continue;
         }
-        return i;
+        if (ii)
+            --ii;
+        else
+            return i;
     }
     std::cerr << "column bit not found: invalid dram address mapping.\n";
     exit(1);

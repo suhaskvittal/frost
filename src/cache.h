@@ -156,7 +156,7 @@ public:
         return POL == CacheReplPolicy::DRRIP;
     }
 
-    inline virtual size_t get_set_index(uint64_t x) const
+    inline static size_t _get_set_index(uint64_t x)
     {
         return fast_mod<SETS>(x);
     }
@@ -179,6 +179,11 @@ protected:
 
     virtual SetDuelingRole get_set_role(size_t idx) const;
     virtual void update_psel(size_t idx);
+
+    inline virtual size_t get_set_index(uint64_t x) const
+    {
+        return _get_set_index(x);
+    }
 
     inline cset_type& get_set(uint64_t x)
     {

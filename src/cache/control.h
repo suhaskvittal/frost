@@ -92,8 +92,8 @@ public:
 
     using stat_type = VecStat<uint64_t, NUM_THREADS>;
 
-    cache_ptr  cache_;
     io_ptr     io_;
+    cache_ptr  cache_;
     
     stat_type s_accesses_{};
     stat_type s_misses_{};

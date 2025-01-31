@@ -24,7 +24,7 @@ size_t dram_row(uint64_t);
 template <size_t FROM, size_t SIZE>
 bool bit_is_in_region(size_t);
 
-constexpr size_t dram_lowest_col_bit_index(void);
+constexpr size_t dram_col_bit_index(size_t);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -66,9 +66,9 @@ inline size_t dram_bankgroup_idx(uint64_t addr)
     return dram_bankgroup(addr) + dram_rank(addr)*DRAM_BANKGROUPS;
 }
 
-inline uint64_t dram_get_first_column_neighbor(uint64_t addr)
+inline uint64_t dram_get_column_neighbor(uint64_t addr, size_t b)
 {
-    return addr ^ (1L << dram_lowest_col_bit_index());
+    return addr ^ (1L << dram_col_bit_index(b));
 }
 
 ////////////////////////////////////////////////////////////////////////////

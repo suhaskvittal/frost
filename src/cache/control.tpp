@@ -19,8 +19,8 @@
 __TEMPLATE_HEADER__ inline
 __TEMPLATE_CLASS__::CacheControl(std::string cache_name, next_ptr& n)
     :io_(new IOBus(IMPL::RQ_SIZE, IMPL::WQ_SIZE, IMPL::PQ_SIZE)),
-    cache_name_(cache_name),
     cache_(new CACHE_TYPE),
+    cache_name_(cache_name),
     next_(n),
     dead_block_pred_(new DEAD_BLOCK_PREDICTOR_TYPE)
 {
@@ -107,11 +107,8 @@ __TEMPLATE_CLASS__::tick()
     {
         uint64_t address = eager_queue_.front();
         bool success;
-        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-            // We know that this should be the last row hit.
-            success = do_writeback_with_dram_write_hint(address, true);
-        else
-            success = do_writeback(address);
+
+        success = do_writeback(address);
 
         if (success)
             eager_queue_.pop_front();
@@ -182,13 +179,9 @@ __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
 {
     typename CACHE_TYPE::fill_result_type v, w;
-    size_t w_lru_pos;
 
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
         std::tie(v, w) = cache_->fill_with_eager_writeback(address, refcnt, dirty);
-    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-        std::tie(v, w, w_lru_pos) = 
-            cache_->fill_with_next_line_writeback(address, dram_lowest_col_bit_index(), refcnt, dirty);
     else
         v = cache_->fill(address, refcnt, dirty);
 
@@ -203,33 +196,14 @@ __TEMPLATE_CLASS__::demand_fill(uint64_t address, size_t refcnt, bool dirty)
     if (e.dirty)
     {
         ++s_writebacks_;
-        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-        {
-            WBQueueEntry wbqe(e.address);
-            wbqe.dram_write_hint_valid = true;
-            wbqe.dram_write_hint_do_autopre = (w_lru_pos != 0) || !w.has_value();
-            if (!do_writeback_with_dram_write_hint(e.address, wbqe.dram_write_hint_do_autopre))
-                writeback_queue_.push_back(wbqe);
-        }
-        else
-        {
-            if (!do_writeback(e.address))
-                writeback_queue_.emplace_back(e.address);
-        }
+        if (!do_writeback(e.address))
+            writeback_queue_.emplace_back(e.address);
     }
 
     // Also writeback `w` if it has a value.
     if (w.has_value())
     {
-        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NEXT_LINE)
-        {
-            if (w_lru_pos == 0)  // Only writeback if this line will be in the LRU position.
-                handle_eager_writeback(w.value());
-            s_tot_next_line_lru_pos_ += w_lru_pos;
-            ++s_tot_next_lines_;
-        }
-        else
-            handle_eager_writeback(w.value());
+        handle_eager_writeback(w.value());
     }
 }
 
