@@ -34,48 +34,45 @@ def issue_sbatch(call: str, out: str):
         os.system(f'sbatch -N1 --ntasks-per-node=1 --account=gts-mqureshi4-rg -t8:00:00 -o {out} --wrap=\"{call}\"')
     else:
         print(f'source ~/.bashrc && {call} > {out} &')
-#   os.system(f'{call} > {out} &\n')
 
 ############################################################
 ############################################################
 
 INST_SIM = 100_000_000
-#INST_WARMUP = 10_000_000
 INST_WARMUP = 0
 
 builds = []
-
 other_args = {}
 
-def append_all_defaults(base: str):
-    for (p, am) in [('OP', 'MOP4'), ('CP','ZEN')]:
-        builds.append(f'{base}_{p}_{am}')
+page_mode = argv[1]
+which = argv[2]
 
-which = argv[1]
+prefix = 'OP' if page_mode == 'open' else 'CP'
+
+def append_build(base: str):
+    builds.append(f'{prefix}_{base}')
 
 if which == 'all':
-    for w in ['baseline', 'no_writes', 'random', 'sync', 'bank-balanced-cache']:
-        os.system(f'python scripts/w_mgt/run.py {w}')
+    for w in ['baseline', 'no_writes', 'evals_1', 'random_writes']:
+        os.system(f'python scripts/w_mgt/run.py {page_mode} {w}')
         if WHERE == 'PACE':
             print('sleeping for 15 minutes...')
             time.sleep(15*60)
     exit(0)
 
 if which == 'baseline':
-    append_all_defaults('BASELINE')
+    append_build('BASELINE')
+    append_build('BASELINE_DEAD_BLOCK')
 elif which == 'no_writes':
-    append_all_defaults('NO_WRITES')
-elif which == 'motivation':
-    for p in [9,11]:
-        append_all_defaults(f'WRITE_QUEUE_{p}')
-elif which == 'random':
-    builds = ['BASELINE_OP_RANDOM', 'BASELINE_CP_RANDOM']
-elif which == 'sync' or which == 'sync-scan':
-    append_all_defaults('WRITE_SYNC')
-elif which == 'bank-balanced-cache' or which == 'bank-balanced-cache-scan':
-    append_all_defaults('WRITE_SYNC_BALANCED_CACHE')
-elif which == 'cost-scan':
-    builds.append('WRITE_SYNC_OP_MOP4')
+    append_build('NO_WRITES')
+elif which == 'evals_1':
+    append_build('WRITE_SYNC')
+    append_build('WRITE_SYNC_DEAD_BLOCK')
+elif which == 'random_writes':
+    append_build('WRITE_SYNC_RANDOM_WRITES')
+elif which == 'evals_2':
+    append_build('BANK_BALANCED_CACHE')
+    append_build('BANK_BALANCED_CACHE_DEAD_BLOCK')
 else:
     print('Unknown experiment!')
     exit(1)
@@ -83,36 +80,11 @@ else:
 ############################################################
 ############################################################
 
-for suite in ['mtf/spec2017', 'mtf/gap', 'mtf/ligra', 'mtf/parsec']:
-    inst_warmup = 250_000_000 if suite == 'mtf/gap' else INST_WARMUP
-
+for suite in ['imat/spec', 'imat/ligra']:
     benchmarks = [f for f in os.listdir(f'TRACES/{suite}') if f.endswith('.xz') or f.endswith('.gz')]
     for build in builds:
         os.system(f'mkdir -p out/{suite}/{build}')
         for b in benchmarks:
             name = get_name(suite, b)
-            base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {inst_warmup}'
-            if which == 'watermark-scan':
-                for x in [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]:
-                    cmd = f'{base_cmd} -dram_wm_low {x} -dram_wm_high 1.0'
-                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{int(x*100)}.out')
-            elif which == 'sync-scan':
-                for ii in [1, 2, 4, 8, 16, 128]:
-                    cmd = f'{base_cmd} -dram_wsync_count {ii}'
-                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
-                if WHERE == 'PACE':
-                    time.sleep(120)
-            elif which == 'bank-balanced-cache-scan':
-                for ii in [1, 2, 4, 8]:
-                    cmd = f'{base_cmd} -dram_wsync_count {ii}'
-                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
-                if WHERE == 'PACE':
-                    time.sleep(120)
-            elif which == 'cost-scan':
-                for (ii,(hit,miss)) in enumerate([(0,1), (1,2), (1,3)]):
-                    cmd = f'{base_cmd} -dram_wsync_hit_cost {hit} -dram_wsync_miss_cost {miss}'
-                    issue_sbatch(cmd, f'out/{suite}/{build}/{name}_scan{ii}.out')
-                if WHERE == 'PACE':
-                    time.sleep(120)
-            else:
-                issue_sbatch(base_cmd, f'out/{suite}/{build}/{name}.out')
+            base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {INST_WARMUP}'
+            issue_sbatch(base_cmd, f'out/{suite}/{build}/{name}.out')

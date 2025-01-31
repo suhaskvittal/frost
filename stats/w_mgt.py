@@ -11,6 +11,14 @@ import os
 ####################################################################
 ####################################################################
 
+from sys import argv
+
+page_mode = argv[1]
+prefix = 'OP' if page_mode == 'op' else 'CP'
+
+####################################################################
+####################################################################
+
 def get_name(suite, filename):
     left, right = 0, filename.find('.')
     # The if statements here are just for special cases.
@@ -27,7 +35,7 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017', 'mtf/gap', 'mtf/parsec', 'mtf/ligra']
+SUITES = ['imat/spec', 'imat/ligra']
 
 def create_csv_file_for_ipc(output_file: str, *builds):
     wr = open(f'data/{output_file}', 'w')
@@ -37,12 +45,12 @@ def create_csv_file_for_ipc(output_file: str, *builds):
     ipc_list = {b: [] for b in builds}
     for suite in SUITES:
         wr.write('\n')
-        workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.mtf.gz')]
+        workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
         local_ipc_list = {b: [] for b in builds}
         for w in workloads:
             # Read results for all builds
             results_map = {
-                b : read_output_file(f'out/{suite}/{b}/{w}.out') for b in builds
+                b : read_output_file(f'out/{suite}/{prefix}_{b}/{w}.out') for b in builds
             }
             baseline = builds[0]  # This is the assumption
             mpki = get_per_core_stat(results_map[baseline][1], lambda d: d['LLC']['MPKI'])
@@ -85,14 +93,14 @@ def create_csv_file_for_ipc_scan(output_file: str, scans: list[int], folder: str
         workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.mtf.gz')]
         for w in workloads:
             # First read baseline results:
-            _, baseline_results = read_output_file(f'out/{suite}/{baseline_folder}/{w}.out')
+            _, baseline_results = read_output_file(f'out/{suite}/{prefix}_{baseline_folder}/{w}.out')
             mpki = get_per_core_stat(baseline_results, lambda d: d['LLC']['MPKI'])
             if mpki < 1.0:
                 continue
             base_ipc = get_per_core_stat(baseline_results, lambda d: d['IPC'])
             # Create array for line
             results_map = {
-                i : read_output_file(f'out/{suite}/{folder}/{w}_scan{i}.out') for i in scans
+                i : read_output_file(f'out/{suite}/{prefix}_{folder}/{w}_scan{i}.out') for i in scans
             }
             data_list = [w,'1.0']
             for i in scans:
@@ -116,28 +124,14 @@ def create_csv_file_for_ipc_scan(output_file: str, scans: list[int], folder: str
 
 ####################################################################
 ####################################################################
-
-def get_folder(base: str, page_mode: str, random=False):
-    if random:
-        return f'{base}_OP_RANDOM' if page_mode == 'op' else f'{base}_CP_RANDOM'
-    else:
-        return f'{base}_OP_MOP4' if page_mode == 'op' else f'{base}_CP_ZEN'
-
-####################################################################
-####################################################################
-# COMPARE OPEN VS CLOSE PAGE
-create_csv_file_for_ipc(f'baseline_comparison.ipc.csv', get_folder('BASELINE', 'op'), get_folder('BASELINE', 'cp'))
-
-####################################################################
-####################################################################
-# WRITE SYNCHRONIZATION SCAN
-for s in ['op','cp']:
-    create_csv_file_for_ipc(f'main_results_1_{s}.ipc.csv',
-                            get_folder('BASELINE', s), 
-                            get_folder('BASELINE', s, random=True), 
-                            get_folder('NO_WRITES', s), 
-                            get_folder('WRITE_SYNC', s),
-                            get_folder('WRITE_SYNC_BALANCED_CACHE', s))
+# RESULTS
+create_csv_file_for_ipc(f'main_results_{page_mode}.csv',
+                        'BASELINE',
+                        'WRITE_SYNC',
+                        'BASELINE_DEAD_BLOCK',
+                        'WRITE_SYNC_DEAD_BLOCK',
+                        'WRITE_SYNC_RANDOM_WRITES',
+                        'NO_WRITES')
 
 ####################################################################
 ####################################################################

@@ -31,6 +31,16 @@ constexpr DRAMCommandType WRITE_CMD = (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+inline void
+dec_pending(DRAMChannel::pending_type& m, uint64_t k)
+{
+    if ((--m[k]) == 0)
+        m.erase(k);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 template <class T> inline T sqr(T x) { return x*x; }
 
 void
@@ -261,17 +271,22 @@ DRAMChannel::try_switch_to_write_mode()
     }
     dram_update_write_distribution_stats(write_cnts, s_tot_write_queue_std_, s_tot_write_queue_minmax_diff_);
 #endif
+
+#if defined(DRAM_RANDOMIZE_WRITE_ADDRESSES)
+    // Here, we will fix all the write addresses to the bank indexes in round robin.
+    for (size_t i = 0; i < write_queue_.size(); i++)
+    {
+        auto& trans = write_queue_[i].trans;
+        dec_pending(pending_writes_, trans.address);        
+        trans.address &= ~((DRAM_TOT_BANKS_PER_CHANNEL-1) << BG_OFF);
+        trans.address |= fast_mod<DRAM_TOT_BANKS_PER_CHANNEL>(i) << BG_OFF;
+        ++pending_writes_[trans.address];
+    }
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-inline void
-dec_pending(DRAMChannel::pending_type& m, uint64_t k)
-{
-    if ((--m[k]) == 0)
-        m.erase(k);
-}
 
 void
 DRAMChannel::issue_next_command()
@@ -381,11 +396,13 @@ DRAMChannel::select_ready_command()
         // If this is a write, check if it violates R->W dependency.
         if (in_write_mode_)
         {
+            /*
             if (pending_reads_.count(q_it->trans.address))
             {
                 in_transition_ = true;
                 break;
             }
+            */
 
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {

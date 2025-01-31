@@ -497,8 +497,10 @@ __TEMPLATE_CLASS__::dead_block_early_exit(const Transaction& trans)
 
     bool override = false;
     // Check if we should override the dead block predictor:
+    /*
     if constexpr (is_bank_balanced_cache<CACHE_TYPE>::value)
         override = cache_->should_override_dead_block_predictor();
+        */
     return override;
 }
 

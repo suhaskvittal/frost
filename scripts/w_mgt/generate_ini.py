@@ -5,27 +5,45 @@
 ############################################################
 ############################################################
 
+from sys import argv
+import os
+
+page_mode = argv[1]
+
+if page_mode == 'open':
+    output_folder = 'ini/simple_core/w_mgt/op'
+else:
+    output_folder = 'ini/simple_core/w_mgt/cp'
+if not os.path.isdir(output_folder):
+    os.system(f'mkdir -p {output_folder}')
+
+address_mapping = 'MOP4' if page_mode == 'open' else 'ZEN'
+page_mode = page_mode.upper()
+
+############################################################
+############################################################
+
 CORES = 8
 REPL_POLICY = 'LRU'
 
 def write_ini(filename: str,
-              page_mode='CLOSE',
               write_queue_size=128,
               write_policy='ASYNC',
               wb_mode='FORCED',
-              address_mapping='ZEN',
               cache_type='Cache',
-              other_defines=''):
-
+              dead_block_predictor='NoDeadBlockPredictor',
+              other_defines=''
+):
     if len(other_defines) > 0:
         other_defines += ','
     other_defines += 'DRAM_TRACK_ADVANCED_STATS'
 
-    with open(filename, 'w') as wr:
+    with open(f'{output_folder}/{filename}.ini', 'w') as wr:
         wr.write(
 f'''[SYSTEM]
 model = simple
 defines = {other_defines}
+trace_format = IMAT
 
 [CORE]
 frequency_ghz = 4.0
@@ -46,7 +64,6 @@ read_queue_size = 128
 write_queue_size = {write_queue_size}
 write_policy = {write_policy}
 sched_policy = FRFCFS
-cmd_queue_size = 16
 page_policy = {page_mode}
 address_mapping = {address_mapping}
 dram_type = 4800
@@ -54,7 +71,7 @@ dram_type = 4800
 [LLC]
 size_kb_per_core = 2048
 ways = 16
-num_mshr = {128*CORES}
+num_mshr = {32*CORES}
 num_rw_ports = 4
 latency = 20
 read_queue_size = 64
@@ -63,41 +80,28 @@ prefetch_queue_size = 32
 replacement_policy = {REPL_POLICY}
 writeback_mode = {wb_mode}
 base_cache_type = {cache_type}
+dead_block_predictor = {dead_block_predictor}
 ''')
 
 ############################################################
 ############################################################
-
-def make_filename(basename: str, page_mode: str, address_mapping: str) -> str:
-    page_str = 'op' if page_mode == 'OPEN' else 'cp'
-    am_str = address_mapping.lower()
-    return f'ini/simple_core/w_mgt/{basename}_{page_str}_{am_str}.ini'
-
-def get_default_mapping(page_mode: str) -> str:
-    return 'MOP4' if page_mode == 'OPEN' else 'ZEN'
-
-############################################################
-############################################################
 # BASELINE
-for page_mode in ['OPEN', 'CLOSE']:
-    am = get_default_mapping(page_mode)
-    write_ini(make_filename('baseline', page_mode, am), address_mapping=am, page_mode=page_mode)
+write_ini('baseline')
+write_ini('baseline_dead_block', dead_block_predictor='SamplingPredictor<$base>')
 
 ############################################################
 ############################################################
-# MOTIVATION: NO WRITES AND RANDOM MAPPING
-for page_mode in ['OPEN', 'CLOSE']:
-    am = get_default_mapping(page_mode)
-    write_ini(make_filename('no_writes', page_mode, am), page_mode=page_mode, address_mapping=am, other_defines='DRAM_DROP_WRITES')
-    write_ini(make_filename('baseline', page_mode, 'RANDOM'), page_mode=page_mode, address_mapping='RANDOM') 
+# MOTIVATION: NO WRITES
+write_ini('no_writes', other_defines='DRAM_DROP_WRITES')
 
 ############################################################
 ############################################################
 # WRITE SYNCHRONIZATION
-for page_mode in ['OPEN', 'CLOSE']:
-    am = get_default_mapping(page_mode)
-    write_ini(make_filename('write_sync', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='SYNC')
-    write_ini(make_filename('write_sync_balanced_cache', page_mode, am), page_mode=page_mode, address_mapping=am, write_policy='SYNC', cache_type='BankBalancedCache')
+write_ini('write_sync', write_policy='SYNC')
+write_ini('write_sync_dead_block', write_policy='SYNC', dead_block_predictor='SamplingPredictor<$base>')
+write_ini('write_sync_random_writes', write_policy='SYNC', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES')
+#write_ini('bank_balanced_cache', write_policy='SYNC', cache_type='BankBalancedCache')
+#write_ini('bank_balanced_cache_dead_block', write_policy='SYNC', cache_type='BankBalancedCache', dead_block_predictor='SamplingPredictor<$base>')
 
 ############################################################
 ############################################################

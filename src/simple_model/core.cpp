@@ -140,7 +140,7 @@ Core::operate_rob()
                 std::cerr << "\nCore " << (coreid_+0) << " deadlock in cycle " << GL_CYCLE << " detected:\n";
                 GL_LLC->deadlock_find_inst(inst);
                 GL_DRAM->deadlock_find_inst(inst);
-                rob_stall_start_cycle_ = GL_CYCLE;
+                exit(1);
             }
             break;
         }

@@ -14,6 +14,14 @@ import os
 SPEC_TRACES = [ f'/traces/champsim/{f}' for f in os.listdir('/traces/champsim') if f.endswith('.xz') ]
 
 LIGRA_TRACES = [
+    '/traces/champsim/Ligra/ligra_BFS-Bitvector.com-lj.ungraph.gcc_6.3.0_O3.drop_500M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_BFS.com-lj.ungraph.gcc_6.3.0_O3.drop_500M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_CF.com-lj.ungraph.gcc_6.3.0_O3.drop_2500M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_Components.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_Components-Shortcut.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_PageRankDelta.com-lj.ungraph.gcc_6.3.0_O3.drop_6000M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_Radii.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz',
+    '/traces/champsim/Ligra/ligra_Triangle.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz',
     '/traces/champsim/Ligra/ligra_BC.com-lj.ungraph.gcc_6.3.0_O3.drop_15500M.length_250M.champsimtrace.xz',
     '/traces/champsim/Ligra/ligra_BellmanFord.com-lj.ungraph.gcc_6.3.0_O3.drop_33750M.length_250M.champsimtrace.xz',
     '/traces/champsim/Ligra/ligra_BFSCC.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz',
@@ -83,9 +91,9 @@ else:
 if not os.path.isdir(f'{OUTPUT_DIRECTORY}/{fmt}'):
     os.mkdir(f'{OUTPUT_DIRECTORY}/{fmt}')
 
-convert('spec', SPEC_TRACES, get_spec_name, fmt)
+#convert('spec', SPEC_TRACES, get_spec_name, fmt)
 convert('ligra', LIGRA_TRACES, get_ligra_name, fmt)
-convert('parsec', PARSEC_TRACES, get_parsec_name, fmt)
+#convert('parsec', PARSEC_TRACES, get_parsec_name, fmt)
 
 #######################################################################################
 #######################################################################################

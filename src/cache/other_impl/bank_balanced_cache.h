@@ -86,7 +86,7 @@ public:
     inline bool should_override_dead_block_predictor(void) const
     {
         return access_counter_ >= 1024  // Ensure that we have enough "samples"
-                && hit_counter_ < (access_counter_ >> 6);  // This means hit rate < 1/64
+                && hit_counter_ < (access_counter_ >> 7);  // This means hit rate < 1/128 (0.8%)
     }
 
     inline void reduce_hit_rate_counters(void)

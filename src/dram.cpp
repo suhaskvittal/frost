@@ -29,10 +29,12 @@ bool
 DRAM::IO::can_accept(uint64_t address, TransactionType type)
 {
     bool is_write = trans_is_write(type);
+
 #if defined(DRAM_DROP_WRITES)
     if (is_write)
         return true;
 #endif
+
     size_t i = dram_channel(address);
     if (is_write)
         return dram->channels_[i]->write_queue_size() < DRAM_WQ_SIZE;
@@ -43,10 +45,13 @@ DRAM::IO::can_accept(uint64_t address, TransactionType type)
 bool
 DRAM::IO::add_incoming(Transaction t)
 {
+    bool is_write = trans_is_write(t.type);
+
 #if defined(DRAM_DROP_WRITES)
-    if (t.type == TransactionType::WRITE)
+    if (is_write)
         return true;
 #endif
+
     size_t i = dram_channel(t.address);
     return dram->channels_[i]->add_incoming(t);
 }

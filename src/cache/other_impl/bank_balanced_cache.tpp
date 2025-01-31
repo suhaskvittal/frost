@@ -178,15 +178,31 @@ __TEMPLATE_CLASS__::find_victim_modified_policy(cset_type& s, BalanceLevel b)
 __TEMPLATE_HEADER__ typename __TEMPLATE_PARENT__::cset_type::iterator
 __TEMPLATE_CLASS__::lru_mod(cset_type& s, BalanceLevel b)
 {
+    constexpr size_t LRU_TOL = WAYS/8;
+
+    std::unordered_map<uint64_t, size_t> lru_pos;
+    lru_pos.reserve(WAYS);
+    std::transform(s.begin(), s.end(), std::inserter(lru_pos, lru_pos.end()),
+                    [&s] (const auto& e)
+                    {
+                        size_t p = std::count_if(s.begin(), s.end(),
+                                    [t=e.timestamp] (const auto& x) { return x.timestamp < t; });
+                        return std::make_pair(e.address, p);
+                    });
     return std::min_element(s.begin(), s.end(),
-                [b] (const auto& x, const auto& y)
+                [b, &lru_pos] (const auto& x, const auto& y)
                 {
                     if (x.dirty == y.dirty)
                         return x.timestamp < y.timestamp;
-                    else if (b == BalanceLevel::REPL_CLEAN)
-                        return y.dirty;
                     else
-                        return x.dirty;
+                    {
+                        size_t px = lru_pos[x.address],
+                               py = lru_pos[y.address];
+                        if ((b == BalanceLevel::REPL_DIRTY && x.dirty) || (b == BalanceLevel::REPL_CLEAN && !x.dirty))
+                            return px <= py + LRU_TOL;
+                        else
+                            return py > px + LRU_TOL;
+                    }
                 });
 }
 
