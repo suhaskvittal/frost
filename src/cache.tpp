@@ -92,7 +92,7 @@ __TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs, bool mark_dirty)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::eager_fill_result_type
 __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t addr, size_t num_refs, bool mark_dirty)
 {
     fill_result_type v, w;
@@ -105,42 +105,6 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t addr, size_t num_refs, bo
             w = *lru_it;
     }
     return multi_fill_result_type(v, w);
-}
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::next_line_fill_result_type
-__TEMPLATE_CLASS__::fill_with_next_line_writeback(uint64_t addr, size_t column_bit, size_t num_refs, bool mark_dirty)
-{
-    fill_result_type v, w;
-    size_t w_lru_pos;
-
-    v = fill(addr, num_refs, mark_dirty);
-
-    if (v.has_value() && v.value().dirty)
-    {
-        const auto& e = v.value();
-        uint64_t next_lineaddr = e.address ^ (1L << column_bit);
-        if (get_set_index(e.address) != get_set_index(next_lineaddr))
-        {
-            std::cout << "set mismatch: " << get_set_index(e.address) << ", " << get_set_index(next_lineaddr) << "\n";
-            exit(1);
-        }
-        cset_type& s = get_set(e.address);
-        auto it = std::find_if(s.begin(), s.end(),
-                            [next_lineaddr] (const CacheEntry& e)
-                            {
-                                return e.address == next_lineaddr;
-                            });
-        if (it != s.end() && it->dirty)
-        {
-            w = *it;
-            w_lru_pos = std::count_if(s.begin(), s.end(),
-                                [t=it->timestamp] (const auto& e)
-                                {
-                                    return t > e.timestamp;
-                                });
-        }
-    }
-    return next_line_fill_result_type(v, w, w_lru_pos);
 }
 
 ////////////////////////////////////////////////////////////////////////////

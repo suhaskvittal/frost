@@ -1,0 +1,479 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   31 January 2025
+ * */
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#define __TEMPLATE_HEADER__ template <class IMPL, class NEXT_TYPE>
+#define __TEMPLATE_CLASS__ Cache<IMPL,NEXT_TYPE>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__
+__TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
+    :cache_name_(cache_name),
+    next_(n)
+{
+    read_queue_.reserve(IMPL::RQ_SIZE);
+    write_queue_.reserve(IMPL::WQ_SIZE);
+    prefetch_queue_.reserve(IMPL::PQ_SIZE);
+
+    pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
+    pending_writes_.reserve(IMPL::WQ_SIZE);
+    pending_misses_.reserve(IMPL::NUM_MSHR);
+    pending_writebacks_.reserve(IMPL::WB_QUEUE_SIZE);
+
+    mshr_.reserve(IMPL::NUM_MSHR):
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::warmup_access(uint64_t address, bool write)
+{
+    if constexpr (!IMPL::WRITE_ALLOCATE)
+    {
+        if (write)
+        {
+            if (!mark(address, true))
+                warmup_fill(address, true);
+            return;
+        }
+    }
+
+    bool hit = probe(address, write);
+    if (!hit)
+    {
+        next_->warmup_access(address, write);
+        warmup_fill(address, write);
+    }
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::warmup_fill(uint64_t address, bool dirty)
+{
+    auto out = fill(address, 1, dirty);
+    if (out.entry.valid && out.entry.dirty)
+        next_->warmup_access(out.entry.address, true);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::tick()
+{
+    // Check for sleeping MSHR entries:
+    if (num_mshr_asleep_ > 0)
+    {
+        auto mshr_it = std::find_if_not(mshr_.begin(), mshr_.end(),
+                                [] (const auto& e) { return e.is_fired; });
+        // Try access to next level:
+        if (next_->can_accept(mshr_it->trans.type) && next_->add_incoming(mshr_it->trans))
+        {
+            mshr_it->is_fired = true;
+            --num_mshr_asleep_;
+        }
+    }
+
+    // Send the next writeback to `next_`
+    if (!writeback_queue_.empty())
+    {
+        const auto& e = writeback_queue_.front();
+        if (next_->can_accept(e.trans.type) && next_->add_incoming(e.trans))
+        {
+            pending_writebacks_.erase(e.trans.address);
+            writeback_queue_.pop_front();
+        }
+    }
+
+    // Perform fills:
+    for (size_t ii = 0; ii < IMPL::NUM_FILLS; ii++)
+    {
+        if (!do_next_fill())
+            break;
+    }
+
+    // Do R/W/P:
+    for (size_t b = 0; b < IMPL::NUM_BANKS; b++)
+    {
+        for (size_t ii = 0; ii < IMPL::NUM_READ_PORTS_PER_BANK; ii++)]
+        {
+            if (!do_next_access(b, true))
+                break;
+        }
+
+        for (size_t ii = 0; ii < IMPL::NUM_WRITE_PORTS_PER_BANK; ii++)]
+        {
+            if (!do_next_access(b, false))
+                break;
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::can_accept(TransactionType t)
+{
+    if (t == TransactionType::PREFETCH)
+        return prefetch_queue_.size() < IMPL::PQ_SIZE;
+    else if (t == TransactionType::WRITE)
+        return write_queue_.size() < IMPL::WQ_SIZE;
+    else
+        return read_queue_.size() < IMPL::RQ_SIZE;
+}
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::can_accept_fill(TransactionType t)
+{
+    return fill_queue_.size() < IMPL::FILL_QUEUE_SIZE;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::add_incoming(Transaction trans)
+{
+    bool is_read = trans_is_read(trans.type);
+
+    // First, check if we can forward writes:
+    if (pending_writes_.count(trans.address) || pending_writebacks_.count(trans.address))
+    {
+        if (is_read)
+            outgoing_queue_.insert({ GL_CYCLE+1, trans });
+        return true;
+    }
+
+    // Now, if this is a read, check if we can merge with any other reads:
+    if (is_read)
+    {
+        if (pending_reads_.count(trans.address))
+        {
+            auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
+                            [x = trans.address] (const auto& tr) { return tr.address == x; });
+            rd_it->merge(trans);
+            return true;
+        }
+        else if (pending_misses_.count(trans.address) && mshr_.size() < IMPL::NUM_MSHR)
+        {
+            add_mshr_entry(trans);
+            return true;
+        }
+    }
+
+    // otherwise, we need to enqueue normally.
+    auto& q =     get_queue_ref(trans.type);
+    auto& p =     is_read ? pending_reads_ : pending_writes_;
+    auto& count = is_read ? s_reads_ : s_writes_;
+
+    if (q.size() == q.capacity())
+        return false;
+    q.push_back(trans);
+    p.insert(trans.address);
+    ++count[trans.coreid];
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::add_incoming_fill(Transaction trans)
+{
+    if (fill_queue_.size() >= FILL_QUEUE_SIZE)
+        return false;
+    fill_queue_.push_back(trans);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::probe(uint64_t address, bool write)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
+    {
+        update_entry(*it);
+        it->dirty |= write;
+        return true;
+    }
+    else
+        return false;
+}
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::mark(uint64_t address, bool dirty)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
+    {
+        it->dirty = dirty;
+        return true;
+    }
+    else
+        return false;
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::invalidate(uint64_t address)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
+        it->valid = false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_type
+__TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool dirty)
+{
+    fill_result_type out;
+
+    cset_type& s = get_set(address);
+
+    // First search for an invalid entry:
+    auto it = std::find_if_not(s.begin(), s.end(),
+                        [] (const auto& e) { return e.valid; });
+    if (it == s.end())
+    {
+        // Search for a dead block:
+        it = std::find_if(s.begin(), s.end(),
+                        [] (const auto& e) { return e.likely_dead; });
+        // If there is no dead block, then use the replacement policy.
+        if (it == s.end())
+            it = find_victim(s);
+        out = fill_result_type(std::move(*it), 0);
+    }
+    init_entry(*it, address, num_refs, dirty);
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
+__TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t address, size_t num_refs, bool dirty)
+{
+    multi_fill_result_type out;
+    out.push_back(fill(address, num_refs, dirty);
+
+    // Check if the writeback queue even has space for the writeback:
+    if (writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
+    {
+        const auto& s = get_const_set(address);
+        auto lru_it = get_way_in_lru_pos(s, 0);
+        if (lru_it->dirty)
+            out.emplace_back(*lru_it, 0);
+    }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_CLASS__::find_victim(cset_type& s)
+{
+    if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
+        return lru(s);
+    else if constexpr (IMPL::REPL == CacheReplPolicy::RAND)
+        return rand(s);
+    else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
+        return rrip(s);
+    else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
+    {
+        update_psel(set_index(s[0].address));
+        return rrip(s);
+    }
+    else
+    {
+        std::cerr << "unsupported cache replacement policy.\n";
+        exit(1);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::do_next_access(size_t bankid, bool do_read)
+{
+    if (mshr_.size() >= IMPL::NUM_MSHR || writeback_queue_.size() >= IMPL::WRITEBACK_QUEUE)
+        return false;
+
+    auto& q = do_read ? (read_queue_.empty() ? prefetch_queue_ : read_queue_)
+                      : write_queue_;
+    if (q.empty())
+        return false;
+
+    auto q_it = std::find_if(q.begin(), q.end(),
+                        [this, bankid, is_write=!do_read] (const auto& tr) 
+                        { 
+                            if (is_write)
+                            {
+                                // Enforce WAR dependence
+                                if (pending_reads_.count(tr.address)
+                                    || pending_misses_.count(tr.address))
+                                {
+                                    return false;
+                                }
+                            }
+                            return bank_index(tr.address) == bankid;
+                        });
+    if (q_it == q.end())
+        return false;
+
+    Transaction trans = std::move(*q_it);
+    q.erase(q_it);
+    if (do_read)
+        pending_reads_.erase(trans.address);
+    else
+        pending_writes_.erase(trans.address);
+
+    // Perform cache access:
+    if (is_read)
+    {
+        ++s_accesses_[trans.coreid];
+        if (probe(trans.address))
+            outgoing_queue_.insert({GL_CYCLE + IMPL::CACHE_LATENCY, trans});
+        else
+        {
+            ++s_misses_[trans.coreid];
+            add_mshr_entry(trans);
+        }
+    }
+    else
+    {
+        if constexpr (IMPL::WRITE_ALLOCATE)
+        {
+            ++s_accesses_[trans.coreid];
+            if (!probe(trans.address, true))
+            {
+                ++s_misses_[trans.coreid];
+                add_mshr_entry(trans);
+            }
+        }
+        else
+        {
+            if (!mark(trans.address, true))
+                do_fill(trans);
+        }
+    }
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::do_next_fill()
+{
+    if (fill_queue_.empty())
+        return;
+
+    const Transaction& trans = fill_queue_.front();
+    const bool is_read = trans_is_read(trans.type);
+    
+    // Compute reference count for the given transaction:
+    auto [begin, end] = mshr_.equal_range(trans.address);
+    size_t refcnt = 0;
+    if (is_read)
+    {
+        refcnt = std::transform_reduce(begin, end,
+                        static_cast<size_t>(0),
+                        std::plus<size_t>{},
+                        [] (const auto& e) { return e.trans.inst_list.size(); });
+    }
+
+    // Handle eviction + any writeback if necessary
+    fill_result_type v = fill(trans.address, refcnt, !is_read);
+    if (v.entry.valid)
+    {
+        ++s_fills_[trans.coreid];
+        ++s_evictions_;
+        if (v.entry.dirty)
+        {
+            ++s_writebacks_;
+            Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, v.entry.address);
+
+            writeback_queue_.emplace_back(wb_trans);
+            pending_writebacks_.insert(v.entry.address);
+        }
+    }
+
+    // Update MSHR:
+    if (is_read)
+    {
+        for (auto it = begin; it != end; it++)
+        {
+            MSHREntry& e = it->second;
+            if (e.is_for_write_allocate)
+            {
+                cache_->mark(e.trans.address, true);
+                ++s_write_alloc_[e.trans.coreid];
+            }
+            else
+                outgoing_queue_.insert({ GL_CYCLE+IMPL::CACHE_LATENCY, std::move(e.trans) });
+
+            // Update miss penalty:
+            s_tot_miss_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
+            ++s_num_miss_penalty_[e.trans.coreid];
+        }
+        mshr_.erase(begin, end);
+        pending_misses_.erase(trans.address);
+    }
+
+    fill_queue_.pop_front();
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
+{
+    bool write_miss = trans_is_write(trans.type);
+    uint64_t address = trans.address;
+
+    MSHREntry e(std::move(trans), write_miss);
+    if (write_miss)  // Need to switch transaction type in the case of a write allocate
+        e.trans.type = TransactionType::READ;
+
+    if (mshr_.count(address) == 0)
+    {
+        e.is_fired = next_->can_accept(address, e.trans.type) && next_->add_incoming(e.trans);
+        pending_misses_.insert(address);
+        if (!e.is_fired)
+            ++num_mshr_asleep_;
+    }
+    else
+        e.is_fired = true;
+
+    mshr_.insert({address, e});
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#include "cache/replacement.tpp"
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#undef __TEMPLATE_HEADER__
+#undef __TEMPLATE_CLASS__
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////

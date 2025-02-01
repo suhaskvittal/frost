@@ -90,9 +90,7 @@ protected:
 public:
     using find_result_type = std::tuple<cset_type*, typename cset_type::iterator>;
     using fill_result_type = std::optional<CacheEntry>;
-    using multi_fill_result_type = std::tuple<fill_result_type, fill_result_type>;
-    // Next line fill result also has the LRU position of the second line if it is dirty
-    using next_line_fill_result_type = std::tuple<fill_result_type, fill_result_type, size_t>;
+    using eager_fill_result_type = std::tuple<fill_result_type, fill_result_type>;
 
     Cache(void) =default;
     /*
@@ -113,7 +111,7 @@ public:
      * `num_refs` here corresponds to the number of MSHR/instruction references
      * at the time of install. Necessary for SRRIP, for example.
      *
-     * `fill_with_eager_writeback` and other functions that return `multi_fill_result_type`
+     * `fill_with_eager_writeback` and other functions that return `eager_fill_result_type`
      * return a victim as well as any entries that should be written back. The caller
      * can do whatever they want with these entries, but keep in mind that the
      * cache has not evicted them. Furthermore, these entries are not references. If the
@@ -121,10 +119,8 @@ public:
      * */
     virtual fill_result_type 
         fill(uint64_t, size_t num_refs, bool mark_dirty=false);
-    virtual multi_fill_result_type
+    virtual eager_fill_result_type
         fill_with_eager_writeback(uint64_t, size_t, bool mark_dirty=false);
-    virtual next_line_fill_result_type 
-        fill_with_next_line_writeback(uint64_t, size_t dram_col_bit, size_t, bool mark_dirty=false);
     /*
      * These functions probe the associated cache set and checks if there are any victims that meet
      * the given criteria:

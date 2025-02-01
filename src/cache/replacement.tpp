@@ -1,0 +1,134 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   31 January 2025
+ * */
+
+#include <cstdlib>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::update_entry(CacheEntry& e)
+{
+    e.timestamp = GL_CYCLE;
+    e.rrpv = RRIP_MAX;
+}
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs, bool mark_dirty)
+{
+    e.valid = true;
+    e.dirty = mark_dirty;
+    e.address = address;
+    e.timestamp = GL_CYCLE;
+    e.likely_dead = false;
+
+    if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
+    {
+        if (num_refs > 1)
+            e.rrpv = RRIP_MAX;
+        else
+        {
+            // Check whether or not to use BRRIP.
+            size_t idx = get_set_index(address);
+            SetDuelingRole r = get_set_role(idx);
+            // Resolve `r` if it is a follower set.
+            if (r == SetDuelingRole::FOLLOWER)
+                r = (psel_ & (1<<PSEL_WIDTH)) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
+            if (r == SetDuelingRole::LEADER_1)
+            {
+                e.rrpv = 1;
+                ++s_dueling_pol1_installs_;
+            }
+            else
+            {
+                e.rrpv = (bimodal_counter_ == 32) ? 1 : 0;
+                ++s_dueling_pol2_installs_;
+                fast_increment_and_mod_inplace<32>(bimodal_counter_);
+            }
+        }
+    }
+    else
+        e.rrpv = (num_refs > 1) ? RRIP_MAX : 1;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_CLASS__::lru(cset_type& s)
+{
+    return get_way_in_lru_pos(s,0);
+}
+
+__TEMPLATE_HEADER__ inline __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_CLASS__::rand(cset_type& s)
+{
+    return std::next(s.begin(), fast_mod<WAYS>(std::rand()));
+}
+
+__TEMPLATE_HEADER__ inline __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_CLASS__::rrip(cset_type& s)
+{
+    auto v_it = std::min_element(s.begin(), s.end(),
+                        [] (const auto& x, const auto& y) { return x.rrpv < y.rrpv; });
+    for (auto& x : s)
+        x.rrpv -= v_it->rrpv;
+    return v_it;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_CLASS__::get_way_in_lru_pos(const cset_type& s, size_t p) const
+{
+    if (p == 0)
+    {
+        return std::min_element(s.begin(), s.end(),
+                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
+    }
+    else if (p == IMPL::NUM_WAYS-1)  // The MRU position
+    {
+        return std::max_element(s.begin(), s.end(),
+                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
+    }
+    else // unfortunately, all other cases are rather hard: this is O(n^2) in the worst case.
+    {
+        return std::find_if(s.begin(), s.end(),
+                        [p, &s] (const auto& e) { return get_lru_pos(e, s) == p; });
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::SetDuelingRole
+__TEMPLATE_CLASS__::get_set_role(size_t s) const
+{
+    size_t grp = s >> numeric_traits<LEADER_SETS>::log2,
+            off = fast_mod<LEADER_SETS>(s);
+    size_t coff = off ^ (LEADER_SETS-1);
+
+    if (grp == off)
+        return SetDuelingRole::LEADER_1;
+    else if (grp == coff)
+        return SetDuelingRole::LEADER_2;
+    else
+        return SetDuelingRole::FOLLOWER;
+}
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::update_psel(size_t s)
+{
+    constexpr static psel_type PSEL_MAX = (1<<PSEL_WIDTH)-1;
+    constexpr static psel_type PSEL_MIN = 0;
+
+    SetDuelingRole r = get_set_role(s);
+    psel_ += static_cast<psel_type>(r);
+    psel_ = std::clamp(psel_, PSEL_MIN, PSEL_MAX);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////

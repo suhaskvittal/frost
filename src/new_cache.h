@@ -1,0 +1,229 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   31 January 2025
+ * */
+
+#ifndef CACHE_h
+#define CACHE_h
+
+#include "cache/entry.h"
+#include "util/stats.h"
+
+#include <algorithm>
+#include <unordered_map>
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+/*
+ *  `IMPL` Definition:
+ *      -- size_t NUM_SETS
+ *      -- size_t NUM_WAYS
+ *      -- CacheReplPolicy REPL
+ *
+ *      -- uint64_t CACHE_LATENCY
+ *      -- size_t NUM_MSHR
+ *      -- size_t WB_QUEUE_SIZE
+ *      -- size_t FILL_QUEUE_SIZE
+ *
+ *      -- size_t NUM_BANKS
+ *      -- size_t NUM_READ_PORTS_PER_BANK
+ *      -- size_t NUM_WRITE_PORTS_PER_BANK
+ *      -- size_t NUM_FILLS
+ *
+ *      -- size_t RQ_SIZE
+ *      -- size_t WQ_SIZE
+ *      -- size_t PQ_SIZE
+ *
+ *      -- CacheWritebackMode WRITEBACK_MODE
+ *
+ *      -- bool WRITE_ALLOCATE
+ * */
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class IMPL, class NEXT_TYPE>
+class Cache
+{
+public:
+    using next_ptr =       std::unique_ptr<NEXT_TYPE>;
+    using stat_type =      VecStat<uint32_t, NUM_THREADS>;
+    using in_queue_type =  std::vector<Transaction>;
+    using out_queue_type = std::unordered_multimap<uint64_t, Transaction>;
+    using pending_type =   std::unordered_set<uint64_t>;
+
+    stat_type s_reads_{};
+    stat_type s_writes_{};
+    stat_type s_accesses_{};
+    stat_type s_misses_{};
+    stat_type s_fills_{};
+    stat_type s_tot_miss_penalty_{};
+    stat_type s_num_miss_penalty_{};
+    stat_type s_invalidates_{};
+    stat_type s_write_alloc_{};
+
+    uint32_t s_evictions_ =0;
+    uint32_t s_writebacks_ =0;
+    uint32_t s_eager_writebacks_ =0;
+
+    uint32_t s_load_bypasses_ =0;
+    uint32_t s_writeback_bypasses_ =0;
+
+    uint32_t s_dead_block_predicts_ =0;
+    uint32_t s_dead_block_evictions_ =0;
+
+    uint32_t s_dueling_pol1_installs_ =0;
+    uint32_t s_dueling_pol2_installs_ =0;
+
+    const std::string cache_name_;
+protected:
+    enum class SetDuelingRole { FOLLOWER =0, LEADER_1 =1, LEADER_2 =-1 };
+
+    struct cset_type : std::array<CacheEntry, IMPL::NUM_WAYS>
+    {
+        inline iterator find(uint64_t address)
+        {
+            return std::find(begin(), end(),
+                        [] (const auto& e) { return e.valid && e.address == address; });
+        }
+    };
+    
+    using psel_type = int16_t;
+
+    using cset_array =      std::array<cset_type, IMPL::NUM_SETS>;
+    using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
+    using wb_queue_type =   std::deque<WBQueueEntry>;
+    using fill_queue_type = std::deque<Transaction>;
+
+    constexpr static size_t    LEADER_SETS = 64;
+    constexpr static size_t    PSEL_WIDTH = 11;
+    constexpr static psel_type PSEL_DEFAULT = (1<<(PSEL_WIDTH-1))-1;
+    /*
+     * Core cache structures:
+     * */
+    cset_array csets_{};
+    psel_type  psel_ =PSEL_DEFAULT;
+    size_t     bimodal_counter_ =0;
+    /*
+     * I/O structures
+     * */
+    in_queue_type read_queue_;
+    in_queue_type write_queue_;
+    in_queue_type prefetch_queue_;
+
+    pending_type  pending_reads_;
+    pending_type  pending_writes_;
+    pending_type  pending_misses_;
+    pending_type  pending_writebacks_;
+    /*
+     * MSHR and writeback queue structures:
+     * */ 
+    mshr_type       mshr_;
+    wb_queue_type   writeback_queue_;
+    fill_queue_type fill_queue_;
+    size_t num_mshr_asleep_ =0;
+    /*
+     * Pointer to next structure in the memory hierarchy.
+     * */
+    next_ptr& next_;
+public:
+    Cache(std::string cache_name, next_ptr&);
+
+    void warmup_access(uint64_t, bool write);
+    void warmup_fill(uint64_t, bool dirty);
+
+    virtual void tick(void);
+
+    virtual bool can_accept(TransactionType);
+    virtual bool can_accept_fill(void);
+
+    virtual bool add_incoming(Transaction);
+    virtual bool add_incoming_fill(Transaction);
+    /*
+     * Useful inlines:
+     * */
+    virtual inline size_t set_index(uint64_t x) const
+    {
+        return fast_mod<IMPL::NUM_SETS>(x);
+    }
+
+    inline size_t bank_index(uint64_t x) const
+    {
+        return fast_mod<IMPL::NUM_BANKS>(x);
+    }
+protected:
+    struct fill_result_type
+    {
+        CacheEntry entry{};
+        size_t lru_pos =0;
+
+        fill_result_type(void) =default;
+        fill_result_type(CacheEntry e, size_t p)
+            :valid(true)
+            entry(std::move(e)),
+            lru_pos(p)
+        {}
+    };
+
+    using multi_fill_result_type = std::vector<fill_result_type>;
+    using way_iterator = typename cset_type::iterator;
+    /*
+     * Cache access implementation:
+     * */
+    virtual bool probe(uint64_t, bool write);
+    virtual bool mark(uint64_t, bool dirty);
+    virtual void invalidate(uint64_t);
+    /*
+     * Cache fill implementations:
+     * */
+    virtual fill_result_type       fill(uint64_t, size_t num_mshr_refs, bool dirty);
+    virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t num_refs, bool dirty); 
+
+    virtual way_iterator find_victim(cset_type&);
+    /*
+     * Insertion implementation:
+     * */
+    virtual void update_entry(CacheEntry&);
+    virtual void init_entry(CacheEntry&, uint64_t address, size_t num_refs, bool dirty);
+    /*
+     * Replacement implementation:
+     * */
+    way_iterator lru(cset_type&);
+    way_iterator rand(cset_type&);
+    way_iterator rrip(cset_type&);
+
+    way_iterator get_way_in_lru_pos(const cset_type&, size_t lru_pos) const;
+    /*
+     * Set Dueling implementation:
+     * */
+    virtual SetDuelingRole get_set_role(size_t set_idx) const;
+    virtual void update_psel(size_t set_idx);
+    /*
+     * IO functions for R/W/P queues (`do_next_access`) and fills (`do_next_fill`)
+     * */
+    virtual void do_next_fill(void);
+    virtual bool do_next_access(size_t bankid, bool do_read);
+    virtual void add_mshr_entry(Transaction);
+
+    inline size_t get_lru_pos(way_iterator it, const cset_type& s) const
+    {
+        return std::count_if(s.begin(), s.end(),
+                            [t=it->timestamp] (const auto& x) { return t > x.timestamp; });
+    }
+
+    inline cset_type& get_set(uint64_t x)
+    {
+        return csets_[set_index(x)];
+    }
+
+    inline const cset_type& get_const_set(uint64_t x) const
+    {
+        return csets_.at(set_index(x));
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#endif  // CACHE_h
