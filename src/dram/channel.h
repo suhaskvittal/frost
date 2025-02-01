@@ -12,9 +12,9 @@
 #include "dram/enums.h"
 #include "dram/scheduler.h"
 #include "dram/state.h"
-#include "io_bus.h"
 #include "transaction.h"
 #include "util/numerics.h"
+#include "util/out_queue.h"
 
 #include <array>
 #include <vector>
@@ -48,7 +48,7 @@ struct BankUsageStats
     template <class T>
     using vec_stat_type = std::array<T, DRAM_TOT_BANKS_PER_CHANNEL>;
 
-    using counts_type = vec_stat_type<uint64_t>;
+    using counts_type = vec_stat_type<uint32_t>;
 
     counts_type reads{};
     counts_type writes{};
@@ -59,7 +59,7 @@ struct BankUsageStats
 
 using write_counts_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
 
-void dram_update_write_distribution_stats(const write_counts_array_type&, double& s_std, uint64_t& s_diff);
+void dram_update_write_distribution_stats(const write_counts_array_type&, double& s_std, uint32_t& s_diff);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -68,41 +68,40 @@ class DRAMChannel
 {
 public:
     using in_queue_type = std::vector<RWQueueEntry>;
-    using pending_type = IOBus::pending_type;
-    using out_queue_type = IOBus::out_queue_type;
+    using pending_type = std::unordered_set<uint64_t>;
 
     out_queue_type outgoing_queue_;
 
-    uint64_t s_reads_ =0;
-    uint64_t s_writes_ =0;
-    uint64_t s_precharges_ =0;
-    uint64_t s_activates_ =0;
-    uint64_t s_refreshes_ =0;
+    uint32_t s_reads_ =0;
+    uint32_t s_writes_ =0;
+    uint32_t s_precharges_ =0;
+    uint32_t s_activates_ =0;
+    uint32_t s_refreshes_ =0;
 
-    uint64_t s_pre_demand_ =0;
+    uint32_t s_pre_demand_ =0;
 
-    uint64_t s_read_row_hits_ =0;
-    uint64_t s_write_row_hits_ =0;
+    uint32_t s_read_row_hits_ =0;
+    uint32_t s_write_row_hits_ =0;
 
-    uint64_t s_tot_read_latency_ =0;
-    uint64_t s_tot_write_latency_ =0;
+    uint32_t s_tot_read_latency_ =0;
+    uint32_t s_tot_write_latency_ =0;
 
-    uint64_t s_num_drains_ =0;
-    uint64_t s_tot_read_occu_at_drain_ =0;
-    uint64_t s_tot_write_occu_at_drain_ =0;
+    uint32_t s_num_drains_ =0;
+    uint32_t s_tot_read_occu_at_drain_ =0;
+    uint32_t s_tot_write_occu_at_drain_ =0;
 
     BankUsageStats s_bank_usage_;
     /*
      * BELOW STATS ARE ONLY UPDATED AND PRINTED IF `DRAM_TRACK_ADVANCED_STATS` IS DEFINED.
      *  these are stats that are computationally intensive to compute, and thus can be disabled.
      * */
-    using wrw_stat_type = std::array<uint64_t, 4>;
+    using wrw_stat_type = std::array<uint32_t, 4>;
 
     wrw_stat_type s_num_seq_{};
     double s_tot_write_queue_std_ =0.0;
     double s_tot_write_issue_std_ =0.0;
-    uint64_t s_tot_write_queue_minmax_diff_ =0;
-    uint64_t s_tot_write_issue_minmax_diff_ =0;
+    uint32_t s_tot_write_queue_minmax_diff_ =0;
+    uint32_t s_tot_write_issue_minmax_diff_ =0;
 
     const double freq_ghz_;
     const size_t channel_id_;

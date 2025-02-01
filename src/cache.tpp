@@ -1,214 +1,325 @@
 /*
  *  author: Suhas Vittal
- *  date:   3 December 2024
+ *  date:   31 January 2025
  * */
 
-#include <algorithm>
-#include <iostream>
-#include <numeric>
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#define __TEMPLATE_HEADER__ template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
+#define __TEMPLATE_CLASS__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_HEADER__ template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
-#define __TEMPLATE_CLASS__  Cache<SETS,WAYS,POL>
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::find_result_type
-__TEMPLATE_CLASS__::find(uint64_t addr)
+__TEMPLATE_HEADER__
+__TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
+    :cache_name_(cache_name),
+    next_(n)
 {
-    cset_type& s = get_set(addr);
-    auto it = std::find_if(s.begin(), s.end(),
-                    [addr] (const CacheEntry& e)
-                    {
-                        return e.valid && e.address == addr;
-                    });
-    return std::make_tuple(&s, it);
-}
+    pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
+    pending_writes_.reserve(IMPL::WQ_SIZE);
+    pending_misses_.reserve(IMPL::NUM_MSHR);
+    pending_writebacks_.reserve(IMPL::WB_QUEUE_SIZE);
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::probe(uint64_t addr, bool write)
-{
-    if constexpr (POL == CacheReplPolicy::PERFECT)
-        return true;
-
-    auto [s_p, it] = find(addr);
-    if (it == s_p->end())
-        return false;
-    else
-    {
-        update_entry(*it);
-        it->dirty |= write;
-        return true;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::mark(uint64_t addr, bool as_dirty)
-{
-    if constexpr (POL == CacheReplPolicy::PERFECT)
-        return true;
-
-    auto [s_p, it] = find(addr);
-    if (it == s_p->end())
-        return false;
-    else
-    {
-        it->dirty = as_dirty;
-        return true;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_type
-__TEMPLATE_CLASS__::fill(uint64_t addr, size_t num_refs, bool mark_dirty)
-{
-    fill_result_type out;
-    if constexpr (POL == CacheReplPolicy::PERFECT)
-        return out;
-
-    cset_type& s = get_set(addr);
-    auto it = std::find_if_not(s.begin(), s.end(),
-                        [] (const auto& e) { return e.valid; });
-    if (it == s.end())
-    {
-        it = find_victim(s); 
-        out = *it;
-    }
-    init_entry(*it, addr, num_refs, mark_dirty);
-    return out;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::eager_fill_result_type
-__TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t addr, size_t num_refs, bool mark_dirty)
-{
-    fill_result_type v, w;
-    v = fill(addr, num_refs, mark_dirty);
-    if (v.has_value())
-    {
-        // We obtain `w` by checking the new LRU position of the set.
-        auto lru_it = get_way_in_lru_pos(get_set(addr));
-        if (lru_it->dirty)
-            w = *lru_it;
-    }
-    return multi_fill_result_type(v, w);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__  inline bool
-__TEMPLATE_CLASS__::fill_will_replace_invalid_victim(uint64_t address) const
-{
-    const cset_type& s = get_const_set(address);
-    return std::any_of(s.begin(), s.end(), 
-                        [] (const auto& e) { return !e.valid; });
-}
-
-__TEMPLATE_HEADER__  inline bool
-__TEMPLATE_CLASS__::fill_will_replace_noncritical_victim(uint64_t address) const
-{
-    const cset_type& s = get_const_set(address);
-    return std::any_of(s.begin(), s.end(), 
-                        [] (const auto& e) { return !e.valid || e.likely_dead; });
+    mshr_.reserve(IMPL::NUM_MSHR);
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::invalidate(uint64_t addr)
+__TEMPLATE_CLASS__::warmup_access(uint64_t address, bool write)
 {
-    auto [s_p, it] = find(addr);
-    if (it != s_p->end())
+    if constexpr (!IMPL::WRITE_ALLOCATE)
+    {
+        if (write)
+        {
+            if (!mark(address, true))
+                warmup_fill(address, true);
+            return;
+        }
+    }
+
+    bool hit = probe(address, write);
+    if (!hit)
+    {
+        next_->warmup_access(address, write);
+        warmup_fill(address, write);
+    }
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::warmup_fill(uint64_t address, bool dirty)
+{
+    auto out = fill(address, 1, dirty);
+    if (out.entry.valid && out.entry.dirty)
+        next_->warmup_access(out.entry.address, true);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::tick()
+{
+    // Check for sleeping MSHR entries:
+    if (num_mshr_asleep_ > 0)
+    {
+        auto mshr_it = std::find_if_not(mshr_.begin(), mshr_.end(),
+                                [] (const auto& x) { return x.second.is_fired; });
+        auto& [address, e] = *mshr_it;
+        // Try access to next level:
+        if (next_->can_accept(address, e.trans.type) && next_->add_incoming(e.trans))
+        {
+            e.is_fired = true;
+            --num_mshr_asleep_;
+        }
+    }
+
+    // Send the next writeback to `next_`
+    if (!writeback_queue_.empty())
+    {
+        const auto& e = writeback_queue_.front();
+        if (next_->can_accept(e.trans.address, e.trans.type) && next_->add_incoming(e.trans))
+        {
+            pending_writebacks_.erase(e.trans.address);
+            writeback_queue_.pop_front();
+        }
+    }
+
+    for (size_t ii = 0; ii < IMPL::NUM_FILL_PORTS; ii++)
+        do_next_fill();
+
+    for (size_t ii = 0; ii < IMPL::NUM_READ_PORTS; ii++)
+        do_next_access(true);
+
+    for (size_t ii = 0; ii < IMPL::NUM_WRITE_PORTS; ii++)
+        do_next_access(false);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::can_accept(uint64_t, TransactionType t)
+{
+    if (t == TransactionType::PREFETCH)
+        return prefetch_queue_.size() < IMPL::PQ_SIZE;
+    else if (t == TransactionType::WRITE)
+        return write_queue_.size() < IMPL::WQ_SIZE;
+    else
+        return read_queue_.size() < IMPL::RQ_SIZE;
+}
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::can_accept_fill()
+{
+    return fill_queue_.size() < IMPL::FILL_QUEUE_SIZE;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::add_incoming(Transaction trans)
+{
+    bool is_read = trans_is_read(trans.type);
+
+    // First, check if we can forward writes:
+    if (pending_writes_.count(trans.address) || pending_writebacks_.count(trans.address))
+    {
+        if (is_read)
+            outgoing_queue_.emplace(trans, GL_CYCLE+1);
+        return true;
+    }
+
+    // Now, if this is a read, check if we can merge with any other reads:
+    if (is_read)
+    {
+        if (pending_reads_.count(trans.address))
+        {
+            auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
+                            [x = trans.address] (const auto& tr) { return tr.address == x; });
+            rd_it->merge(trans);
+            return true;
+        }
+        else if (pending_misses_.count(trans.address) && mshr_.size() < IMPL::NUM_MSHR)
+        {
+            add_mshr_entry(trans);
+            return true;
+        }
+    }
+
+    // otherwise, we need to enqueue normally.
+    auto& q =     get_queue_ref(trans.type);
+    size_t s =    get_queue_size(trans.type);
+    auto& p =     is_read ? pending_reads_ : pending_writes_;
+    auto& count = is_read ? s_reads_ : s_writes_;
+
+    if (q.size() == s)
+        return false;
+    q.push_back(trans);
+    p.insert(trans.address);
+    ++count[trans.coreid];
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ inline bool
+__TEMPLATE_CLASS__::add_incoming_fill(Transaction trans)
+{
+    if (fill_queue_.size() >= IMPL::FILL_QUEUE_SIZE)
+        return false;
+    fill_queue_.push_back(trans);
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
+{
+    std::cerr << "searching in " << cache_name_ << "...\n";
+
+    // Search in read queue:
+    auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
+                        [inst] (const auto& tr) { return tr.contains_inst(inst); });
+    if (rd_it != read_queue_.end())
+    {
+        size_t rd_pos = std::distance(read_queue_.begin(), rd_it);
+        std::cerr << "\found instruction in read queue: position = " << rd_pos
+                    << ", read queue occupancy = " << read_queue_.size()
+                    << ", write_queue occupancy = " << write_queue_.size()
+                    << ", prefetch queue occupancy = " << prefetch_queue_.size()
+                    << ", mshr occupancy = " << mshr_.size() << "\n";
+        return true;
+    }
+    
+    // Search in MSHR
+    auto mshr_it = std::find_if(mshr_.begin(), mshr_.end(),
+                        [inst] (const auto& x) { return x.second.trans.contains_inst(inst); });
+    if (mshr_it != mshr_.end())
+    {
+        const auto& [address, e] = *mshr_it;
+        std::cerr << "\tfound instruction in mshr: is fired = " << e.is_fired << ", cycle fired = "
+            << e.cycle_fired << "\n";
+        return true;
+    }
+
+    std::cerr << "\tnothing found\n";
+    return false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::probe(uint64_t address, bool write)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
+    {
+        update_entry(*it);
+        it->dirty |= write;
+        return true;
+    }
+    else
+        return false;
+}
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::mark(uint64_t address, bool dirty)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
+    {
+        it->dirty = dirty;
+        return true;
+    }
+    else
+        return false;
+}
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::invalidate(uint64_t address)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
         it->valid = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::mark_likely_dead(uint64_t address)
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_type
+__TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool dirty)
 {
-    auto [s_p, it] = find(address);
-    if (it != s_p->end())
+    fill_result_type out;
+
+    cset_type& s = get_set(address);
+
+    // First search for an invalid entry:
+    auto it = std::find_if_not(s.begin(), s.end(),
+                        [] (const auto& e) { return e.valid; });
+    if (it == s.end())
     {
-        it->likely_dead = true;
-        // Update `rrpv` as well:
-        it->rrpv = 0;
+        // Search for a dead block:
+        it = std::find_if(s.begin(), s.end(),
+                        [] (const auto& e) { return e.likely_dead; });
+        // If there is no dead block, then use the replacement policy.
+        if (it == s.end())
+            it = find_victim(s);
+        out = fill_result_type(std::move(*it), 0);
     }
+    init_entry(*it, address, num_refs, dirty);
+    return out;
 }
 
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::mark_likely_alive(uint64_t address)
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
+__TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t address, size_t num_refs, bool dirty)
 {
-    auto [s_p, it] = find(address);
-    if (it != s_p->end())
+    multi_fill_result_type out;
+    out.push_back(fill(address, num_refs, dirty));
+
+    // Check if the writeback queue even has space for the writeback:
+    if (writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
     {
-        it->likely_dead = false;
-        // Update `rrpv` as well:
-        it->rrpv = RRIP_MAX;
+        auto& s = get_set(address);
+        auto lru_it = get_way_in_lru_pos(s, 0);
+        if (lru_it->dirty)
+            out.emplace_back(*lru_it, 0);
     }
+    return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__
-template <class PRED> inline size_t
-__TEMPLATE_CLASS__::get_occupancy(const PRED& pred)
-{
-    size_t cnt = std::transform_reduce(csets_.begin(), csets_.end(), 
-                        static_cast<size_t>(0),
-                        std::plus<size_t>{},
-                        [pred] (const cset_type& s)
-                        {
-                            return std::count_if(s.begin(), s.end(), pred);
-                        });
-    return cnt;
-}
-
-__TEMPLATE_HEADER__ size_t
-__TEMPLATE_CLASS__::get_occupancy()
-{
-    return get_occupancy([] (const CacheEntry& e) { return e.valid; });
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::find_victim(cset_type& s)
 {
-    auto v_it = get_likely_dead_line(s);
-    if (v_it != s.end())
-        return v_it;
-
-    if constexpr (POL == CacheReplPolicy::LRU)
+    if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
         return lru(s);
-    else if constexpr (POL == CacheReplPolicy::RAND)
+    else if constexpr (IMPL::REPL == CacheReplPolicy::RAND)
         return rand(s);
-    else if constexpr (POL == CacheReplPolicy::SRRIP)
+    else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
         return rrip(s);
-    else if constexpr (POL == CacheReplPolicy::DRRIP)
+    else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
-        update_psel(get_set_index(s[0].address));
+        update_psel(set_index(s[0].address));
         return rrip(s);
     }
-    else 
+    else
     {
         std::cerr << "unsupported cache replacement policy.\n";
         exit(1);
@@ -218,124 +329,186 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
-__TEMPLATE_CLASS__::lru(cset_type& s)
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::do_next_access(bool do_read)
 {
-    return get_way_in_lru_pos(s);
-}
+    if (mshr_.size() >= IMPL::NUM_MSHR || writeback_queue_.size() >= IMPL::WB_QUEUE_SIZE)
+        return false;
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
-__TEMPLATE_CLASS__::rand(cset_type& s)
-{
-    return std::next(s.begin(), fast_mod<WAYS>(rng_()));
-}
+    auto& q = do_read ? (read_queue_.empty() ? prefetch_queue_ : read_queue_)
+                      : write_queue_;
+    if (q.empty())
+        return false;
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
-__TEMPLATE_CLASS__::rrip(cset_type& s)
-{
-    auto v_it = std::min_element(s.begin(), s.end(),
-                            [] (const CacheEntry& x, const CacheEntry& y)
-                            {
-                                return x.rrpv < y.rrpv;
-                            });
-    // Reduce all entries' rrpv values.
-    for (CacheEntry& x : s)
-        x.rrpv -= v_it->rrpv;
-    return v_it;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::update_entry(CacheEntry& e)
-{
-    e.timestamp = GL_CYCLE;
-    e.rrpv = RRIP_MAX;
-    e.likely_dead = false;
-}
-
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t addr, size_t num_refs, bool mark_dirty)
-{
-    e.valid = true;
-    e.dirty = mark_dirty;
-    e.address = addr;
-    e.timestamp = GL_CYCLE;
-    e.likely_dead = false;
-
-    if constexpr (POL == CacheReplPolicy::DRRIP)
+    auto q_it = q.begin();
+    if (!do_read)
     {
-        // Check whether or not to use BRRIP.
-        size_t s = get_set_index(addr);
-        SetDuelingRole r = get_set_role(s);
-        // Resolve `r` if it is a follower set:
-        if (r == SetDuelingRole::FOLLOWER)
-            r = psel_ < PSEL_THRESHOLD ? SetDuelingRole::LEADER_1 : SetDuelingRole::LEADER_2;
+        q_it = std::find_if(q.begin(), q.end(),
+                        [this] (const auto& tr) 
+                        { 
+                            // Enforce WAR dependence
+                            return !this->pending_reads_.count(tr.address)
+                                    && !this->pending_misses_.count(tr.address);
+                        });
+        if (q_it == q.end())
+            return false;
+    }
 
-        uint8_t rrip_init = (r == SetDuelingRole::LEADER_1) ? 1 : (bimodal_ctr_ == BIMODAL_CTR_MAX ? 1 : 0);
-        e.rrpv = (num_refs > 1) ? RRIP_MAX : rrip_init;
+    Transaction trans = std::move(*q_it);
+    q.erase(q_it);
+    if (do_read)
+        pending_reads_.erase(trans.address);
+    else
+        pending_writes_.erase(trans.address);
 
-        if (r == SetDuelingRole::LEADER_2)
-        {
-            fast_increment_and_mod_inplace<BIMODAL_CTR_MAX>(bimodal_ctr_);
-            ++s_dueling_pol2_installs_;
-        }
+    // Perform cache access:
+    if (do_read)
+    {
+        ++s_accesses_[trans.coreid];
+        if (probe(trans.address))
+            outgoing_queue_.emplace(trans, GL_CYCLE+IMPL::CACHE_LATENCY);
         else
-            ++s_dueling_pol1_installs_;
+        {
+            ++s_misses_[trans.coreid];
+            add_mshr_entry(trans);
+        }
     }
     else
-        e.rrpv = (num_refs > 1) ? RRIP_MAX : 1;
+    {
+        if constexpr (IMPL::WRITE_ALLOCATE)
+        {
+            ++s_accesses_[trans.coreid];
+            if (!probe(trans.address, true))
+            {
+                ++s_misses_[trans.coreid];
+                add_mshr_entry(trans);
+            }
+        }
+        else
+        {
+            if (!mark(trans.address, true))
+                fill_queue_.push_back(trans);
+        }
+    }
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
-__TEMPLATE_CLASS__::get_likely_dead_line(cset_type& s)
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::do_next_fill()
 {
-    return std::find_if(s.begin(), s.end(),
-                [] (const auto& x) { return x.likely_dead; });
-}
+    if (fill_queue_.empty())
+        return;
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::cset_type::iterator
-__TEMPLATE_CLASS__::get_way_in_lru_pos(cset_type& s)
-{
-    return std::min_element(s.begin(), s.end(),
-                [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
+    const Transaction& trans = fill_queue_.front();
+    const bool is_read = trans_is_read(trans.type);
+    
+    // Compute reference count for the given transaction:
+    auto [begin, end] = mshr_.equal_range(trans.address);
+    size_t refcnt = 0;
+    if (is_read)
+    {
+        refcnt = std::transform_reduce(begin, end,
+                        static_cast<size_t>(0),
+                        std::plus<size_t>{},
+                        [] (const auto& x) { return x.second.trans.inst_list.size(); });
+    }
+
+    // Handle eviction + any writeback if necessary
+    fill_result_type v = fill(trans.address, refcnt, !is_read);
+    if (v.entry.valid)
+    {
+        ++s_fills_[trans.coreid];
+        ++s_evictions_;
+        if (v.entry.dirty)
+        {
+            ++s_writebacks_;
+            Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, v.entry.address);
+
+            writeback_queue_.emplace_back(wb_trans);
+            pending_writebacks_.insert(v.entry.address);
+        }
+    }
+
+    // Update MSHR:
+    if (is_read)
+    {
+        for (auto it = begin; it != end; it++)
+        {
+            MSHREntry& e = it->second;
+            if (e.is_for_write_allocate)
+            {
+                mark(e.trans.address, true);
+                ++s_write_alloc_[e.trans.coreid];
+            }
+            else
+                outgoing_queue_.emplace(std::move(e.trans), GL_CYCLE+IMPL::CACHE_LATENCY);
+
+            // Update miss penalty:
+            s_tot_miss_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
+            ++s_num_miss_penalty_[e.trans.coreid];
+        }
+        mshr_.erase(begin, end);
+        pending_misses_.erase(trans.address);
+    }
+
+    fill_queue_.pop_front();
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::SetDuelingRole
-__TEMPLATE_CLASS__::get_set_role(size_t s) const
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
 {
-    size_t grp = s >> numeric_traits<LEADER_SETS>::log2,
-           off = fast_mod<LEADER_SETS>(s);
-    size_t coff = off ^ (LEADER_SETS-1);
+    bool write_miss = trans_is_write(trans.type);
+    uint64_t address = trans.address;
 
-    if (grp == off)
-        return SetDuelingRole::LEADER_1;
-    else if (grp == coff)
-        return SetDuelingRole::LEADER_2;
+    MSHREntry e(std::move(trans), write_miss);
+    if (write_miss)  // Need to switch transaction type in the case of a write allocate
+        e.trans.type = TransactionType::READ;
+
+    if (mshr_.count(address) == 0)
+    {
+        e.is_fired = next_->can_accept(address, e.trans.type) && next_->add_incoming(e.trans);
+        pending_misses_.insert(address);
+        if (!e.is_fired)
+            ++num_mshr_asleep_;
+    }
     else
-        return SetDuelingRole::FOLLOWER;
+        e.is_fired = true;
+
+    mshr_.insert({address, e});
 }
 
-__TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::update_psel(size_t idx)
-{
-    SetDuelingRole r = get_set_role(idx);
-    psel_ += static_cast<int16_t>(r);
-    psel_ = std::clamp(psel_, PSEL_MIN, PSEL_MAX);
-}
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#include "cache/replacement.tpp"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 #undef __TEMPLATE_HEADER__
 #undef __TEMPLATE_CLASS__
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class CACHE_TYPE, class FUNC> void
+drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>& c, const FUNC& fn)
+{
+    while (!c->outgoing_queue_.empty())
+    {
+        const auto& [trans, cyc] = c->outgoing_queue_.top();
+        if (cyc > GL_CYCLE)
+            return;
+        fn(trans);
+        c->outgoing_queue_.pop();
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

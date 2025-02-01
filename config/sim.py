@@ -32,13 +32,11 @@ def get_cache_params(cfg, caches: list[str]) -> str:
         sets = ccfg['sets']
         repl = ccfg['replacement_policy']
         num_mshr = ccfg['num_mshr']
-        num_rw = ccfg['num_rw_ports']
+        r_ports = ccfg['read_ports']
+        w_ports = ccfg['write_ports']
         latency = ccfg['latency']
-        rq = ccfg['read_queue_size']
-        wq = ccfg['write_queue_size']
-        pq = ccfg['prefetch_queue_size']
 
-        calls[c] = f'{size_kb}, {sets}, {ways}, \"{repl}\", {num_mshr}, {num_rw}, {latency}, {rq}, {wq}, {pq}'
+        calls[c] = f'{size_kb}, {sets}, {ways}, \"{repl}\", {num_mshr}, {r_ports}, {w_ports}, {latency}'
     return calls
 
 ####################################################################
@@ -177,22 +175,19 @@ list_cache_params(
     size_t ways,
     std::string_view repl,
     size_t num_mshr,
-    size_t num_ports,
-    size_t latency,
-    size_t rq,
-    size_t wq,
-    size_t pq)
+    size_t r_ports,
+    size_t w_ports,
+    size_t latency)
 {{
-    std::string qstr = std::to_string(rq) + ":" + std::to_string(wq) + ":" + std::to_string(pq);
     out << std::setw(12) << std::left << name
         << std::setw(12) << std::left << (size_kb == 0 ? "N/A" : std::to_string(size_kb))
         << std::setw(8) << std::left << sets
         << std::setw(8) << std::left << ways
         << std::setw(8) << std::left << repl
         << std::setw(8) << std::left << num_mshr
-        << std::setw(8) << std::left << num_ports
+        << std::setw(8) << std::left << r_ports
+        << std::setw(8) << std::left << w_ports
         << std::setw(12) << std::left << latency
-        << std::setw(12) << std::left << qstr
         << "\n";
 }}
 
@@ -227,9 +222,9 @@ print_config(std::ostream& out)
         << std::setw(8) << std::left << "WAYS"
         << std::setw(8) << std::left << "REPL"
         << std::setw(8) << std::left << "MSHR"
-        << std::setw(8) << std::left << "PORTS"
+        << std::setw(8) << std::left << "R_PORTS"
+        << std::setw(8) << std::left << "W_PORTS"
         << std::setw(12) << std::left << "LATENCY"
-        << std::setw(12) << std::left << "RQ:WQ:PQ"
         << "\n" << BAR << "\n";
     list_cache_params(out, "L1I$", {cache_params['L1i']});
     list_cache_params(out, "L1D$", {cache_params['L1d']});

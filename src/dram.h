@@ -11,13 +11,7 @@
 #else
 
 #include "dram/channel.h"
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-/*
- * Defined in `transaction.h`
- * */
-class Transaction;
+#include "transaction.h"
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -28,25 +22,10 @@ class Transaction;
 class DRAM
 {
 public:
-    /*
-     * IO mimics `IOBus` but really only implements `add_incoming`.
-     * */
-    struct IO
-    {
-        DRAM* dram;
-
-        IO(DRAM*);
-        bool can_accept(uint64_t, TransactionType);
-        bool add_incoming(Transaction);
-    };
-
-    using io_ptr = std::unique_ptr<IO>;
     using channel_ptr = std::unique_ptr<DRAMChannel>;
     using channel_array_t = std::array<channel_ptr, DRAM_CHANNELS>;
 
-    io_ptr io_;
     channel_array_t channels_;
-
     const double freq_ghz_;
 private:
     double leap_ =0.0;
@@ -56,6 +35,9 @@ public:
     DRAM(double cpu_freq_ghz, double freq_ghz);
 
     void warmup_access(uint64_t, bool) {}
+
+    bool can_accept(uint64_t, TransactionType);
+    bool add_incoming(Transaction);
 
     void tick(void);
     void print_stats(std::ostream&);

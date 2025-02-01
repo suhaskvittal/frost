@@ -20,7 +20,7 @@
 
 struct DRAMBankState
 {
-    using row_t = std::optional<uint64_t>;
+    using row_t = std::optional<uint32_t>;
 
     row_t open_row{};
 
@@ -69,7 +69,7 @@ struct DRAMCommand;
  * */
 bool cmd_is_issuable(const DRAMChannelState&, const DRAMCommand&);
 void update_dram_state(DRAMChannelState&, const DRAMCommand&);
-bool try_and_issue_ref(DRAMRankState&, uint64_t& s_ref, uint64_t& s_pre);
+bool try_and_issue_ref(DRAMRankState&, uint32_t& s_ref, uint32_t& s_pre);
 /*
  * These are just helper functions.
  * */

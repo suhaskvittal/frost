@@ -102,7 +102,7 @@ pred_any_bank(DRAMRankState& ra, const PRED& pred)
 }
 
 bool
-try_and_issue_ref(DRAMRankState& ra, uint64_t& s_ref, uint64_t& s_pre)
+try_and_issue_ref(DRAMRankState& ra, uint32_t& s_ref, uint32_t& s_pre)
 {
     bool preab_needed = pred_any_bank(ra, 
                             [] (const auto& ba) 

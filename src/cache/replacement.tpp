@@ -31,7 +31,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs,
         else
         {
             // Check whether or not to use BRRIP.
-            size_t idx = get_set_index(address);
+            size_t idx = set_index(address);
             SetDuelingRole r = get_set_role(idx);
             // Resolve `r` if it is a follower set.
             if (r == SetDuelingRole::FOLLOWER)
@@ -56,19 +56,19 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs,
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::lru(cset_type& s)
 {
     return get_way_in_lru_pos(s,0);
 }
 
-__TEMPLATE_HEADER__ inline __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::rand(cset_type& s)
 {
-    return std::next(s.begin(), fast_mod<WAYS>(std::rand()));
+    return std::next(s.begin(), fast_mod<NUM_WAYS>(std::rand()));
 }
 
-__TEMPLATE_HEADER__ inline __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::rrip(cset_type& s)
 {
     auto v_it = std::min_element(s.begin(), s.end(),
@@ -82,7 +82,7 @@ __TEMPLATE_CLASS__::rrip(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::get_way_in_lru_pos(const cset_type& s, size_t p) const
+__TEMPLATE_CLASS__::get_way_in_lru_pos(cset_type& s, size_t p)
 {
     if (p == 0)
     {
@@ -97,7 +97,7 @@ __TEMPLATE_CLASS__::get_way_in_lru_pos(const cset_type& s, size_t p) const
     else // unfortunately, all other cases are rather hard: this is O(n^2) in the worst case.
     {
         return std::find_if(s.begin(), s.end(),
-                        [p, &s] (const auto& e) { return get_lru_pos(e, s) == p; });
+                        [this, p, &s] (const auto& e) { return this->get_lru_pos(e, s) == p; });
     }
 }
 

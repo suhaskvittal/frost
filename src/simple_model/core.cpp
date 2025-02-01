@@ -69,7 +69,7 @@ Core::tick()
 void
 Core::checkpoint_stats()
 {
-    double ipc = mean(finished_inst_num_, GL_CYCLE);
+    double ipc = mean(static_cast<uint64_t>(finished_inst_num_), GL_CYCLE);
     std::string header = "CORE_" + std::to_string(static_cast<int>(coreid_));
 
     stats_stream_ << BAR << "\n";
@@ -167,10 +167,10 @@ bool
 Core::do_llc_access(inst_ptr inst)
 {
     TransactionType t = inst->is_store ? TransactionType::WRITE : TransactionType::READ;
-    if (GL_LLC->io_->can_accept(inst->p_lineaddr, t))
+    if (GL_LLC->can_accept(0,t))
     {
         Transaction trans(coreid_, inst, t, inst->p_lineaddr);
-        GL_LLC->io_->add_incoming(trans);
+        GL_LLC->add_incoming(trans);
         inst->state = AccessState::IN_CACHE;
         if (inst->is_store)
             inst->cycle_done = GL_CYCLE+1;
@@ -198,6 +198,7 @@ Core::next_inst()
     else
         return nullptr;
 }
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 

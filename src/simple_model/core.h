@@ -36,7 +36,7 @@ using trace_format_type = IMAT;
 class Core
 {
 public:
-    uint64_t finished_inst_num_ =0;
+    uint32_t finished_inst_num_ =0;
     bool done_ =false;
 
     const uint8_t coreid_;
@@ -53,8 +53,8 @@ private:
     tracereader_type trace_reader_;
     inst_ptr         next_mem_inst_ =nullptr;
 
-    uint64_t curr_inst_num_ =0;
-    uint64_t inst_warmup_ =0;
+    uint32_t curr_inst_num_ =0;
+    uint32_t inst_warmup_ =0;
 
     std::stringstream stats_stream_;
 public:

@@ -57,7 +57,7 @@ struct Instruction : INST_BASE
     MemopList loads;
     MemopList stores;
 
-    Instruction(uint64_t inst_num, const CTF&);
+    Instruction(uint32_t inst_num, const CTF&);
 
     inline bool is_mem_inst(void) const override
     {
@@ -78,13 +78,13 @@ struct Instruction : INST_BASE
 ////////////////////////////////////////////////////////////////////////////
 
 inline
-Instruction::Instruction(uint64_t ii, const CTF& t)
+Instruction::Instruction(uint32_t ii, const CTF& t)
 {
     inst_num = ii;
     ip = t.ip;
     branch_taken = t.branch_taken;
 
-    std::vector<uint64_t> dst_regs,
+    std::vector<uint8_t> dst_regs,
                           src_regs;
     // First resolve branch data.
     std::remove_copy(std::begin(t.dst_regs), std::end(t.dst_regs), std::back_inserter(dst_regs), 0);
@@ -128,11 +128,11 @@ Instruction::Instruction(uint64_t ii, const CTF& t)
         {
             std::cerr << "instruction: unknown branch found"
                 << "\n\tsource registers:";
-            for (uint64_t r : src_regs)
-                std::cerr << " " << r;
+            for (uint8_t r : src_regs)
+                std::cerr << " " << r+0;
             std::cerr << "\n\tdestination registers:";
-            for (uint64_t r : dst_regs)
-                std::cerr << " " << r;
+            for (uint8_t r : dst_regs)
+                std::cerr << " " << r+0;
             std::cerr << "\n\treads_sp: " << reads_sp
                 << "\n\treads_ip: " << reads_ip
                 << "\n\treads_cc: " << reads_cc

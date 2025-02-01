@@ -10,7 +10,6 @@
 #include "dram.h"
 #include "dram/address.h"
 #include "dram/channel.h"
-#include "io_bus.h"
 #include "util/stats.h"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -21,12 +20,19 @@ uint64_t GL_DRAM_CYCLE = 0;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAM::IO::IO(DRAM* d)
-    :dram(d)
-{}
+DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
+    :freq_ghz_(freq_ghz),
+    clock_scale_(cpu_freq_ghz/freq_ghz - 1.0)
+{
+    for (size_t i = 0; i < DRAM_CHANNELS; i++)
+        channels_[i] = channel_ptr(new DRAMChannel(i, freq_ghz));
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 bool
-DRAM::IO::can_accept(uint64_t address, TransactionType type)
+DRAM::can_accept(uint64_t address, TransactionType type)
 {
     bool is_write = trans_is_write(type);
 
@@ -37,13 +43,13 @@ DRAM::IO::can_accept(uint64_t address, TransactionType type)
 
     size_t i = dram_channel(address);
     if (is_write)
-        return dram->channels_[i]->write_queue_size() < DRAM_WQ_SIZE;
+        return channels_[i]->write_queue_size() < DRAM_WQ_SIZE;
     else
-        return dram->channels_[i]->read_queue_size() < DRAM_RQ_SIZE;
+        return channels_[i]->read_queue_size() < DRAM_RQ_SIZE;
 }
 
 bool
-DRAM::IO::add_incoming(Transaction t)
+DRAM::add_incoming(Transaction t)
 {
     bool is_write = trans_is_write(t.type);
 
@@ -53,19 +59,7 @@ DRAM::IO::add_incoming(Transaction t)
 #endif
 
     size_t i = dram_channel(t.address);
-    return dram->channels_[i]->add_incoming(t);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
-    :io_(new DRAM::IO(this)),
-    freq_ghz_(freq_ghz),
-    clock_scale_(cpu_freq_ghz/freq_ghz - 1.0)
-{
-    for (size_t i = 0; i < DRAM_CHANNELS; i++)
-        channels_[i] = channel_ptr(new DRAMChannel(i, freq_ghz));
+    return channels_[i]->add_incoming(t);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -79,12 +73,14 @@ DRAM::tick()
         for (channel_ptr& ch : channels_)
         {
             auto& q = ch->outgoing_queue_;
-            if (q.count(GL_DRAM_CYCLE) > 0)
+            while (!q.empty())
             {
-                auto [begin, end] = q.equal_range(GL_DRAM_CYCLE);
-                for (auto it = begin; it != end; it++)
-                    GL_LLC->mark_load_as_done(it->second.address);
-                q.erase(begin, end);
+                const auto& [trans, cyc] = q.top();
+                if (cyc > GL_DRAM_CYCLE)
+                    break;
+                if (GL_LLC->can_accept_fill())
+                    GL_LLC->add_incoming_fill(trans);
+                q.pop();
             }
             ch->tick();
         }
@@ -99,7 +95,7 @@ DRAM::tick()
 ////////////////////////////////////////////////////////////////////////////
 
 #define CREATE_VEC_STAT(stat)\
-    VecStat<uint64_t,DRAM_CHANNELS> stat;\
+    VecStat<uint32_t, DRAM_CHANNELS> stat;\
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
         stat[i] = channels_[i]->s_##stat##_;\
     }\
@@ -156,16 +152,6 @@ DRAM::print_stats(std::ostream& out)
 
     print_vecstat(out, "DRAM", "BANK_READ_STANDARD_DEVIATION", bank_read_std, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "BANK_WRITE_STANDARD_DEVIATION", bank_write_std, VecAccMode::GMEAN);
-
-    /*
-    for (size_t i = 0; i < DRAM_TOT_BANKS_PER_CHANNEL; i++)
-    {
-        VecStat<uint64_t, DRAM_CHANNELS> writes;
-        for (size_t j = 0; j < DRAM_CHANNELS; j++)
-            writes[j] = channels_[j]->s_bank_usage_.writes[i];
-        print_vecstat(out, "DRAM", "WRITES_TO_BANK_" + std::to_string(i), writes);
-    }
-    */
     
     out << "\n";
 
@@ -189,8 +175,8 @@ DRAM::print_stats(std::ostream& out)
 
     for (size_t i = 0; i < 4; i++)
     {
-        uint64_t max_cyc = 1L << (i+8);
-        std::array<uint64_t,2> vec{channels_[0]->s_num_seq_[i], channels_[1]->s_num_seq_[i]};
+        uint32_t max_cyc = 1L << (i+8);
+        std::array<uint32_t, 2> vec{channels_[0]->s_num_seq_[i], channels_[1]->s_num_seq_[i]};
         print_vecstat(out, "DRAM", "NUM_WR+W_SEQ_LE_" + std::to_string(max_cyc), vec);
     }
 

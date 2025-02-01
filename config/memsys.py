@@ -8,44 +8,49 @@ from .files import GEN_DIR, AUTOGEN_HEADER
 ####################################################################
 ####################################################################
 
-def declare_cache_type(cfg, typename: str, next_typename: str) -> str:
+def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False) -> str:
     sets, ways, repl = cfg['sets'], cfg['ways'], cfg['replacement_policy']
-    num_mshr, num_rw_ports, latency = cfg['num_mshr'], cfg['num_rw_ports'], cfg['latency']
-    rq_size, wq_size, pq_size = cfg['read_queue_size'], cfg['write_queue_size'], cfg['prefetch_queue_size']
     
-    write_allocate = 'true' if (cfg['operate_mode'] == 'WRITE_ALLOCATE') else 'false'
-    invalidate_on_hit = 'true' if (cfg['operate_mode'] == 'INVALIDATE_ON_HIT') else 'false'
-    next_is_invalidate_on_hit = 'true' if (cfg['operate_mode'] == 'NEXT_IS_INVALIDATE_ON_HIT') else 'false'
+    sets =          cfg['sets']
+    ways =          cfg['ways']
+    repl =          cfg['replacement_policy']
+    rq_size =       cfg['read_queue_size']
+    wq_size =       cfg['write_queue_size']
+    pq_size =       cfg['prefetch_queue_size']
+    latency =       cfg['latency']
+    num_mshr =      cfg['num_mshr']
+    wbq_size =      cfg['writeback_queue_size']
+    fq_size =       cfg['fill_queue_size']
+    r_ports =       cfg['read_ports']
+    w_ports =       cfg['write_ports']
+    f_ports =       cfg['fill_ports']
 
-    wb_mode = cfg['writeback_mode']
-    cache_type = cfg['base_cache_type']
-
-    base_cache_typename = f'base_{typename.lower()}_type'
-    dbp_type = cfg['dead_block_predictor'].replace('$base', base_cache_typename)
+    write_alloc = str(write_alloc).lower()
 
     cache_decl =\
 f'''
-using {base_cache_typename} = {cache_type}<{sets},{ways},CacheReplPolicy::{repl}>;
-
-struct {typename} : public CacheControl<{typename}, {base_cache_typename}, {next_typename}, {dbp_type}>
+struct {typename} : public Cache<{typename}, {sets}, {ways}, {next_typename}>
 {{
-    constexpr static size_t RQ_SIZE = {rq_size};
-    constexpr static size_t WQ_SIZE = {wq_size};
-    constexpr static size_t PQ_SIZE = {pq_size};
+    constexpr static size_t NUM_SETS =         {sets};
+    constexpr static size_t NUM_WAYS =         {ways};
+    constexpr static CacheReplPolicy REPL =    CacheReplPolicy::{repl};
 
-    constexpr static size_t NUM_MSHR = {num_mshr};
-    constexpr static size_t NUM_RW_PORTS = {num_rw_ports};
-    constexpr static size_t CACHE_LATENCY = {latency};
+    constexpr static size_t RQ_SIZE =          {rq_size};
+    constexpr static size_t WQ_SIZE =          {wq_size};
+    constexpr static size_t PQ_SIZE =          {pq_size};
 
-    constexpr static bool WRITE_ALLOCATE = {write_allocate};
-    constexpr static bool INVALIDATE_ON_HIT = {invalidate_on_hit};
-    constexpr static bool NEXT_IS_INVALIDATE_ON_HIT = {next_is_invalidate_on_hit};
+    constexpr static uint64_t CACHE_LATENCY =  {latency};
+    constexpr static size_t NUM_MSHR =         {num_mshr};
+    constexpr static size_t WB_QUEUE_SIZE =    {wbq_size};
+    constexpr static size_t FILL_QUEUE_SIZE =  {fq_size};
 
-    constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
+    constexpr static size_t NUM_READ_PORTS =   {r_ports};
+    constexpr static size_t NUM_WRITE_PORTS =  {w_ports};
+    constexpr static size_t NUM_FILL_PORTS =   {f_ports};
 
-    {typename}(std::string name, CacheControl::next_ptr& n)
-        :CacheControl(name, n)
-    {{}}
+    constexpr static bool WRITE_ALLOCATE = {write_alloc};
+
+    using Cache<{typename},{sets},{ways},{next_typename}>::Cache;
 }};
 '''
     return cache_decl
@@ -67,10 +72,7 @@ f'''{AUTOGEN_HEADER}
 #ifndef MEMSYS_h
 #define MEMSYS_h
 
-#include "cache/control.h"
-#include "cache/dead_block/all.h"
-#include "cache/other_impl/all.h"
-
+#include "cache.h"
 #include "dram.h"
 {ptw_inc}
 
@@ -110,7 +112,7 @@ f'''{AUTOGEN_HEADER}
             next_typename = cache_typenames[caches[ii]]
             if cfg[caches[ii]]['operate_mode'] == 'INVALIDATE_ON_HIT':
                 cfg[c]['operate_mode'] = 'NEXT_IS_INVALIDATE_ON_HIT'
-        wr.write(declare_cache_type(cfg[c], typename, next_typename))
+        wr.write(declare_cache_type(cfg[c], typename, next_typename, write_alloc=(typename=='L1d')))
     wr.write(
 '''
 

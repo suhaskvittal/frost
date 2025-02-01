@@ -47,17 +47,17 @@ def validate_cache_section(cfg) -> bool:
     optionals = [
         ('sets', 64),
         ('ways', 8),
-        ('num_mshr', 8),
-        ('num_rw_ports', 2),
+        ('replacement_policy', 'LRU'),
         ('read_queue_size', 64),
         ('write_queue_size', 64),
         ('prefetch_queue_size', 32),
         ('latency', 4),
-        ('operate_mode', ''),
-        ('writeback_mode', 'FORCED'),
-        ('replacement_policy', 'LRU'),
-        ('base_cache_type', 'Cache'),
-        ('dead_block_predictor', 'DeadBlockPredictor')
+        ('num_mshr', 8),
+        ('writeback_queue_size', 4),
+        ('fill_queue_size', 4),
+        ('read_ports', 3),
+        ('write_ports', 2),
+        ('fill_ports', 2)
     ]
     # Now check if the number of sets or the size of the cache
     # is specified.
@@ -80,7 +80,6 @@ def validate_dram_section(cfg) -> bool:
         ('rows', 65536),
         ('columns', 128),
         ('BL', '16'),
-        ('cmd_queue_size', '16'),
         ('page_policy', 'OPEN'),
         ('write_policy', 'ASAP'),
         ('sched_policy', 'FRFCFS'),

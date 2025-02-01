@@ -6,10 +6,19 @@
 #ifndef CACHE_ENTRY_h
 #define CACHE_ENTRY_h
 
+#include "transaction.h"
+
+#include <cstdint>
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr uint8_t RRIP_MAX = 7;
+extern uint64_t GL_CYCLE;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+constexpr int8_t RRIP_MAX = 7;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -41,9 +50,9 @@ struct MSHREntry
 
     uint64_t cycle_fired;
 
-    MSHREntry(Transaction&& t, bool is_write=false)
+    MSHREntry(Transaction t, bool is_write=false)
         :is_for_write_allocate(is_write),
-        trans(std::move(t)),
+        trans(t),
         cycle_fired(GL_CYCLE)
     {}
 };
@@ -58,8 +67,8 @@ struct WBQueueEntry
     Transaction trans;
     DRAMWriteHint dram_write_hint =DRAMWriteHint::NONE;
 
-    WBQueueEntry(Transaction&& t)
-        :trans(std::move(t))
+    WBQueueEntry(Transaction t)
+        :trans(t)
     {}
 };
 

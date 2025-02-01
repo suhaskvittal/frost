@@ -32,7 +32,7 @@ enum class AccessState
  * */
 struct INST_BASE
 {
-    uint64_t inst_num =0;
+    uint32_t inst_num =0;
 
     size_t   rob_refs =1;
     uint64_t cycle_done =std::numeric_limits<uint64_t>::max();

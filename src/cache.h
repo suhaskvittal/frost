@@ -1,196 +1,263 @@
 /*
  *  author: Suhas Vittal
- *  date:   3 December 2024
+ *  date:   31 January 2025
  * */
 
 #ifndef CACHE_h
 #define CACHE_h
 
+#include "cache/entry.h"
+#include "cache/enums.h"
+#include "transaction.h"
 #include "util/numerics.h"
+#include "util/out_queue.h"
+#include "util/stats.h"
 
+#include <algorithm>
 #include <array>
-#include <cstdint>
-#include <optional>
-#include <random>
-#include <tuple>
+#include <deque>
+#include <memory>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
 /*
- * Defined in `globals.h`
+ *  `IMPL` Definition:
+ *      -- size_t NUM_SETS
+ *      -- size_t NUM_WAYS
+ *      -- CacheReplPolicy REPL
+ *
+ *      -- size_t RQ_SIZE
+ *      -- size_t WQ_SIZE
+ *      -- size_t PQ_SIZE
+ *
+ *      -- uint64_t CACHE_LATENCY
+ *      -- size_t NUM_MSHR
+ *      -- size_t WB_QUEUE_SIZE
+ *      -- size_t FILL_QUEUE_SIZE
+ *
+ *      -- size_t NUM_READ_PORTS
+ *      -- size_t NUM_WRITE_PORTS
+ *      -- size_t NUM_FILL_PORTS
+ *
+ *      -- CacheWritebackMode WRITEBACK_MODE
+ *
+ *      -- bool WRITE_ALLOCATE
  * */
-extern uint64_t GL_CYCLE;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-enum class CacheReplPolicy { LRU, RAND, SRRIP, PERFECT, DRRIP };
-
-constexpr uint8_t RRIP_MAX = 15;
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-struct CacheEntry
-{
-    bool valid =false;
-    bool dirty =false;
-    uint64_t address;
-    /*
-     * Replacement policy data:
-     * */
-    uint64_t timestamp;
-    uint8_t  rrpv;
-
-    bool likely_dead =false;
-
-    CacheEntry(void) =default;
-};
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-/*
- * Forward declarations for friend classes and functions:
- * */
-template <class CACHE_TYPE> class VirtualWriteQueue;
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-template <
-    size_t SETS,
-    size_t WAYS,
-    CacheReplPolicy POL>
-class Cache 
+template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
+class Cache
 {
 public:
-    uint64_t s_dueling_pol1_installs_ =0;
-    uint64_t s_dueling_pol2_installs_ =0;
+    using next_ptr =       std::unique_ptr<NEXT_TYPE>;
+    using stat_type =      VecStat<uint32_t, NUM_THREADS>;
+    using in_queue_type =  std::vector<Transaction>;
+    using pending_type =   std::unordered_set<uint64_t>;
+
+    stat_type s_reads_{};
+    stat_type s_writes_{};
+    stat_type s_accesses_{};
+    stat_type s_misses_{};
+    stat_type s_fills_{};
+    stat_type s_tot_miss_penalty_{};
+    stat_type s_num_miss_penalty_{};
+    stat_type s_invalidates_{};
+    stat_type s_write_alloc_{};
+
+    uint32_t s_evictions_ =0;
+    uint32_t s_writebacks_ =0;
+    uint32_t s_eager_writebacks_ =0;
+
+    uint32_t s_load_bypasses_ =0;
+    uint32_t s_writeback_bypasses_ =0;
+
+    uint32_t s_dead_block_predicts_ =0;
+    uint32_t s_dead_block_evictions_ =0;
+
+    uint32_t s_dueling_pol1_installs_ =0;
+    uint32_t s_dueling_pol2_installs_ =0;
+
+    out_queue_type outgoing_queue_;
+
+    const std::string cache_name_;
 protected:
-    enum class SetDuelingRole { LEADER_1 =1, LEADER_2 =-1, FOLLOWER =0 };
+    enum class SetDuelingRole { FOLLOWER =0, LEADER_1 =1, LEADER_2 =-1 };
 
-    using psel_type = int16_t;
-    using cset_type       = std::array<CacheEntry, WAYS>;
-    using cset_array_type = std::array<cset_type, SETS>;
+    struct cset_type : std::array<CacheEntry, NUM_WAYS>
+    {
+        using parent_type = std::array<CacheEntry, NUM_WAYS>;
 
-    constexpr static size_t LEADER_SETS = 64;
-    constexpr static size_t PSEL_WIDTH = 11;
-    constexpr static psel_type PSEL_MAX = (1 << PSEL_WIDTH) - 1;
-    constexpr static psel_type PSEL_MIN = 0;
-    constexpr static psel_type PSEL_THRESHOLD = (1 << (PSEL_WIDTH-1));
-    constexpr static psel_type PSEL_DEFAULT = PSEL_THRESHOLD-1;
-
-    constexpr static size_t BIMODAL_CTR_MAX = 32;
+        inline typename parent_type::iterator 
+        find(uint64_t address)
+        {
+            return std::find_if(parent_type::begin(), parent_type::end(),
+                        [address] (const auto& e) { return e.valid && e.address == address; });
+        }
+    };
     
-    cset_array_type csets_{};
-    psel_type psel_ =PSEL_DEFAULT;
-    size_t bimodal_ctr_ =0;
+    using psel_type = int16_t;
 
-    std::mt19937_64 rng_{0};
+    using cset_array =      std::array<cset_type, NUM_SETS>;
+    using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
+    using wb_queue_type =   std::deque<WBQueueEntry>;
+    using fill_queue_type = std::deque<Transaction>;
+
+    constexpr static size_t    LEADER_SETS = 64;
+    constexpr static size_t    PSEL_WIDTH = 11;
+    constexpr static psel_type PSEL_DEFAULT = (1<<(PSEL_WIDTH-1))-1;
+    /*
+     * Core cache structures:
+     * */
+    cset_array csets_{};
+    psel_type  psel_ =PSEL_DEFAULT;
+    size_t     bimodal_counter_ =0;
+    /*
+     * I/O structures
+     * */
+    in_queue_type read_queue_;
+    in_queue_type write_queue_;
+    in_queue_type prefetch_queue_;
+
+    pending_type  pending_reads_;
+    pending_type  pending_writes_;
+    pending_type  pending_misses_;
+    pending_type  pending_writebacks_;
+    /*
+     * MSHR and writeback queue structures:
+     * */ 
+    mshr_type       mshr_;
+    wb_queue_type   writeback_queue_;
+    fill_queue_type fill_queue_;
+    size_t num_mshr_asleep_ =0;
+    /*
+     * Pointer to next structure in the memory hierarchy.
+     * */
+    next_ptr& next_;
 public:
-    using find_result_type = std::tuple<cset_type*, typename cset_type::iterator>;
-    using fill_result_type = std::optional<CacheEntry>;
-    using eager_fill_result_type = std::tuple<fill_result_type, fill_result_type>;
+    Cache(std::string cache_name, next_ptr&);
 
-    Cache(void) =default;
+    void warmup_access(uint64_t, bool write);
+    void warmup_fill(uint64_t, bool dirty);
+
+    virtual void tick(void);
+
+    virtual bool can_accept(uint64_t, TransactionType);
+    virtual bool can_accept_fill(void);
+
+    virtual bool add_incoming(Transaction);
+    virtual bool add_incoming_fill(Transaction);
+
+    bool deadlock_find_inst(inst_ptr) const;
     /*
-     * Searches for the given line. Does not update any metadata. This is
-     * like peeking into the cache.
+     * Useful inlines:
      * */
-    find_result_type find(uint64_t);
-
-    inline bool get_dirty_bit(uint64_t address)
+    virtual inline size_t set_index(uint64_t x) const
     {
-        auto [s_p, it] = find(address);
-        return it->dirty;
-    }
-
-    virtual bool probe(uint64_t, bool write=false);
-    virtual bool mark(uint64_t, bool as_dirty);
-    /*
-     * `num_refs` here corresponds to the number of MSHR/instruction references
-     * at the time of install. Necessary for SRRIP, for example.
-     *
-     * `fill_with_eager_writeback` and other functions that return `eager_fill_result_type`
-     * return a victim as well as any entries that should be written back. The caller
-     * can do whatever they want with these entries, but keep in mind that the
-     * cache has not evicted them. Furthermore, these entries are not references. If the
-     * caller wants to modify the cache, they must call the appropriate function to do so.
-     * */
-    virtual fill_result_type 
-        fill(uint64_t, size_t num_refs, bool mark_dirty=false);
-    virtual eager_fill_result_type
-        fill_with_eager_writeback(uint64_t, size_t, bool mark_dirty=false);
-    /*
-     * These functions probe the associated cache set and checks if there are any victims that meet
-     * the given criteria:
-     *  `invalid_victim` -- any entry with `valid == false`
-     *  `noncritical_victim` -- any entry with `valid == false || likely_dead == true`
-     * */
-    bool fill_will_replace_invalid_victim(uint64_t address) const;
-    bool fill_will_replace_noncritical_victim(uint64_t address) const;
-
-    virtual void invalidate(uint64_t);
-
-    virtual void mark_likely_dead(uint64_t);
-    virtual void mark_likely_alive(uint64_t);
-    /*
-     * Counts number of elements in cache meeting criteria. If `get_occupancy(void)` is
-     * used, then this just counts the number of valid elements in the cache.
-     * */
-    template <class PRED>
-    size_t get_occupancy(const PRED&);
-    size_t get_occupancy(void);
-
-    inline static constexpr size_t num_ways(void) { return WAYS; }
-    inline static constexpr size_t num_sets(void) { return SETS; }
-    inline static constexpr size_t size(void) { return WAYS*SETS; }
-    inline static constexpr CacheReplPolicy repl(void) { return POL; }
-
-    inline static constexpr bool uses_set_dueling(void) 
-    {
-        return POL == CacheReplPolicy::DRRIP;
-    }
-
-    inline static size_t _get_set_index(uint64_t x)
-    {
-        return fast_mod<SETS>(x);
+        return fast_mod<NUM_SETS>(x);
     }
 protected:
-    virtual typename cset_type::iterator find_victim(cset_type&);
+    struct fill_result_type
+    {
+        CacheEntry entry{};
+        size_t lru_pos =0;
 
-    typename cset_type::iterator lru(cset_type&);
-    typename cset_type::iterator rand(cset_type&);
-    typename cset_type::iterator rrip(cset_type&);
+        fill_result_type(void) =default;
+        fill_result_type(CacheEntry e, size_t p)
+            :entry(std::move(e)),
+            lru_pos(p)
+        {}
+    };
+
+    using multi_fill_result_type = std::vector<fill_result_type>;
+    using way_iterator = typename cset_type::iterator;
     /*
-     * Update replacement metadata for the entry.
+     * Cache access implementation:
+     * */
+    virtual bool probe(uint64_t, bool write=false);
+    virtual bool mark(uint64_t, bool dirty);
+    virtual void invalidate(uint64_t);
+    /*
+     * Cache fill implementations:
+     * */
+    virtual fill_result_type       fill(uint64_t, size_t num_mshr_refs, bool dirty);
+    virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t num_refs, bool dirty); 
+
+    virtual way_iterator find_victim(cset_type&);
+    /*
+     * Insertion implementation:
      * */
     virtual void update_entry(CacheEntry&);
-    virtual void init_entry(CacheEntry&, uint64_t address, size_t num_refs, bool mark_dirty);
+    virtual void init_entry(CacheEntry&, uint64_t address, size_t num_refs, bool dirty);
     /*
-     * Gets way in the given LRU position.
+     * Replacement implementation:
      * */
-    typename cset_type::iterator get_likely_dead_line(cset_type&);
-    typename cset_type::iterator get_way_in_lru_pos(cset_type&);
+    way_iterator lru(cset_type&);
+    way_iterator rand(cset_type&);
+    way_iterator rrip(cset_type&);
 
-    virtual SetDuelingRole get_set_role(size_t idx) const;
-    virtual void update_psel(size_t idx);
+    way_iterator get_way_in_lru_pos(cset_type&, size_t lru_pos);
+    /*
+     * Set Dueling implementation:
+     * */
+    virtual SetDuelingRole get_set_role(size_t set_idx) const;
+    virtual void update_psel(size_t set_idx);
+    /*
+     * IO functions for R/W/P queues (`do_next_access`) and fills (`do_next_fill`)
+     * */
+    virtual void do_next_fill(void);
+    virtual bool do_next_access(bool do_read);
+    virtual void add_mshr_entry(Transaction);
 
-    inline virtual size_t get_set_index(uint64_t x) const
+    inline in_queue_type& get_queue_ref(TransactionType t)
     {
-        return _get_set_index(x);
+        if (t == TransactionType::PREFETCH)
+            return prefetch_queue_;
+        else if (t == TransactionType::WRITE)
+            return write_queue_;
+        else
+            return read_queue_;
+    }
+
+    inline size_t get_queue_size(TransactionType t) const
+    {
+        if (t == TransactionType::PREFETCH)
+            return IMPL::PQ_SIZE;
+        else if (t == TransactionType::WRITE)
+            return IMPL::WQ_SIZE;
+        else
+            return IMPL::RQ_SIZE;
+    }
+
+    inline size_t get_lru_pos(const CacheEntry& e, const cset_type& s) const
+    {
+        return std::count_if(s.begin(), s.end(),
+                            [t=e.timestamp] (const auto& x) { return t > x.timestamp; });
     }
 
     inline cset_type& get_set(uint64_t x)
     {
-        return csets_[get_set_index(x)];
+        return csets_[set_index(x)];
     }
 
     inline const cset_type& get_const_set(uint64_t x) const
     {
-        return csets_.at(get_set_index(x));
+        return csets_.at(set_index(x));
     }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class CACHE_TYPE, class FUNC>
+void drain_cache_outgoing_queue(std::unique_ptr<CACHE_TYPE>&, const FUNC&);
+
+void drain_llc_outgoing_queue(void);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

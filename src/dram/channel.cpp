@@ -31,20 +31,10 @@ constexpr DRAMCommandType WRITE_CMD = (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline void
-dec_pending(DRAMChannel::pending_type& m, uint64_t k)
-{
-    if ((--m[k]) == 0)
-        m.erase(k);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 template <class T> inline T sqr(T x) { return x*x; }
 
 void
-dram_update_write_distribution_stats(const write_counts_array_type& cnts, double& std, uint64_t& diff)
+dram_update_write_distribution_stats(const write_counts_array_type& cnts, double& std, uint32_t& diff)
 {
     std += vec_std(cnts);
 
@@ -136,9 +126,7 @@ DRAMChannel::tick()
 inline bool
 trans_add(DRAMChannel::in_queue_type& q, DRAMChannel::pending_type& p, Transaction&& t, size_t qsize)
 {
-    if (q.size() >= qsize)
-        return false;
-    ++p[t.address];
+    p.insert(t.address);
     q.emplace_back(std::move(t));
     return true;
 }
@@ -150,17 +138,14 @@ DRAMChannel::add_incoming(Transaction t)
     if (pending_writes_.count(t.address))
     {
         if (trans_is_read(t.type))
-            outgoing_queue_.insert({ GL_DRAM_CYCLE, std::move(t) });
+            outgoing_queue_.emplace(std::move(t), GL_DRAM_CYCLE+1);
         return true;
     }
     // Check for common reads.
     if (trans_is_read(t.type) && pending_reads_.count(t.address))
     {
         auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
-                            [addr = t.address] (const auto& x)
-                            {
-                                return x.trans.address == addr;
-                            });
+                            [addr = t.address] (const auto& x) { return x.trans.address == addr; });
         rd_it->trans.merge(t);
         return true;
     }
@@ -198,12 +183,11 @@ DRAMChannel::deadlock_find_inst(const inst_ptr inst) const
             auto q_it = std::find_if(write_queue_.begin(), write_queue_.end(),
                                     [b, row=get_bank_const_ref_from_idx(b).open_row.value()] (const auto& x)
                                     {
-                                        return b == dram_bank_idx(x.trans.address) && row == dram_row(x.trans.address);
+                                        return b == dram_bank_idx(x.trans.address) 
+                                                && row == dram_row(x.trans.address);
                                     });
             if (q_it == write_queue_.end())
-            {
                 std::cerr << "\tactive buffer entry B" << b << " not in write queue!\n";
-            }
             else
             {
                 size_t q_pos = std::distance(write_queue_.begin(), q_it);
@@ -260,8 +244,6 @@ DRAMChannel::try_switch_to_write_mode()
     s_tot_write_occu_at_drain_ += write_queue_.size();
     in_transition_ = true;
 
-    GL_LLC->sig_dram_write_drain(channel_id_, writes_per_bank);
-
 #if defined(DRAM_TRACK_ADVANCED_STATS)
     write_counts_array_type write_cnts{};
     for (const auto& e : write_queue_)
@@ -277,10 +259,10 @@ DRAMChannel::try_switch_to_write_mode()
     for (size_t i = 0; i < write_queue_.size(); i++)
     {
         auto& trans = write_queue_[i].trans;
-        dec_pending(pending_writes_, trans.address);        
+        pending_writes_.erase(trans.address);
         trans.address &= ~((DRAM_TOT_BANKS_PER_CHANNEL-1) << BG_OFF);
         trans.address |= fast_mod<DRAM_TOT_BANKS_PER_CHANNEL>(i) << BG_OFF;
-        ++pending_writes_[trans.address];
+        pending_writes_.insert(trans.address);
     }
 #endif
 }
@@ -309,7 +291,7 @@ DRAMChannel::issue_next_command()
         auto& row_hits  = is_read ? s_read_row_hits_    : s_write_row_hits_;
         auto& latency   = is_read ? s_tot_read_latency_ : s_tot_write_latency_; 
 
-        dec_pending(pending, trans.address);
+        pending.erase(trans.address);
         ++count;
         if (q_entry.is_row_buffer_hit)
             ++row_hits;
@@ -319,7 +301,7 @@ DRAMChannel::issue_next_command()
 
         if (is_read)
         {
-            outgoing_queue_.insert({ GL_DRAM_CYCLE + CL, std::move(trans) });
+            outgoing_queue_.emplace(std::move(trans), GL_DRAM_CYCLE+CL);
             ++s_bank_usage_.reads[bank_idx];
         }
         else
@@ -396,13 +378,11 @@ DRAMChannel::select_ready_command()
         // If this is a write, check if it violates R->W dependency.
         if (in_write_mode_)
         {
-            /*
             if (pending_reads_.count(q_it->trans.address))
             {
                 in_transition_ = true;
                 break;
             }
-            */
 
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
@@ -442,10 +422,7 @@ DRAMChannel::select_ready_command()
                 bank_ready_cmds.begin() + starting_bank_idx_for_ready_cmd_,
                 bank_ready_cmds.end());
     auto cmd_it = std::find_if(bank_ready_cmds.begin(), bank_ready_cmds.end(),
-                            [end_it = q.end()] (const auto& x)
-                            {
-                                return x.second != end_it;
-                            });
+                            [end_it = q.end()] (const auto& x) { return x.second != end_it; });
     // Select ready command amongst all banks:
     DRAMCommand ready_cmd;
     std::optional<RWQueueEntry> q_entry;
@@ -505,7 +482,7 @@ DRAMChannel::update_wrw_state(const DRAMCommand& ready_cmd)
             wrw_seq_state_ = WRWSequenceState::NEED_READ;
             for (size_t i = 0; i < 4; i++)
             {
-                uint64_t max_cyc = 1L << (i+8);
+                uint32_t max_cyc = 1L << (i+8);
                 if (GL_DRAM_CYCLE - wrw_first_write_cycle_ <= max_cyc)
                     ++s_num_seq_[i];
             }

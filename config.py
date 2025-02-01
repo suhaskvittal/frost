@@ -15,6 +15,13 @@ from sys import argv
 ####################################################################
 ####################################################################
 
+def multiply_per_core(cfg, llc_stat_name: str):
+    per_core_name = f'{llc_stat_name}_per_core'
+    cfg['LLC'][llc_stat_name] = str(int(cfg['LLC'][per_core_name]) * int(cfg['CORE']['num_threads']))
+
+####################################################################
+####################################################################
+
 build_id = argv[1]
 config_file = argv[2]
 
@@ -33,12 +40,12 @@ for sec in sections:
 
 validate_system_section(cfg['SYSTEM'])
 validate_core_section(cfg['CORE'])
-# For the LLC config, if `size_kb_per_core` is specified,
-# add `size_kb` now.
+
 if 'size_kb_per_core' in cfg['LLC']:
-    cfg['LLC']['size_kb'] = str(int(cfg['LLC']['size_kb_per_core']) * int(cfg['CORE']['num_threads']))
+    multiply_per_core(cfg, 'size_kb')
 if 'num_mshr_per_core' in cfg['LLC']:
-    cfg['LLC']['num_mshr'] = str(int(cfg['LLC']['num_mshr_per_core']) * int(cfg['CORE']['num_threads']))
+    multiply_per_core(cfg, 'num_mshr')
+
 for c in caches:
     validate_cache_section(cfg[c])
 validate_dram_section(cfg['DRAM'])
