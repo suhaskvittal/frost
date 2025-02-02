@@ -40,8 +40,13 @@ struct Transaction
 
     uint64_t address;
     bool     address_is_ip;
-
+    /*
+     * These are DRAM related parameters -- by default, these are "neutral", but
+     * they can be set by the LLC, for example, to manipulate the scheduler.
+     * */
     DRAMClosureHint dram_closure_hint =DRAMClosureHint::NONE;
+    int8_t          dram_issue_priority =0;
+    uint8_t         dram_sequence_size =1;
 
     Transaction(uint8_t cid, inst_ptr inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
         :coreid(cid),

@@ -23,7 +23,7 @@
 template <class T> inline T sqr(T x) { return x*x; }
 
 void
-dram_update_write_distribution_stats(const write_counts_array_type& cnts, double& std, uint32_t& diff)
+dram_update_write_distribution_stats(const write_counts_array& cnts, double& std, uint32_t& diff)
 {
     std += vec_std(cnts);
 
@@ -207,7 +207,7 @@ DRAMChannel::try_switch_to_write_mode()
         return;
 
     bool drain_cond_1 = write_queue_.size() >= high_watermark_;
-    bool drain_cond_2 = write_queue_.size() >= low_watermark_ && read_queue_.empty();
+    bool drain_cond_2 = write_queue_.size() > low_watermark_ && read_queue_.empty();
 
     if (!drain_cond_1 && !drain_cond_2)
         return;
@@ -218,27 +218,20 @@ DRAMChannel::try_switch_to_write_mode()
     {
         size_t writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
         if (OPT_DRAM_WRITE_SYNC_COUNT == 0)
+        {
+            writes_per_bank = num_writes >> numeric_traits<DRAM_TOT_BANKS_PER_CHANNEL>::log2;
             writes_per_bank = std::max(static_cast<size_t>(1), writes_per_bank);
+        }
 
-        writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_MISS_COST * writes_per_bank);
+        write_budget_per_bank_.fill(OPT_DRAM_WRITE_SYNC_MISS_COST * writes_per_bank);
     }
     else
-        writes_to_drain_per_bank_.fill(num_writes);
+        write_budget_per_bank_.fill(num_writes);
 
     ++s_num_drains_;
     s_tot_read_occu_at_drain_ += read_queue_.size();
     s_tot_write_occu_at_drain_ += write_queue_.size();
     in_transition_ = true;
-
-#if defined(DRAM_TRACK_ADVANCED_STATS)
-    write_counts_array_type write_cnts{};
-    for (const auto& e : write_queue_)
-    {
-        size_t bank_idx = dram_bank_idx(e.trans.address);
-        ++write_cnts[bank_idx];
-    }
-    dram_update_write_distribution_stats(write_cnts, s_tot_write_queue_std_, s_tot_write_queue_minmax_diff_);
-#endif
 
 #if defined(DRAM_RANDOMIZE_WRITE_ADDRESSES)
     // Here, we will fix all the write addresses to the bank indexes in round robin.
@@ -250,6 +243,16 @@ DRAMChannel::try_switch_to_write_mode()
         trans.address |= fast_mod<DRAM_TOT_BANKS_PER_CHANNEL>(i) << BG_OFF;
         pending_writes_.insert(trans.address);
     }
+#endif
+
+#if defined(DRAM_TRACK_ADVANCED_STATS)
+    write_counts_array write_cnts{};
+    for (const auto& e : write_queue_)
+    {
+        size_t bank_idx = dram_bank_idx(e.trans.address);
+        ++write_cnts[bank_idx];
+    }
+    dram_update_write_distribution_stats(write_cnts, s_tot_write_queue_std_, s_tot_write_queue_minmax_diff_);
 #endif
 }
 
@@ -296,8 +299,8 @@ DRAMChannel::issue_next_command()
             {
                 ssize_t write_cost = q_entry.is_row_buffer_hit ? OPT_DRAM_WRITE_SYNC_HIT_COST 
                                                                   : OPT_DRAM_WRITE_SYNC_MISS_COST;
-                writes_to_drain_per_bank_[bank_idx] -= write_cost;
-                writes_to_drain_per_bank_[bank_idx] = std::clamp(writes_to_drain_per_bank_[bank_idx], 
+                write_budget_per_bank_[bank_idx] -= write_cost;
+                write_budget_per_bank_[bank_idx] = std::clamp(write_budget_per_bank_[bank_idx], 
                                                                     static_cast<ssize_t>(0),
                                                                     std::numeric_limits<ssize_t>::max());
             }
@@ -333,13 +336,13 @@ typename DRAMChannel::cmd_output_type
 DRAMChannel::select_ready_command()
 {
     using bank_ready_cmd_type = std::pair<DRAMCommand, in_queue_type::iterator>;
+    using bank_ready_array = std::vector<bank_ready_cmd_type>;
 
+    // Initialize relevant structures:
+    auto& q = in_write_mode_ ? write_queue_ : read_queue_;
     SchedulerState algo_state{};
 
-    auto& q = in_write_mode_ ? write_queue_ : read_queue_;
-
-    std::vector<bank_ready_cmd_type> 
-        bank_ready_cmds(DRAM_TOT_BANKS_PER_CHANNEL, std::make_pair(DRAMCommand(), q.end()));
+    bank_ready_array bank_ready_cmds(DRAM_TOT_BANKS_PER_CHANNEL, std::make_pair(DRAMCommand(), q.end()));
 
     bool any_write_is_possible = false;
     for (auto q_it = q.begin(); q_it != q.end(); q_it++)
@@ -365,22 +368,26 @@ DRAMChannel::select_ready_command()
                 bool is_write_row_hit = b.open_row.has_value() && b.open_row == row;
                 size_t write_cost = is_write_row_hit ? OPT_DRAM_WRITE_SYNC_HIT_COST 
                                                      : OPT_DRAM_WRITE_SYNC_MISS_COST;
-                if (writes_to_drain_per_bank_[bank_idx] < write_cost)
+
+                // Check if this write can be completed within the available budget:
+                if (write_cost > write_budget_per_bank_[bank_idx])
+                    continue;
+
+                // Check if this write's sequence size exceeds the budget:
+                if (q_it->trans.dram_sequence_size > write_budget_per_bank_[bank_idx])
                     continue;
             }
         }
         any_write_is_possible = true;
-        // Otherwise, compute the ready command:
+
+        // Compute the ready command:
         DRAMCommandType type = DRAMCommandType::INVALID;
         if (b.open_row.has_value())
         {
             if (b.open_row == row)
                 type = scheduler_get_cas_command(q_it, q, algo_state, b);
-            else if (!active_buffer_.count(bank_idx)
-                    && scheduler_allow_demand_precharge(q_it, q, algo_state, b))
-            {
+            else if (!active_buffer_.count(bank_idx) && scheduler_allow_demand_precharge(q_it, q, algo_state, b))
                 type = DRAMCommandType::PRECHARGE;
-            }
         }
         else
             type = DRAMCommandType::ACTIVATE;
@@ -393,15 +400,18 @@ DRAMChannel::select_ready_command()
                         && cmd_is_issuable(state_, ready_cmd);
         if (cmd_ok)
             bank_ready_cmds[bank_idx] = {ready_cmd, q_it};
-        algo_state.is_first[bank_idx] = false;
+        
+        // Update algo state:
+        algo_state.update_priority(bank_idx, q_it->trans.dram_issue_priority);
     }
 
     // Rotate the ready command array:
-    std::rotate(bank_ready_cmds.begin(), 
+    std::rotate(bank_ready_cmds.begin(),
                 bank_ready_cmds.begin() + starting_bank_idx_for_ready_cmd_,
                 bank_ready_cmds.end());
     auto cmd_it = std::find_if(bank_ready_cmds.begin(), bank_ready_cmds.end(),
                             [end_it = q.end()] (const auto& x) { return x.second != end_it; });
+
     // Select ready command amongst all banks:
     DRAMCommand ready_cmd;
     std::optional<RWQueueEntry> q_entry;
@@ -466,18 +476,64 @@ DRAMChannel::scheduler_allow_demand_precharge(
 {
     if constexpr (DRAM_SCHED_POLICY == DRAMSchedPolicy::FCFS)
         return true;
-    else
+
+    size_t rank_idx = dram_rank(q_it->trans.address);
+    size_t bank_idx = dram_bank_idx(q_it->trans.address);
+
+    // Note that this is the same as checking if a cmd is first (as `highest_priority = -128` at the beginning
+    // of the queue)
+    if (s.highest_priority.at(bank_idx) >= q_it->trans.dram_issue_priority)
+        return false;
+    
+    // For ease of checking, get all commands in the queue that belong to the given bank:
+    // We also want to only get commands that fit within some expected sequence budget
+    size_t sequence_budget = std::numeric_limits<size_t>::max();
+    if (in_write_mode_)
     {
-        size_t bank_idx = dram_bank_idx(q_it->trans.address);
-        bool any_pending_row_hits = std::any_of(std::next(q_it), q.end(),
-                                            [bank_idx, row=b.open_row.value()] (const auto& e)
-                                            {
-                                                return dram_bank_idx(e.trans.address) == bank_idx
-                                                        && dram_row(e.trans.address) == row;
-                                            });
-        return s.is_first.at(bank_idx) && (!any_pending_row_hits || b.num_cas_to_open_row >= 4);
+        sequence_budget = write_budget_per_bank_.at(bank_idx);
     }
+
+    std::vector<RWQueueEntry> cmds;
+    std::copy_if(std::next(q_it), q.end(), std::back_inserter(cmds),
+                    [bank_idx, sequence_budget] (const auto& e)
+                    {
+                        return dram_bank_idx(e.trans.address) == bank_idx
+                                && e.trans.dram_sequence_size <= sequence_budget; 
+                    });
+
+    // Check if there are any instructions with higher priority than this:
+    if constexpr (dram_sched_obey_issue_priority(DRAM_SCHED_POLICY))
+    {
+        // Now check in front of `q_it`
+        bool any_higher_priority = std::any_of(cmds.begin(), cmds.end(),
+                                        [p=q_it->trans.dram_issue_priority] 
+                                        (const auto& e)
+                                        {
+                                            return e.trans.dram_issue_priority > p;
+                                        });
+        if (any_higher_priority)
+            return false;
+    }
+
+    // Check for row buffer hits:
+    if constexpr (dram_sched_prioritize_row_buffer_hits(DRAM_SCHED_POLICY))
+    {
+        bool any_pending_row_hits = std::any_of(cmds.begin(), cmds.end(),
+                                        [row=b.open_row.value()] 
+                                        (const auto& e) { return dram_row(e.trans.address) == row; });
+        if (any_pending_row_hits && b.num_cas_to_open_row < 4)
+            return false;
+    }
+
+    // Check if we are about to perform a REF:
+    if (GL_DRAM_CYCLE >= state_[rank_idx].next_ref_cycle - 32)
+        return false;
+    
+    return true;
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 DRAMCommandType
 DRAMChannel::scheduler_get_cas_command(
@@ -495,39 +551,48 @@ DRAMChannel::scheduler_get_cas_command(
         return in_write_mode_ ? DRAMCommandType::WRITE_PRECHARGE : DRAMCommandType::READ_PRECHARGE;
     else
     {
-        // A bit more complex: here, we will check the rest of the queue for potential row buffer hits
-        bool keep_open = true;
+        DRAMCommandType cmd =         in_write_mode_ ? DRAMCommandType::WRITE 
+                                                     : DRAMCommandType::READ,
+                        cmd_autopre = in_write_mode_ ? DRAMCommandType::WRITE_PRECHARGE 
+                                                     : DRAMCommandType::READ_PRECHARGE;
 
-        // Close the row if we are transitioning (no more ACTs)
-        keep_open &= !in_transition_; // close the row if we are transitioning (will get no more ACTs).
+        size_t bank_idx = dram_bank_idx(q_it->trans.address);
 
-        // Check if we are about to transition:
-        if (keep_open)
+        // If we are in transition, we will have no more row buffer hits:
+        if (in_transition_)
+            return cmd_autopre;
+
+        // Predict whether or not we will transition any time soon:
+        constexpr size_t TOL = 4;
+        if (in_write_mode_)
         {
-            if (in_write_mode_ && (!read_queue_.empty() && write_queue_.size() <= low_watermark_+4))
-                keep_open = false;
-            if (!in_write_mode_ && (read_queue_.size() < 4 || write_queue_.size() >= high_watermark_-4))
-                keep_open = false;
+            if (!read_queue_.empty() && (write_queue_.size() <= low_watermark_ + TOL))
+                return cmd_autopre;
+            if (write_budget_per_bank_[bank_idx] <= OPT_DRAM_WRITE_SYNC_MISS_COST)
+                return cmd_autopre;
+        }
+        if (!in_write_mode_ && (read_queue_.size() < TOL || write_queue_.size() >= high_watermark_ - TOL))
+            return cmd_autopre;
+
+        // For ease of checking, get all commands in the queue that belong to the given bank:
+        std::vector<RWQueueEntry> cmds;
+        std::copy_if(std::next(q_it), q.end(), std::back_inserter(cmds),
+                        [bank_idx] (const auto& e) { return dram_bank_idx(e.trans.address) == bank_idx; });
+
+        // Check for row buffer hits:
+        if constexpr (dram_sched_prioritize_row_buffer_hits(DRAM_SCHED_POLICY))
+        {
+            bool any_pending_hits = std::any_of(cmds.begin(), cmds.end(),
+                                            [row=b.open_row.value()]
+                                            (const auto& e) { return dram_row(e.trans.address) == row; });
+            if (!any_pending_hits || b.num_cas_to_open_row >= 3)
+                return cmd_autopre;
         }
 
-        if (keep_open)
-        {
-            size_t bank_idx = dram_bank_idx(q_it->trans.address);
-            bool any_pending_hits = std::any_of(std::next(q_it), q.end(),
-                                            [bank_idx, row=b.open_row.value()] (const auto& e)
-                                            {
-                                                return dram_bank_idx(e.trans.address) == bank_idx
-                                                        && dram_row(e.trans.address) == row;
-                                            });
-            keep_open &= any_pending_hits && b.num_cas_to_open_row < 3;
-        }
-
-        keep_open &= (hint != DRAMClosureHint::CLOSE_AFTER);
-
-        if (keep_open)
-            return in_write_mode_ ? DRAMCommandType::WRITE : DRAMCommandType::READ;
+        if (hint == DRAMClosureHint::CLOSE_AFTER)
+            return cmd_autopre;
         else
-            return in_write_mode_ ? DRAMCommandType::WRITE_PRECHARGE : DRAMCommandType::READ_PRECHARGE;
+            return cmd;
     }
 }
 

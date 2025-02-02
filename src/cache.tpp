@@ -193,11 +193,13 @@ __TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
     if (rd_it != read_queue_.end())
     {
         size_t rd_pos = std::distance(read_queue_.begin(), rd_it);
-        std::cerr << "\found instruction in read queue: position = " << rd_pos
+        std::cerr << "\tfound instruction in read queue: position = " << rd_pos
                     << ", read queue occupancy = " << read_queue_.size()
                     << ", write_queue occupancy = " << write_queue_.size()
                     << ", prefetch queue occupancy = " << prefetch_queue_.size()
-                    << ", mshr occupancy = " << mshr_.size() << "\n";
+                    << ", mshr occupancy = " << mshr_.size()
+                    << ", writeback queue occupancy = " << writeback_queue_.size()
+                    << "\n";
         return true;
     }
     
@@ -485,8 +487,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         // Set DRAM row closure hint if possible:
         if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
         {
-//          wb_trans.dram_closure_hint = eviction_list.size() > i+1 ? DRAMClosureHint::KEEP_OPEN
-//                                                                  : DRAMClosureHint::CLOSE_AFTER;
+            wb_trans.dram_issue_priority = eviction_list.size()-1;
         }
         writeback_queue_.push_back(wb_trans);
         pending_writebacks_.insert(e.address);

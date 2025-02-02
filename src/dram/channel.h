@@ -44,13 +44,20 @@ struct RWQueueEntry
 
 struct SchedulerState
 {
-    using bank_bitvec_type = std::vector<bool>;
+    using issue_prio_array = std::array<int8_t, DRAM_TOT_BANKS_PER_CHANNEL>;
 
-    bank_bitvec_type is_first;
+    issue_prio_array highest_priority;
 
     SchedulerState(void)
-        :is_first(DRAM_TOT_BANKS_PER_CHANNEL, true)
-    {}
+    {
+        highest_priority.fill(std::numeric_limits<int8_t>::lowest());
+    }
+
+    inline void update_priority(size_t bank_idx, int8_t p)
+    {
+        int8_t& cp = highest_priority[bank_idx];
+        cp = std::max(cp, p);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -70,9 +77,9 @@ struct BankUsageStats
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-using write_counts_array_type = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
+using write_counts_array = std::array<size_t, DRAM_TOT_BANKS_PER_CHANNEL>;
 
-void dram_update_write_distribution_stats(const write_counts_array_type&, double& s_std, uint32_t& s_diff);
+void dram_update_write_distribution_stats(const write_counts_array&, double& s_std, uint32_t& s_diff);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -120,7 +127,7 @@ public:
     const size_t high_watermark_;
 private:
     using active_buffer_type = std::unordered_set<size_t>;
-    using write_drain_array_type = std::array<ssize_t, DRAM_TOT_BANKS_PER_CHANNEL>;
+    using write_drain_array = std::array<ssize_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     /* 
      * Custom IO implementation
      * */
@@ -131,7 +138,7 @@ private:
 
     active_buffer_type active_buffer_;
     /*
-     * `writes_to_drain_per_bank_`: number of writes that can be issued (max) by a bank. Only used if
+     * `write_budget_per_bank_`: number of writes that can be issued (max) by a bank. Only used if
      *      `DRAM_WRITE_POLICY` is `SYNC`
      *  `writes_issued_per_bank_`: purely for stats -- this is the writes issued from each bank in actuality.
      *
@@ -140,10 +147,10 @@ private:
      *      `in_transition_`: this is true if the DRAM is finishing up any straggling ACTs
      *      `drain_start_cycle_`: for computing `s_tot_drain_latency_` -- the start cycle of a write drain
      * */
-    write_drain_array_type writes_to_drain_per_bank_{};
+    write_drain_array write_budget_per_bank_{};
     bool in_write_mode_ =false;
     bool in_transition_ =false;
-    write_counts_array_type writes_issued_per_bank_{};
+    write_counts_array writes_issued_per_bank_{};
     uint64_t drain_start_cycle_ =0;
 
     size_t starting_bank_idx_for_ready_cmd_ =0;
