@@ -24,12 +24,14 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
     r_ports =       cfg['read_ports']
     w_ports =       cfg['write_ports']
     f_ports =       cfg['fill_ports']
+    wb_mode =       cfg['writeback_mode']
+    cache_type =    cfg['cache_type']
 
     write_alloc = str(write_alloc).lower()
 
     cache_decl =\
 f'''
-struct {typename} : public Cache<{typename}, {sets}, {ways}, {next_typename}>
+struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typename}>
 {{
     constexpr static size_t NUM_SETS =         {sets};
     constexpr static size_t NUM_WAYS =         {ways};
@@ -50,7 +52,9 @@ struct {typename} : public Cache<{typename}, {sets}, {ways}, {next_typename}>
 
     constexpr static bool WRITE_ALLOCATE = {write_alloc};
 
-    using Cache<{typename},{sets},{ways},{next_typename}>::Cache;
+    constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
+
+    using {cache_type}<{typename},{sets},{ways},{next_typename}>::{cache_type};
 }};
 '''
     return cache_decl
@@ -75,6 +79,8 @@ f'''{AUTOGEN_HEADER}
 #include "cache.h"
 #include "dram.h"
 {ptw_inc}
+
+#include "cache/other_impl/all.h"
 
 #include <memory>
 

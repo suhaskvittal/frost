@@ -20,17 +20,6 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr DRAMCommandType READ_CMD = (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
-                                        ? DRAMCommandType::READ
-                                        : DRAMCommandType::READ_PRECHARGE;
-
-constexpr DRAMCommandType WRITE_CMD = (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
-                                        ? DRAMCommandType::WRITE
-                                        : DRAMCommandType::WRITE_PRECHARGE;
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 template <class T> inline T sqr(T x) { return x*x; }
 
 void
@@ -98,22 +87,23 @@ DRAMChannel::tick()
         {
             bool preab_issued = try_and_issue_ref(ra, s_refreshes_, s_precharges_);
             if (preab_issued)
+            {
                 active_buffer_.clear();
+
+                if (in_write_mode_)  // This is the only situation where we are transitioning:
+                    update_modal_stats_post_transition();
+
+                in_write_mode_ = false;
+                in_transition_ = false;
+            }
         }
     }
 
     try_switch_to_write_mode();
     if (active_buffer_.empty() && in_transition_)
     {
-        if (in_write_mode_)
-        {
-            // Update stats:
-#if defined(DRAM_TRACK_ADVANCED_STATS)
-            dram_update_write_distribution_stats(writes_issued_per_bank_, 
-                                                    s_tot_write_issue_std_, s_tot_write_issue_minmax_diff_);
-#endif
-            writes_issued_per_bank_.fill(0);
-        }
+        update_modal_stats_post_transition();
+
         in_write_mode_ = !in_write_mode_;
         in_transition_ = false;
     }
@@ -126,6 +116,9 @@ DRAMChannel::tick()
 inline bool
 trans_add(DRAMChannel::in_queue_type& q, DRAMChannel::pending_type& p, Transaction&& t, size_t qsize)
 {
+    if (q.size() >= qsize)
+        return false;
+
     p.insert(t.address);
     q.emplace_back(std::move(t));
     return true;
@@ -191,7 +184,8 @@ DRAMChannel::deadlock_find_inst(const inst_ptr inst) const
             else
             {
                 size_t q_pos = std::distance(write_queue_.begin(), q_it);
-                std::cerr << "\tactive buffer entry B" << b << " found in write queue position " << q_pos << "\n";
+                std::cerr << "\tactive buffer entry B" << b 
+                            << " found in write queue position " << q_pos << "\n";
             }
         }
         return true;
@@ -213,32 +207,24 @@ DRAMChannel::try_switch_to_write_mode()
         return;
 
     bool drain_cond_1 = write_queue_.size() >= high_watermark_;
-    bool drain_cond_2 = write_queue_.size() > low_watermark_ && read_queue_.empty();
+    bool drain_cond_2 = write_queue_.size() >= low_watermark_ && read_queue_.empty();
 
     if (!drain_cond_1 && !drain_cond_2)
         return;
 
+    // Setup number of writes per bank:
     const size_t num_writes = write_queue_.size();
-
-    size_t writes_per_bank = num_writes / DRAM_TOT_BANKS_PER_CHANNEL;
     if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
     {
-        // Reocompute `writes_per_bank` accordingly:
+        size_t writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
         if (OPT_DRAM_WRITE_SYNC_COUNT == 0)
             writes_per_bank = std::max(static_cast<size_t>(1), writes_per_bank);
-        else
-            writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
-
-        size_t max_writes = writes_per_bank * DRAM_TOT_BANKS_PER_CHANNEL;
 
         writes_to_drain_per_bank_.fill(OPT_DRAM_WRITE_SYNC_MISS_COST * writes_per_bank);
-        tot_writes_to_drain_ = std::min(num_writes, max_writes);
     }
     else
-    {
         writes_to_drain_per_bank_.fill(num_writes);
-        tot_writes_to_drain_ = num_writes;
-    }
+
     ++s_num_drains_;
     s_tot_read_occu_at_drain_ += read_queue_.size();
     s_tot_write_occu_at_drain_ += write_queue_.size();
@@ -276,10 +262,10 @@ DRAMChannel::issue_next_command()
     auto [ready_cmd, opt_q_entry] = select_ready_command();
     if (cmd_is_invalid(ready_cmd.type))
         return;
+
     update_dram_state(state_, ready_cmd);
 
     size_t bank_idx = dram_bank_idx(ready_cmd.address);
-
     if (cmd_is_cas(ready_cmd.type))
     {
         auto& q_entry = opt_q_entry.value();
@@ -306,8 +292,6 @@ DRAMChannel::issue_next_command()
         }
         else
         {
-            --tot_writes_to_drain_;
-            
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
                 ssize_t write_cost = q_entry.is_row_buffer_hit ? OPT_DRAM_WRITE_SYNC_HIT_COST 
@@ -320,14 +304,14 @@ DRAMChannel::issue_next_command()
             ++writes_issued_per_bank_[bank_idx];
             ++s_bank_usage_.writes[bank_idx];
         }
-        active_buffer_.erase(dram_bank_idx(ready_cmd.address));
+        active_buffer_.erase(bank_idx);
     }
     else 
     {
         if (cmd_is_act(ready_cmd.type))
         {
             ++s_activates_;
-            active_buffer_.insert(dram_bank_idx(ready_cmd.address));
+            active_buffer_.insert(bank_idx);
         }
         else {
             ++s_precharges_;
@@ -335,10 +319,6 @@ DRAMChannel::issue_next_command()
         }
     }
     // additional stats:
-#if defined(DRAM_TRACK_ADVANCED_STATS)
-    update_wrw_state(ready_cmd);
-#endif
-
 #if defined(DRAM_ENABLE_LOGGER)
     tmp_logger_ << "selected command: " << ready_cmd << "\n";
     if (cmd_is_cas(ready_cmd.type))
@@ -357,7 +337,6 @@ DRAMChannel::select_ready_command()
     SchedulerState algo_state{};
 
     auto& q = in_write_mode_ ? write_queue_ : read_queue_;
-    algo_state.is_write_mode = in_write_mode_;
 
     std::vector<bank_ready_cmd_type> 
         bank_ready_cmds(DRAM_TOT_BANKS_PER_CHANNEL, std::make_pair(DRAMCommand(), q.end()));
@@ -379,10 +358,7 @@ DRAMChannel::select_ready_command()
         if (in_write_mode_)
         {
             if (pending_reads_.count(q_it->trans.address))
-            {
-                in_transition_ = true;
-                break;
-            }
+                continue;
 
             if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
             {
@@ -400,8 +376,11 @@ DRAMChannel::select_ready_command()
         {
             if (b.open_row == row)
                 type = scheduler_get_cas_command(q_it, q, algo_state, b);
-            else if (!active_buffer_.count(bank_idx) && scheduler_allow_demand_precharge(q_it, q, algo_state, b))
+            else if (!active_buffer_.count(bank_idx)
+                    && scheduler_allow_demand_precharge(q_it, q, algo_state, b))
+            {
                 type = DRAMCommandType::PRECHARGE;
+            }
         }
         else
             type = DRAMCommandType::ACTIVATE;
@@ -442,8 +421,11 @@ DRAMChannel::select_ready_command()
     }
 
     // Update state:
-    if (in_write_mode_ && (!any_write_is_possible || tot_writes_to_drain_ == 0))
+    if (in_write_mode_ 
+            && (!any_write_is_possible || (!read_queue_.empty() && write_queue_.size() < low_watermark_)))
+    {
         in_transition_ = true;
+    }
 
     return std::make_tuple(ready_cmd, q_entry);
 }
@@ -452,46 +434,100 @@ DRAMChannel::select_ready_command()
 ////////////////////////////////////////////////////////////////////////////
 
 void
-DRAMChannel::update_wrw_state(const DRAMCommand& ready_cmd)
+DRAMChannel::update_modal_stats_post_transition()
 {
-    if (!cmd_is_cas(ready_cmd.type))
-        return;
-    // Current logger setup: we only write to `dram_logger_` if the sequence is of the form:
-    //  (1) a write
-    //  (2) one or more reads
-    //  (3) a write
-    switch (wrw_seq_state_)
+    if (in_write_mode_)
     {
-    case WRWSequenceState::NEED_WRITE:
-        if (cmd_is_write(ready_cmd.type))
+        // Update drain latency stats:
+        s_tot_drain_latency_ += GL_DRAM_CYCLE - drain_start_cycle_;
+
+#if defined(DRAM_TRACK_ADVANCED_STATS)
+        dram_update_write_distribution_stats(writes_issued_per_bank_,
+                                                s_tot_write_issue_std_,
+                                                s_tot_write_issue_minmax_diff_);
+#endif
+        writes_issued_per_bank_.fill(0);
+    }
+    else
+    {
+        drain_start_cycle_ = GL_DRAM_CYCLE;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+bool
+DRAMChannel::scheduler_allow_demand_precharge(
+        in_queue_type::const_iterator q_it,
+        const in_queue_type& q,
+        const SchedulerState& s,
+        const DRAMBankState& b)
+{
+    if constexpr (DRAM_SCHED_POLICY == DRAMSchedPolicy::FCFS)
+        return true;
+    else
+    {
+        size_t bank_idx = dram_bank_idx(q_it->trans.address);
+        bool any_pending_row_hits = std::any_of(std::next(q_it), q.end(),
+                                            [bank_idx, row=b.open_row.value()] (const auto& e)
+                                            {
+                                                return dram_bank_idx(e.trans.address) == bank_idx
+                                                        && dram_row(e.trans.address) == row;
+                                            });
+        return s.is_first.at(bank_idx) && (!any_pending_row_hits || b.num_cas_to_open_row >= 4);
+    }
+}
+
+DRAMCommandType
+DRAMChannel::scheduler_get_cas_command(
+        in_queue_type::const_iterator q_it,
+        const in_queue_type& q,
+        const SchedulerState& s,
+        const DRAMBankState& b)
+{
+    // If we have a closure hint, then use it:
+    DRAMClosureHint hint = q_it->trans.dram_closure_hint;
+
+    if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
+        return in_write_mode_ ? DRAMCommandType::WRITE : DRAMCommandType::READ;
+    else if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::CLOSE)
+        return in_write_mode_ ? DRAMCommandType::WRITE_PRECHARGE : DRAMCommandType::READ_PRECHARGE;
+    else
+    {
+        // A bit more complex: here, we will check the rest of the queue for potential row buffer hits
+        bool keep_open = true;
+
+        // Close the row if we are transitioning (no more ACTs)
+        keep_open &= !in_transition_; // close the row if we are transitioning (will get no more ACTs).
+
+        // Check if we are about to transition:
+        if (keep_open)
         {
-            wrw_seq_state_ = WRWSequenceState::NEED_READ;
-            wrw_first_write_cycle_ = GL_DRAM_CYCLE;
+            if (in_write_mode_ && (!read_queue_.empty() && write_queue_.size() <= low_watermark_+4))
+                keep_open = false;
+            if (!in_write_mode_ && (read_queue_.size() < 4 || write_queue_.size() >= high_watermark_-4))
+                keep_open = false;
         }
-        break;
-    case WRWSequenceState::NEED_READ:
-        if (cmd_is_write(ready_cmd.type))
-            wrw_first_write_cycle_ = GL_DRAM_CYCLE;
+
+        if (keep_open)
+        {
+            size_t bank_idx = dram_bank_idx(q_it->trans.address);
+            bool any_pending_hits = std::any_of(std::next(q_it), q.end(),
+                                            [bank_idx, row=b.open_row.value()] (const auto& e)
+                                            {
+                                                return dram_bank_idx(e.trans.address) == bank_idx
+                                                        && dram_row(e.trans.address) == row;
+                                            });
+            keep_open &= any_pending_hits && b.num_cas_to_open_row < 3;
+        }
+
+        keep_open &= (hint != DRAMClosureHint::CLOSE_AFTER);
+
+        if (keep_open)
+            return in_write_mode_ ? DRAMCommandType::WRITE : DRAMCommandType::READ;
         else
-            wrw_seq_state_ = WRWSequenceState::IN_READS;
-        break;
-    case WRWSequenceState::IN_READS:
-        // Can only promote in this state.
-        if (cmd_is_write(ready_cmd.type))
-        {
-            wrw_seq_state_ = WRWSequenceState::NEED_READ;
-            for (size_t i = 0; i < 4; i++)
-            {
-                uint32_t max_cyc = 1L << (i+8);
-                if (GL_DRAM_CYCLE - wrw_first_write_cycle_ <= max_cyc)
-                    ++s_num_seq_[i];
-            }
-            wrw_first_write_cycle_ = GL_DRAM_CYCLE;
-        }
-        else if (GL_DRAM_CYCLE - wrw_first_write_cycle_ > 2048)
-            // Reset the state as we are taking too long to reach the next write.
-            wrw_seq_state_ = WRWSequenceState::NEED_WRITE;
-        break;
+            return in_write_mode_ ? DRAMCommandType::WRITE_PRECHARGE : DRAMCommandType::READ_PRECHARGE;
     }
 }
 

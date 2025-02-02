@@ -3,6 +3,8 @@
  *  date:   31 January 2025
  * */
 
+#include "dram/address.h"
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +54,7 @@ __TEMPLATE_CLASS__::warmup_access(uint64_t address, bool write)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::warmup_fill(uint64_t address, bool dirty)
 {
-    auto out = fill(address, 1, dirty);
+    auto out = fill(address, 1, dirty)[0];
     if (out.entry.valid && out.entry.dirty)
         next_->warmup_access(out.entry.address, true);
 }
@@ -80,10 +82,10 @@ __TEMPLATE_CLASS__::tick()
     // Send the next writeback to `next_`
     if (!writeback_queue_.empty())
     {
-        const auto& e = writeback_queue_.front();
-        if (next_->can_accept(e.trans.address, e.trans.type) && next_->add_incoming(e.trans))
+        const auto& trans = writeback_queue_.front();
+        if (next_->can_accept(trans.address, trans.type) && next_->add_incoming(trans))
         {
-            pending_writebacks_.erase(e.trans.address);
+            pending_writebacks_.erase(trans.address);
             writeback_queue_.pop_front();
         }
     }
@@ -258,7 +260,7 @@ __TEMPLATE_CLASS__::invalidate(uint64_t address)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::fill_result_type
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
 __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool dirty)
 {
     fill_result_type out;
@@ -279,7 +281,7 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool dirty)
         out = fill_result_type(std::move(*it), 0);
     }
     init_entry(*it, address, num_refs, dirty);
-    return out;
+    return multi_fill_result_type{out};
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -288,8 +290,7 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool dirty)
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
 __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t address, size_t num_refs, bool dirty)
 {
-    multi_fill_result_type out;
-    out.push_back(fill(address, num_refs, dirty));
+    auto out = fill(address, num_refs, dirty);
 
     // Check if the writeback queue even has space for the writeback:
     if (writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
@@ -298,6 +299,39 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t address, size_t num_refs,
         auto lru_it = get_way_in_lru_pos(s, 0);
         if (lru_it->dirty)
             out.emplace_back(*lru_it, 0);
+    }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
+__TEMPLATE_CLASS__::fill_with_same_set_row_harvest(uint64_t address, size_t num_refs, bool dirty)
+{
+    multi_fill_result_type out = fill(address, num_refs, dirty);
+    const auto& primary_victim = out.front();
+
+    if (primary_victim.entry.valid && primary_victim.entry.dirty)
+    {
+        auto& s = get_set(address);
+        uint64_t row = dram_row(primary_victim.entry.address);
+
+        std::unordered_set<uint64_t> visited;
+        while (true)
+        {
+            auto it = std::find_if(s.begin(), s.end(),
+                            [row, &visited] (const auto& e) 
+                            { 
+                                return e.valid && e.dirty 
+                                        && !visited.count(e.address) && row == dram_row(e.address);
+                            });
+            if (it == s.end())
+                break;
+            size_t p = get_lru_pos(*it, s);
+            out.emplace_back(*it, p);
+            visited.insert(it->address);
+        }
     }
     return out;
 }
@@ -417,18 +451,55 @@ __TEMPLATE_CLASS__::do_next_fill()
     }
 
     // Handle eviction + any writeback if necessary
-    fill_result_type v = fill(trans.address, refcnt, !is_read);
-    if (v.entry.valid)
+    multi_fill_result_type eviction_list;
+    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NORMAL)
+        eviction_list = fill(trans.address, refcnt, !is_read);
+    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
+        eviction_list = fill_with_eager_writeback(trans.address, refcnt, !is_read);
+    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
+        eviction_list = fill_with_same_set_row_harvest(trans.address, refcnt, !is_read);
+    else
     {
-        ++s_fills_[trans.coreid];
-        ++s_evictions_;
-        if (v.entry.dirty)
-        {
-            ++s_writebacks_;
-            Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, v.entry.address);
+        std::cerr << cache_name_ << ": unknown writeback mode\n";
+        exit(1);
+    }
+    ++s_fills_[trans.coreid]; 
 
-            writeback_queue_.emplace_back(wb_trans);
-            pending_writebacks_.insert(v.entry.address);
+    for (size_t i = 0; i < eviction_list.size(); i++)
+    {
+        const auto& e = eviction_list[i].entry;
+
+        // If this is the first entry, it is the actual victim line
+        if (i == 0)
+        {
+            ++s_evictions_;
+            if (!e.dirty)
+                break;
+        }
+
+        ++s_writebacks_;
+        if (i > 0)
+            ++s_eager_writebacks_;
+
+        Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, e.address);
+        // Set DRAM row closure hint if possible:
+        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
+        {
+//          wb_trans.dram_closure_hint = eviction_list.size() > i+1 ? DRAMClosureHint::KEEP_OPEN
+//                                                                  : DRAMClosureHint::CLOSE_AFTER;
+        }
+        writeback_queue_.push_back(wb_trans);
+        pending_writebacks_.insert(e.address);
+        
+        // If this is an eager writeback, we may need to do more:
+        if (i > 0)
+        {
+            // Clean the line in the cache:
+            mark(e.address, false);
+
+            // Record LRU position of eager writebacks:
+            s_ssrh_tot_lru_pos_[i-1] += eviction_list[i].lru_pos;
+            ++s_ssrh_num_harvests_[i-1];
         }
     }
 

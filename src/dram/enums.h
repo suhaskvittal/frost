@@ -4,7 +4,8 @@
 enum class DRAMPagePolicy
 {
     OPEN,
-    CLOSE
+    CLOSE,
+    HYBRID
 };
 
 enum class DRAMSchedPolicy
@@ -17,6 +18,13 @@ enum class DRAMWritePolicy
 {
     ASYNC,  // Writes are issued when they are ready
     SYNC    // Writes are issued altogether by each command queue
+};
+
+enum class DRAMClosureHint
+{
+    NONE,
+    KEEP_OPEN,
+    CLOSE_AFTER
 };
 
 #endif  // DRAM_ENUMS_h

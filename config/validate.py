@@ -57,7 +57,9 @@ def validate_cache_section(cfg) -> bool:
         ('fill_queue_size', 4),
         ('read_ports', 3),
         ('write_ports', 2),
-        ('fill_ports', 2)
+        ('fill_ports', 2),
+        ('writeback_mode', 'NORMAL'),
+        ('cache_type', 'Cache')
     ]
     # Now check if the number of sets or the size of the cache
     # is specified.

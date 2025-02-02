@@ -92,7 +92,6 @@ else()
                 src/dram.cpp
                 src/dram/channel.cpp
                 src/dram/command.cpp
-                src/dram/scheduler.cpp
                 src/dram/state.cpp)
 endif()
 

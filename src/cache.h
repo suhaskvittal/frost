@@ -43,7 +43,7 @@
  *      -- size_t NUM_WRITE_PORTS
  *      -- size_t NUM_FILL_PORTS
  *
- *      -- CacheWritebackMode WRITEBACK_MODE
+ *      -- CacheWBMode WRITEBACK_MODE
  *
  *      -- bool WRITE_ALLOCATE
  * */
@@ -74,14 +74,14 @@ public:
     uint32_t s_writebacks_ =0;
     uint32_t s_eager_writebacks_ =0;
 
-    uint32_t s_load_bypasses_ =0;
-    uint32_t s_writeback_bypasses_ =0;
-
-    uint32_t s_dead_block_predicts_ =0;
-    uint32_t s_dead_block_evictions_ =0;
-
     uint32_t s_dueling_pol1_installs_ =0;
     uint32_t s_dueling_pol2_installs_ =0;
+    /*
+     * Stats exclusive to same-set-row-harvest:
+     * */
+    using ssrh_lru_pos_array = std::array<uint32_t, 4>;
+    ssrh_lru_pos_array s_ssrh_tot_lru_pos_{};
+    ssrh_lru_pos_array s_ssrh_num_harvests_{};
 
     out_queue_type outgoing_queue_;
 
@@ -105,7 +105,7 @@ protected:
 
     using cset_array =      std::array<cset_type, NUM_SETS>;
     using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
-    using wb_queue_type =   std::deque<WBQueueEntry>;
+    using wb_queue_type =   std::deque<Transaction>;
     using fill_queue_type = std::deque<Transaction>;
 
     constexpr static size_t    LEADER_SETS = 64;
@@ -185,8 +185,9 @@ protected:
     /*
      * Cache fill implementations:
      * */
-    virtual fill_result_type       fill(uint64_t, size_t num_mshr_refs, bool dirty);
+    virtual multi_fill_result_type fill(uint64_t, size_t num_mshr_refs, bool dirty);
     virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t num_refs, bool dirty); 
+    virtual multi_fill_result_type fill_with_same_set_row_harvest(uint64_t, size_t num_refs, bool dirty);
 
     virtual way_iterator find_victim(cset_type&);
     /*

@@ -95,7 +95,7 @@ DRAM::tick()
 ////////////////////////////////////////////////////////////////////////////
 
 #define CREATE_VEC_STAT(stat)\
-    VecStat<uint32_t, DRAM_CHANNELS> stat;\
+    VecStat<uint64_t, DRAM_CHANNELS> stat;\
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
         stat[i] = channels_[i]->s_##stat##_;\
     }\
@@ -118,6 +118,7 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(num_drains)
     CREATE_VEC_STAT(tot_read_occu_at_drain)
     CREATE_VEC_STAT(tot_write_occu_at_drain)
+    CREATE_VEC_STAT(tot_drain_latency)
 
     VecStat<double, DRAM_CHANNELS> rd_rbhr = vec_elwise_mean(read_row_hits, reads),
                                    wr_rbhr = vec_elwise_mean(write_row_hits, writes),
@@ -125,7 +126,9 @@ DRAM::print_stats(std::ostream& out)
                                    write_latency = vec_elwise_mean(tot_write_latency, writes),
                                    mean_read_occu_at_drain = vec_elwise_mean(tot_read_occu_at_drain, num_drains),
                                    mean_write_occu_at_drain = vec_elwise_mean(tot_write_occu_at_drain, num_drains),
-                                   writes_per_drain = vec_elwise_mean(writes, num_drains);
+                                   writes_per_drain = vec_elwise_mean(writes, num_drains),
+                                   drain_latency = vec_elwise_mean(tot_drain_latency, num_drains),
+                                   drain_fraction = mean(tot_drain_latency, GL_DRAM_CYCLE);
     // Get bank usage stats:
     VecStat<double, DRAM_CHANNELS> bank_read_std,
                                     bank_write_std;
@@ -159,6 +162,8 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "WRITES_PER_DRAIN", writes_per_drain, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "MEAN_WRITE_OCCUPANCY_AT_DRAIN", mean_write_occu_at_drain, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "DRAIN_LATENCY", drain_latency, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "FRACTION_OF_TIME_IN_WRITE_MODE", drain_fraction, VecAccMode::GMEAN);
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)
     out << "\n";
@@ -172,13 +177,6 @@ DRAM::print_stats(std::ostream& out)
                                    mean_write_queue_minmax_diff = vec_elwise_mean(tot_write_queue_minmax_diff, num_drains),
                                    mean_write_issue_std = vec_elwise_mean(tot_write_issue_std, num_drains),
                                    mean_write_issue_minmax_diff = vec_elwise_mean(tot_write_issue_minmax_diff, num_drains);
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        uint32_t max_cyc = 1L << (i+8);
-        std::array<uint32_t, 2> vec{channels_[0]->s_num_seq_[i], channels_[1]->s_num_seq_[i]};
-        print_vecstat(out, "DRAM", "NUM_WR+W_SEQ_LE_" + std::to_string(max_cyc), vec);
-    }
 
     print_vecstat(out, "DRAM", "MEAN_WRITE_QUEUE_STANDARD_DEVIATION", mean_write_queue_std, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "MEAN_WRITE_QUEUE_MINMAX_DIFFERENCE", mean_write_queue_minmax_diff, VecAccMode::GMEAN);

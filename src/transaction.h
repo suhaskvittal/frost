@@ -7,6 +7,7 @@
 #define TRANSACTION_h
 
 #include "instruction.h"
+#include "dram/enums.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -17,16 +18,6 @@
 ////////////////////////////////////////////////////////////////////////////
 
 enum class TransactionType { READ, WRITE, PREFETCH, TRANSLATION };
-
-inline bool trans_is_read(TransactionType t)
-{
-    return t != TransactionType::WRITE;
-}
-
-inline bool trans_is_write(TransactionType t)
-{
-    return t == TransactionType::WRITE;
-}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -49,12 +40,8 @@ struct Transaction
 
     uint64_t address;
     bool     address_is_ip;
-    /*
-     * For the `NEXT_LINE` writeback mode, where the LLC directs DRAM whether or not to close
-     * a row after a write command.
-     * */
-    bool dram_write_hint_valid =false;
-    bool dram_write_hint_do_autopre =false;
+
+    DRAMClosureHint dram_closure_hint =DRAMClosureHint::NONE;
 
     Transaction(uint8_t cid, inst_ptr inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
         :coreid(cid),
@@ -85,6 +72,19 @@ struct Transaction
 #endif
     }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline bool trans_is_read(TransactionType t)
+{
+    return t != TransactionType::WRITE;
+}
+
+inline bool trans_is_write(TransactionType t)
+{
+    return t == TransactionType::WRITE;
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

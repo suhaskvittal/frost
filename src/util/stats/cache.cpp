@@ -23,8 +23,23 @@ print_llc_stats(std::ostream& out)
 
     if (repl_uses_set_dueling(LLCache::REPL))
     {
+        out << "\n";
         print_stat(out, "LLC", "POL_ONE_FILLS", GL_LLC->s_dueling_pol1_installs_);
         print_stat(out, "LLC", "POL_TWO_FILLS", GL_LLC->s_dueling_pol2_installs_);
+    }
+    
+    if (LLCache::WRITEBACK_MODE != CacheWBMode::NORMAL)
+    {
+        out << "\n";
+        print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);
+        if (LLCache::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
+        {
+            for (size_t i = 0; i < GL_LLC->s_ssrh_tot_lru_pos_.size(); i++)
+            {
+                double elru_pos = mean(GL_LLC->s_ssrh_tot_lru_pos_[i], GL_LLC->s_ssrh_num_harvests_[i]);
+                print_stat(out, "LLC", "SSRH_WB" + std::to_string(i+1) + "_LRU_POSITION", elru_pos);
+            }
+        }
     }
 }
 

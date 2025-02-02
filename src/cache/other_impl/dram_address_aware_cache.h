@@ -18,29 +18,39 @@ extern size_t OPT_DRAM_ADDRESS_AWARE_CACHE_NUM_BITS;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_PARENT__ Cache<SETS,WAYS,POL>
+#define __TEMPLATE_PARENT__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-template <size_t SETS, size_t WAYS, CacheReplPolicy POL>
-class DRAMAddressAwareCache : public Cache<SETS, WAYS, POL>
+/*
+ * Only modification is to the set indexing function:
+ * */
+template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
+class DRAMAddressAwareCache : public __TEMPLATE_PARENT__
 {
 public:
     using __TEMPLATE_PARENT__::Cache;
-    using __TEMPLATE_PARENT__::fill_result_type;
 
-    using fill_result_type_with_pos = std::pair<fill_result_type, size_t>;
-    using multi_fill_result_type = std::tuple<fill_result_type, std::vector<fill_result_type_with_pos>>;
-
-    multi_fill_result_type fill_with_multiline_writeback(uint64_t);
-
-
-    static size_t _get_set_index(uint64_t);
-private:
-    inline size_t get_set_index(uint64_t x) const override
+    size_t set_index(uint64_t x) const override
     {
-        return DRAMAddressAwareCache::_get_set_index(x);
+        const size_t skip_count = OPT_DRAM_ADDRESS_AWARE_CACHE_SKIP_BITS;
+        const size_t col_count = OPT_DRAM_ADDRESS_AWARE_CACHE_NUM_BITS;
+
+        size_t idx = 0;
+
+        // Initialize dram column bit positions
+        size_t idx_pos = 0;
+        size_t prev_pos = 0;
+        for (size_t i = skip_count; i < skip_count+col_count; i++)
+        {
+            size_t pos = dram_col_bit_index(i);
+            size_t pos_diff = pos-prev_pos;
+            idx |= ((x >> prev_pos) & ((1L << pos_diff)-1)) << idx_pos;
+            idx_pos += pos_diff;
+            prev_pos = pos+1;
+        }
+        idx |= (x >> prev_pos) << idx_pos;
+        return fast_mod<NUM_SETS>(idx);
     }
 };
 
