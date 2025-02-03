@@ -145,7 +145,7 @@ private:
      *  Other:
      *      `in_write_mode_`: this is true if the DRAM is issuing writes
      *      `in_transition_`: this is true if the DRAM is finishing up any straggling ACTs
-     *      `drain_start_cycle_`: for computing `s_tot_drain_latency_` -- the start cycle of a write drain
+     *      `drain_start_cycle_`: for computing `s_tot_drain_latency_` -- the start cycle of a write drai
      * */
     write_drain_array write_budget_per_bank_{};
     bool in_write_mode_ =false;
@@ -211,7 +211,14 @@ private:
             const SchedulerState&,
             const DRAMBankState&);
     /*
-     *
+     * Auxilliary function for updating the LLC. This needs to be a template so functions that are
+     * not defined in `Cache` but in a different class (i.e., `BankBalancedCache`) can be used.
+     * */
+    template <class CACHE_TYPE>
+    void update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>&);
+
+    /*
+     * Useful inlines for accessing bank references.
      * */
     inline DRAMBankState& get_bank_ref_from_idx(size_t ii)
     {
@@ -237,17 +244,14 @@ private:
 
 #include "cache/other_impl/all.h"
 
-/*
- * Here are just some auxilliary functions for updating the LLC.
- * */
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
-template <class CACHE_TYPE>
-void update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>& c, size_t channel_id, size_t writes_drained_per_bank)
+template <class CACHE_TYPE> void
+DRAMChannel::update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>& c)
 {
     if constexpr (is_bank_balanced_cache<typename CACHE_TYPE::parent_type>::value)
-    {
-        c->handle_write_drain(channel_id, writes_drained_per_bank);
-    }
+        c->handle_write_drain(channel_id_, writes_issued_per_bank_);
 }
 
 ////////////////////////////////////////////////////////////////////////////

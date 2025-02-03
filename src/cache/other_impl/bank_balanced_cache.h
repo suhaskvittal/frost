@@ -24,6 +24,8 @@ protected:
     using write_counter_array = std::array<std::array<int8_t, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
 
     constexpr static size_t CRITICAL_WRITES = (DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL) / 2;
+    constexpr static int8_t CTR_MIN = 0;
+    constexpr static int8_t CTR_MAX = 64;
 
     write_counter_array per_bank_write_counters_{};
 public:
@@ -34,6 +36,7 @@ public:
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
 
     void handle_write_drain(size_t channel_id, size_t writes_drained_per_bank);
+    void handle_write_drain(size_t channel_id, const write_counts_array&);
 protected:
     multi_fill_result_type fill(uint64_t, size_t, bool) override;
 

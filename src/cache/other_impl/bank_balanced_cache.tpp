@@ -17,12 +17,20 @@
 __TEMPLATE_HEADER__ inline void
 __TEMPLATE_CLASS__::handle_write_drain(size_t channel_id, size_t w)
 {
-    constexpr int8_t CTR_MIN = 0;
-    constexpr int8_t CTR_MAX = 64;
-
     for (auto& c : per_bank_write_counters_[channel_id])
     {
         c -= w;
+        c = std::clamp(c, CTR_MIN, CTR_MAX);
+    }
+}
+
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::handle_write_drain(size_t channel_id, const write_counts_array& w)
+{
+    for (size_t i = 0; i < w.size(); i++)
+    {
+        auto& c = per_bank_write_counters_[channel_id][i];
+        c -= w.at(i);
         c = std::clamp(c, CTR_MIN, CTR_MAX);
     }
 }
@@ -42,6 +50,7 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t num_refs, bool dirty)
             size_t bank_idx = dram_bank_idx(v.entry.address);
             size_t channel = dram_channel(v.entry.address);
             ++per_bank_write_counters_[channel][bank_idx];
+            break;
         }
     }
     return out;

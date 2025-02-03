@@ -207,7 +207,7 @@ DRAMChannel::try_switch_to_write_mode()
         return;
 
     bool drain_cond_1 = write_queue_.size() >= high_watermark_;
-    bool drain_cond_2 = write_queue_.size() > low_watermark_ && read_queue_.empty();
+    bool drain_cond_2 = !write_queue_.empty() && read_queue_.empty();
 
     if (!drain_cond_1 && !drain_cond_2)
         return;
@@ -219,17 +219,22 @@ DRAMChannel::try_switch_to_write_mode()
         size_t writes_per_bank = OPT_DRAM_WRITE_SYNC_COUNT;
         if (OPT_DRAM_WRITE_SYNC_COUNT == 0)
         {
-            writes_per_bank = num_writes >> numeric_traits<DRAM_TOT_BANKS_PER_CHANNEL>::log2;
+            writes_per_bank = num_writes / DRAM_TOT_BANKS_PER_CHANNEL;
             writes_per_bank = std::max(static_cast<size_t>(1), writes_per_bank);
         }
 
         write_budget_per_bank_.fill(OPT_DRAM_WRITE_SYNC_MISS_COST * writes_per_bank);
 
         // Update the LLC (possibly -- depends on LLC type).
-        update_cache_post_write_drain(GL_LLC, channel_id_, writes_per_bank);
+//      update_cache_post_write_drain(GL_LLC, channel_id_, writes_per_bank);
     }
     else
+    {
         write_budget_per_bank_.fill(num_writes);
+
+        // Update the LLC (possibly -- depends on LLC type).
+//      update_cache_post_write_drain(GL_LLC, channel_id_, num_writes / DRAM_TOT_BANKS_PER_CHANNEL);
+    }
 
     ++s_num_drains_;
     s_tot_read_occu_at_drain_ += read_queue_.size();
@@ -464,6 +469,7 @@ DRAMChannel::update_modal_stats_post_transition()
                                                 s_tot_write_issue_std_,
                                                 s_tot_write_issue_minmax_diff_);
 #endif
+        update_cache_post_write_drain(GL_LLC);
         writes_issued_per_bank_.fill(0);
     }
     else
