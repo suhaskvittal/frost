@@ -33,6 +33,8 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
 f'''
 struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typename}>
 {{
+    using parent_type = {cache_type}<{typename}, {sets}, {ways}, {next_typename}>;
+
     constexpr static size_t NUM_SETS =         {sets};
     constexpr static size_t NUM_WAYS =         {ways};
     constexpr static CacheReplPolicy REPL =    CacheReplPolicy::{repl};
@@ -54,7 +56,7 @@ struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typena
 
     constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
 
-    using {cache_type}<{typename},{sets},{ways},{next_typename}>::{cache_type};
+    using parent_type::{cache_type};
 }};
 '''
     return cache_decl

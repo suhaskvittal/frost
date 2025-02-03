@@ -235,4 +235,22 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+#include "cache/other_impl/all.h"
+
+/*
+ * Here are just some auxilliary functions for updating the LLC.
+ * */
+
+template <class CACHE_TYPE>
+void update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>& c, size_t channel_id, size_t writes_drained_per_bank)
+{
+    if constexpr (is_bank_balanced_cache<typename CACHE_TYPE::parent_type>::value)
+    {
+        c->handle_write_drain(channel_id, writes_drained_per_bank);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 #endif  // DRAM_CHANNEL_h

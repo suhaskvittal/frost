@@ -224,6 +224,9 @@ DRAMChannel::try_switch_to_write_mode()
         }
 
         write_budget_per_bank_.fill(OPT_DRAM_WRITE_SYNC_MISS_COST * writes_per_bank);
+
+        // Update the LLC (possibly -- depends on LLC type).
+        update_cache_post_write_drain(GL_LLC, channel_id_, writes_per_bank);
     }
     else
         write_budget_per_bank_.fill(num_writes);
@@ -431,10 +434,15 @@ DRAMChannel::select_ready_command()
     }
 
     // Update state:
-    if (in_write_mode_ 
-            && (!any_write_is_possible || (!read_queue_.empty() && write_queue_.size() < low_watermark_)))
+    if (in_write_mode_)
     {
-        in_transition_ = true;
+        if (!any_write_is_possible)
+            in_transition_ = true;
+        if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::ASYNC)
+        {
+           if (!read_queue_.empty() && write_queue_.size() < low_watermark_)
+                in_transition_ = true;
+        }
     }
 
     return std::make_tuple(ready_cmd, q_entry);
