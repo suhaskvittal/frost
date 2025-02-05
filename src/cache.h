@@ -243,7 +243,17 @@ protected:
         return csets_.at(set_index(x));
     }
 
-    inline void enqueue_writeback(Transaction trans)
+    virtual inline bool allow_access(void)
+    {
+        return mshr_.size() < IMPL::NUM_MSHR && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE;
+    }
+
+    virtual inline bool allow_fill(void)
+    {
+        return !fill_queue_.empty() && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE;
+    }
+
+    virtual inline void enqueue_writeback(Transaction trans)
     {
         writeback_queue_.push_back(trans);
         pending_writebacks_.insert(trans.address);

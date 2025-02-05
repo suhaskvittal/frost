@@ -79,8 +79,12 @@ DRAM::tick()
                 if (cyc > GL_DRAM_CYCLE)
                     break;
                 if (GL_LLC->can_accept_fill())
+                {
                     GL_LLC->add_incoming_fill(trans);
-                q.pop();
+                    q.pop();
+                }
+                else
+                    break;
             }
             ch->tick();
         }

@@ -210,7 +210,13 @@ __TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
     {
         const auto& [address, e] = *mshr_it;
         std::cerr << "\tfound instruction in mshr: is fired = " << e.is_fired << ", cycle fired = "
-            << e.cycle_fired << "\n";
+            << e.cycle_fired
+            << ", read queue occupancy = " << read_queue_.size()
+            << ", write_queue occupancy = " << write_queue_.size()
+            << ", prefetch queue occupancy = " << prefetch_queue_.size()
+            << ", mshr occupancy = " << mshr_.size()
+            << ", writeback queue occupancy = " << writeback_queue_.size()
+            << "\n";
         return true;
     }
 
@@ -368,7 +374,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::do_next_access(bool do_read)
 {
-    if (mshr_.size() >= IMPL::NUM_MSHR || writeback_queue_.size() >= IMPL::WB_QUEUE_SIZE)
+    if (!allow_access())
         return false;
 
     auto& q = do_read ? (read_queue_.empty() ? prefetch_queue_ : read_queue_)
@@ -435,7 +441,7 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::do_next_fill()
 {
-    if (fill_queue_.empty())
+    if (!allow_fill())
         return;
 
     const Transaction& trans = fill_queue_.front();

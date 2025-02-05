@@ -23,7 +23,7 @@ class BankBalancedCache : public __TEMPLATE_PARENT__
 protected:
     using write_counter_array = std::array<std::array<int8_t, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
 
-    constexpr static size_t CRITICAL_WRITES = 1;
+    constexpr static size_t CRITICAL_WRITES = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
     constexpr static int8_t CTR_MIN = 0;
     constexpr static int8_t CTR_MAX = 64;
 
@@ -40,7 +40,7 @@ public:
 protected:
     multi_fill_result_type fill(uint64_t, size_t, bool) override;
 
-    way_iterator find_victim(cset_type&);
+    way_iterator find_victim(cset_type&) override;
 
     way_iterator lru_mod(cset_type&, bool evict_dirty);
     way_iterator rrip_mod(cset_type&, bool evict_dirty);
