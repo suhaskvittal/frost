@@ -99,6 +99,7 @@ DRAMChannel::tick()
         }
     }
 
+    // Attempt to switch from read to write mode, or v.v.
     try_switch_to_write_mode();
     if (active_buffer_.empty() && in_transition_)
     {
@@ -107,7 +108,14 @@ DRAMChannel::tick()
         in_write_mode_ = !in_write_mode_;
         in_transition_ = false;
     }
+
+    // Try to issue from either the read or write queue:
     issue_next_command();
+
+    // If the write queue is looking empty, then request the LLC to get some writebacks so
+    // writes are available when the read queue becomes empty.
+    if (write_queue_.size() < virtual_write_queue_watermark_)
+        send_demand_writeback_request(GL_LLC);
 }
 
 ////////////////////////////////////////////////////////////////////////////

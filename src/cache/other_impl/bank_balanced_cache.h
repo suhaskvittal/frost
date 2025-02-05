@@ -23,7 +23,7 @@ class BankBalancedCache : public __TEMPLATE_PARENT__
 protected:
     using write_counter_array = std::array<std::array<int8_t, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
 
-    constexpr static size_t CRITICAL_WRITES = (DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL) / 2;
+    constexpr static size_t CRITICAL_WRITES = 1;
     constexpr static int8_t CTR_MIN = 0;
     constexpr static int8_t CTR_MAX = 64;
 

@@ -59,7 +59,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs,
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::lru(cset_type& s)
 {
-    return get_way_in_lru_pos(s,0);
+    return cset_get_way_in_lru_position(s.begin(), s.end(), 0);
 }
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
@@ -76,29 +76,6 @@ __TEMPLATE_CLASS__::rrip(cset_type& s)
     for (auto& x : s)
         x.rrpv -= v_it->rrpv;
     return v_it;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::get_way_in_lru_pos(cset_type& s, size_t p)
-{
-    if (p == 0)
-    {
-        return std::min_element(s.begin(), s.end(),
-                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
-    }
-    else if (p == IMPL::NUM_WAYS-1)  // The MRU position
-    {
-        return std::max_element(s.begin(), s.end(),
-                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
-    }
-    else // unfortunately, all other cases are rather hard: this is O(n^2) in the worst case.
-    {
-        return std::find_if(s.begin(), s.end(),
-                        [this, p, &s] (const auto& e) { return this->get_lru_pos(e, s) == p; });
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

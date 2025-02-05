@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
             { // Optional
                 {"w", "Number of warmup instructions", "10000000"},
                 {"s", "Number of instructions to simulate", "10000000"},
-                {"dram_wm_low", "DRAM Low Watermark", "0.1"},
+                {"dram_wm_low", "DRAM Low Watermark", "0.3"},
                 {"dram_wm_high", "DRAM High Watermark", "1.0"},
                 {"dram_wsync_count", "In DRAM_WRITE_POLICY = SYNC, number of writes to drain (per bank)", "0"},
                 {"dram_wsync_hit_cost", "Cost of a write hit", "0"},

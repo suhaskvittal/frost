@@ -298,7 +298,7 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(uint64_t address, size_t num_refs,
     if (writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
     {
         auto& s = get_set(address);
-        auto lru_it = get_way_in_lru_pos(s, 0);
+        auto lru_it = cset_get_way_in_lru_position(s.cbegin(), s.cend(), 0);
         if (lru_it->dirty)
             out.emplace_back(*lru_it, 0);
     }
@@ -330,7 +330,7 @@ __TEMPLATE_CLASS__::fill_with_same_set_row_harvest(uint64_t address, size_t num_
                             });
             if (it == s.end())
                 break;
-            size_t p = get_lru_pos(*it, s);
+            size_t p = cset_get_lru_position_of_entry(*it, s.cbegin(), s.cend());
             out.emplace_back(*it, p);
             visited.insert(it->address);
         }
@@ -489,8 +489,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         {
             wb_trans.dram_issue_priority = eviction_list.size()-1;
         }
-        writeback_queue_.push_back(wb_trans);
-        pending_writebacks_.insert(e.address);
+        enqueue_writeback(wb_trans);
         
         // If this is an eager writeback, we may need to do more:
         if (i > 0)

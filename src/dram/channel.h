@@ -125,6 +125,8 @@ public:
     const size_t channel_id_;
     const size_t low_watermark_;
     const size_t high_watermark_;
+
+    const size_t virtual_write_queue_watermark_ =(0.9 * DRAM_WQ_SIZE);
 private:
     using active_buffer_type = std::unordered_set<size_t>;
     using write_drain_array = std::array<ssize_t, DRAM_TOT_BANKS_PER_CHANNEL>;
@@ -216,6 +218,11 @@ private:
      * */
     template <class CACHE_TYPE>
     void update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>&);
+    /*
+     * Auxilliary function for handling situation with virtual write queue:
+     * */
+    template <class CACHE_TYPE>
+    void send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>&);
 
     /*
      * Useful inlines for accessing bank references.
@@ -252,6 +259,13 @@ DRAMChannel::update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>& c)
 {
     if constexpr (is_bank_balanced_cache<typename CACHE_TYPE::parent_type>::value)
         c->handle_write_drain(channel_id_, writes_issued_per_bank_);
+}
+
+template <class CACHE_TYPE> void
+DRAMChannel::send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>& c)
+{
+    if constexpr (is_virtual_write_queue<typename CACHE_TYPE::parent_type>::value)
+        c->channel_request_demand_writeback(channel_id_);
 }
 
 ////////////////////////////////////////////////////////////////////////////

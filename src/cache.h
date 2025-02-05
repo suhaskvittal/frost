@@ -201,8 +201,6 @@ protected:
     way_iterator lru(cset_type&);
     way_iterator rand(cset_type&);
     way_iterator rrip(cset_type&);
-
-    way_iterator get_way_in_lru_pos(cset_type&, size_t lru_pos);
     /*
      * Set Dueling implementation:
      * */
@@ -235,12 +233,6 @@ protected:
             return IMPL::RQ_SIZE;
     }
 
-    inline size_t get_lru_pos(const CacheEntry& e, const cset_type& s) const
-    {
-        return std::count_if(s.begin(), s.end(),
-                            [t=e.timestamp] (const auto& x) { return t > x.timestamp; });
-    }
-
     inline cset_type& get_set(uint64_t x)
     {
         return csets_[set_index(x)];
@@ -250,7 +242,38 @@ protected:
     {
         return csets_.at(set_index(x));
     }
+
+    inline void enqueue_writeback(Transaction trans)
+    {
+        writeback_queue_.push_back(trans);
+        pending_writebacks_.insert(trans.address);
+    }
 };
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class ITER> inline size_t 
+cset_get_lru_position_of_entry(const CacheEntry& e, ITER begin, ITER end)
+{
+    return std::count_if(begin, end,
+                        [t=e.timestamp] (const auto& x) { return t > x.timestamp; });
+}
+
+template <class ITER> inline ITER
+cset_get_way_in_lru_position(ITER begin, ITER end, size_t p)
+{
+    if (p == 0)
+    {
+        return std::min_element(begin, end,
+                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
+    }
+    else
+    {
+        return std::find_if(begin, end,
+                    [p, &begin, &end] (const auto& e) { return cset_get_lru_position_of_entry(e, begin, end) == p; });
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

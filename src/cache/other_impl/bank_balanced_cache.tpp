@@ -103,13 +103,30 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::lru_mod(cset_type& s, bool evict_dirty)
 {
+    std::unordered_map<uint64_t, size_t> lru_pos_map;
+    lru_pos_map.reserve(NUM_WAYS);
+
+    std::transform(s.begin(), s.end(), std::inserter(lru_pos_map, lru_pos_map.begin()),
+                [&s] (const auto& e) 
+                { 
+                    size_t p = cset_get_lru_position_of_entry(e, s.cbegin(), s.cend());
+                    return std::make_pair(e.address, p);
+                });
+
     return std::min_element(s.begin(), s.end(),
-                        [evict_dirty] (const auto& x, const auto& y)
+                        [evict_dirty, &lru_pos_map] (const auto& x, const auto& y)
                         {
-                            if (x.dirty == y.dirty)
-                                return x.timestamp < y.timestamp;
+                            size_t px = lru_pos_map.at(x.address),
+                                   py = lru_pos_map.at(y.address);
+                            if (px < 4 && py < 4)
+                            {
+                                if (x.dirty == y.dirty)
+                                    return x.timestamp < y.timestamp;
+                                else
+                                    return evict_dirty ? x.dirty : y.dirty;
+                            }
                             else
-                                return evict_dirty ? x.dirty : y.dirty;
+                                return x.timestamp < y.timestamp;
                         });
 }
 
