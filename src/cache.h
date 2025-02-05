@@ -45,12 +45,17 @@
  *      -- CacheWBMode WRITEBACK_MODE
  *
  *      -- bool WRITE_ALLOCATE
+ *      -- bool ALLOW_DBP_BYPASS
  * */
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
+template <class IMPL, 
+            size_t NUM_SETS, 
+            size_t NUM_WAYS,
+            class NEXT_TYPE,
+            class DBP_TYPE=NoDeadBlockPredictor>
 class Cache
 {
 public:
@@ -58,6 +63,7 @@ public:
     using stat_type =      VecStat<uint32_t, NUM_THREADS>;
     using in_queue_type =  std::vector<Transaction>;
     using pending_type =   std::unordered_set<uint64_t>;
+    using dbp_type =       std::unique_ptr<DBP_TYPE>;
 
     stat_type s_reads_{};
     stat_type s_writes_{};
@@ -72,6 +78,8 @@ public:
     uint32_t s_evictions_ =0;
     uint32_t s_writebacks_ =0;
     uint32_t s_eager_writebacks_ =0;
+
+    uint32_t s_bypasses_ =0;
 
     uint32_t s_dueling_pol1_installs_ =0;
     uint32_t s_dueling_pol2_installs_ =0;
@@ -139,6 +147,10 @@ protected:
      * Pointer to next structure in the memory hierarchy.
      * */
     next_ptr& next_;
+    /*
+     * Pointer to dead block predictor:
+     * */
+    dbp_ptr dbp_;
 public:
     Cache(std::string cache_name, next_ptr&);
 
@@ -154,13 +166,6 @@ public:
     virtual bool add_incoming_fill(Transaction);
 
     bool deadlock_find_inst(inst_ptr) const;
-    /*
-     * Useful inlines:
-     * */
-    virtual inline size_t set_index(uint64_t x) const
-    {
-        return fast_mod<NUM_SETS>(x);
-    }
 protected:
     struct fill_result_type
     {
@@ -212,6 +217,10 @@ protected:
     virtual void do_next_fill(void);
     virtual bool do_next_access(bool do_read);
     virtual void add_mshr_entry(Transaction);
+    /*
+     * Function for setting dead block prediction to cache line (sets `likely_dead`):
+     * */
+    virtual void mark_likely_dead(uint64_t);
 
     inline in_queue_type& get_queue_ref(TransactionType t)
     {
@@ -235,12 +244,12 @@ protected:
 
     inline cset_type& get_set(uint64_t x)
     {
-        return csets_[set_index(x)];
+        return csets_[cache_set_index<NUM_SETS>(x)];
     }
 
     inline const cset_type& get_const_set(uint64_t x) const
     {
-        return csets_.at(set_index(x));
+        return csets_.at(cache_set_index<NUM_SETS>(x));
     }
 
     virtual inline bool allow_access(void)
@@ -263,27 +272,20 @@ protected:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class ITER> inline size_t 
-cset_get_lru_position_of_entry(const CacheEntry& e, ITER begin, ITER end)
+template <size_t NUM_SETS>
+inline size_t cache_set_index(uint64_t x)
 {
-    return std::count_if(begin, end,
-                        [t=e.timestamp] (const auto& x) { return t > x.timestamp; });
+    return fast_mod<NUM_SETS>(x);
 }
 
-template <class ITER> inline ITER
-cset_get_way_in_lru_position(ITER begin, ITER end, size_t p)
-{
-    if (p == 0)
-    {
-        return std::min_element(begin, end,
-                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
-    }
-    else
-    {
-        return std::find_if(begin, end,
-                    [p, &begin, &end] (const auto& e) { return cset_get_lru_position_of_entry(e, begin, end) == p; });
-    }
-}
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class ITER>
+size_t cset_get_lru_position_of_entry(const CacheEntry&, ITER begin, ITER end);
+
+template <class ITER>
+ITER cset_get_way_in_lru_position(ITER begin, ITER end, size_t position);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -57,8 +57,6 @@ public:
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
 
     void tick(void) override;
-
-    using __TEMPLATE_PARENT__::set_index;
 protected:
     way_iterator find_victim(cset_type&) override;
 

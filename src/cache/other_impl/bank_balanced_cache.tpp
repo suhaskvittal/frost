@@ -84,7 +84,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
             return rrip_mod(s, evict_dirty);
         else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
         {
-            update_psel(set_index(s[0].address));
+            update_psel(cache_set_index<NUM_SETS>(s[0].address));
             return rrip_mod(s);
         }
         else

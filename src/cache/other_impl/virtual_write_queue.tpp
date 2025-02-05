@@ -111,7 +111,7 @@ __TEMPLATE_CLASS__::probe(uint64_t address, bool write)
 
     // Update set criticality if this is a hit:
     if (hit)
-        update_criticality_via_count(set_index(address));
+        update_criticality_via_count(cache_set_index<NUM_SETS>(address));
 
     return hit;
 }
@@ -123,7 +123,7 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool dirty)
 
     // Update set criticality if this is a hit:
     if (hit)
-        update_criticality_via_count(set_index(address));
+        update_criticality_via_count(cache_set_index<NUM_SETS>(address));
 
     return hit;
 }
@@ -137,7 +137,7 @@ __TEMPLATE_CLASS__::fill(uint64_t address, size_t refs, bool dirty)
     auto out = __TEMPLATE_PARENT__::fill(address, refs, dirty);
 
     // Update set criticality:
-    update_criticality_via_count(set_index(address));
+    update_criticality_via_count(cache_set_index<NUM_SETS>(address));
 
     return out;
 }

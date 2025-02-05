@@ -8,8 +8,8 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_HEADER__ template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
-#define __TEMPLATE_CLASS__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE>
+#define __TEMPLATE_HEADER__ template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
+#define __TEMPLATE_CLASS__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -17,7 +17,8 @@
 __TEMPLATE_HEADER__
 __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     :cache_name_(cache_name),
-    next_(n)
+    next_(n),
+    dbp_(new DBP_TYPE)
 {
     pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
     pending_writes_.reserve(IMPL::WQ_SIZE);
@@ -358,7 +359,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
         return rrip(s);
     else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
-        update_psel(set_index(s[0].address));
+        update_psel(cache_set_index<NUM_SETS>(s[0].address));
         return rrip(s);
     }
     else
@@ -408,7 +409,14 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
     {
         ++s_accesses_[trans.coreid];
         if (probe(trans.address))
+        {
             outgoing_queue_.emplace(trans, GL_CYCLE+IMPL::CACHE_LATENCY);
+            
+            // Invoke dead block predictor:
+            if (dbp_->predict_if_dead(trans))
+                mark_likely_dead(trans.address);
+            dbp_->update_on_probe_or_fill(trans.address);
+        }
         else
         {
             ++s_misses_[trans.coreid];
@@ -428,7 +436,13 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
         }
         else
         {
-            if (!mark(trans.address, true))
+            if (mark(trans.address, true))
+            {
+                // We need to tell the dead block predictor that we have marked
+                // the line as dirty (is not dead when clean):
+                dbp_->update_on_mark_dirty(trans.address);
+            }
+            else
                 fill_queue_.push_back(trans);
         }
     }
@@ -460,18 +474,39 @@ __TEMPLATE_CLASS__::do_next_fill()
 
     // Handle eviction + any writeback if necessary
     multi_fill_result_type eviction_list;
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NORMAL)
-        eviction_list = fill(trans.address, refcnt, !is_read);
-    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
-        eviction_list = fill_with_eager_writeback(trans.address, refcnt, !is_read);
-    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
-        eviction_list = fill_with_same_set_row_harvest(trans.address, refcnt, !is_read);
+    
+    // If the dead block predictor is allowed to bypass installs, then we need to handle this
+    // here:
+    bool bypass = false;
+    if constexpr (IMPL::ALLOW_DPB_BYPASS)
+        bypass = dbp_->predict_if_dead(trans);
+
+    if (bypass)
+    {
+        ++s_bypasses_;
+
+        // If we bypassed a write-fill, move the write to `writeback_queue_`:
+        if (!is_read)
+            enqueue_writeback(trans);
+    }
     else
     {
-        std::cerr << cache_name_ << ": unknown writeback mode\n";
-        exit(1);
+        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NORMAL)
+            eviction_list = fill(trans.address, refcnt, !is_read);
+        else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
+            eviction_list = fill_with_eager_writeback(trans.address, refcnt, !is_read);
+        else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
+            eviction_list = fill_with_same_set_row_harvest(trans.address, refcnt, !is_read);
+        else
+        {
+            std::cerr << cache_name_ << ": unknown writeback mode\n";
+            exit(1);
+        }
+        ++s_fills_[trans.coreid]; 
+
+        // Update dead block predictor:
+        dbp_->update_on_probe_or_fill(trans);
     }
-    ++s_fills_[trans.coreid]; 
 
     for (size_t i = 0; i < eviction_list.size(); i++)
     {
@@ -490,11 +525,6 @@ __TEMPLATE_CLASS__::do_next_fill()
             ++s_eager_writebacks_;
 
         Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, e.address);
-        // Set DRAM row closure hint if possible:
-        if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
-        {
-            wb_trans.dram_issue_priority = eviction_list.size()-1;
-        }
         enqueue_writeback(wb_trans);
         
         // If this is an eager writeback, we may need to do more:
@@ -563,6 +593,18 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+__TEMPLATE_HEADER__ inline void
+__TEMPLATE_CLASS__::mark_likely_dead(uint64_t address)
+{
+    cset_type& s = get_set(address);
+    auto it = s.find(address);
+    if (it != s.end())
+        it->likely_dead = true;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 #include "cache/replacement.tpp"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -570,6 +612,31 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
 
 #undef __TEMPLATE_HEADER__
 #undef __TEMPLATE_CLASS__
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class ITER> inline size_t 
+cset_get_lru_position_of_entry(const CacheEntry& e, ITER begin, ITER end)
+{
+    return std::count_if(begin, end,
+                        [t=e.timestamp] (const auto& x) { return t > x.timestamp; });
+}
+
+template <class ITER> inline ITER
+cset_get_way_in_lru_position(ITER begin, ITER end, size_t p)
+{
+    if (p == 0)
+    {
+        return std::min_element(begin, end,
+                        [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
+    }
+    else
+    {
+        return std::find_if(begin, end,
+                    [p, &begin, &end] (const auto& e) { return cset_get_lru_position_of_entry(e, begin, end) == p; });
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

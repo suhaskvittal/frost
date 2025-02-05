@@ -48,8 +48,6 @@ public:
 
     void tick(void) override;
     void channel_request_demand_writeback(size_t channel_id);
-
-    using __TEMPLATE_PARENT__::set_index;
 protected:
     bool probe(uint64_t, bool write=false) override;
     bool mark(uint64_t, bool dirty) override;
