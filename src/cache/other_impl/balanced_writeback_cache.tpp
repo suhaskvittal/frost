@@ -22,7 +22,7 @@ __TEMPLATE_CLASS__::tick()
 {
     // Issue writeback:
     auto& buf_array = balanced_buffer_[issue_to_channel_];
-    size_t& wb_ctr = total_writebacks_in_epoch_[issue_to_channel_];
+    size_t& wb_ctr = total_writebacks_[issue_to_channel_];
 
     // First search for any full buffers:
     auto buf_it = std::find_if(buf_array.begin(), buf_array.end(),
@@ -32,7 +32,7 @@ __TEMPLATE_CLASS__::tick()
     if (buf_it == buf_array.end())
     {
         buf_it = std::find_if(buf_array.begin(), buf_array.end(),
-                        [] (const auto& buf) { return !buf.empty() && buf.epoch_write_counter < MAX_WRITE_COUNTER; });
+                        [] (const auto& buf) { return !buf.empty() && buf.write_counter < MAX_WRITE_COUNTER; });
     }
 
     if (buf_it != buf_array.end())
@@ -43,8 +43,8 @@ __TEMPLATE_CLASS__::tick()
             pending_writebacks_.erase(trans.address);
             buf_it->pop_back();
             
-            // Increment epoch write counter (local and global)
-            ++buf_it->epoch_write_counter;
+            // Increment write counter (local and global)
+            ++buf_it->write_counter;
             ++wb_ctr;
         }
 
@@ -53,7 +53,7 @@ __TEMPLATE_CLASS__::tick()
             // Reset all counters:
             wb_ctr = 0;
             for (auto& buf : buf_array)
-                buf.epoch_write_counter = 0;
+                buf.write_counter = 0;
         }
     }
     fast_increment_and_mod_inplace<DRAM_CHANNELS>(issue_to_channel_);
@@ -73,18 +73,20 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
     // Check if corresponding write counter is saturated: if so, then evict a
     // clean line:
     const auto& buf = balanced_buffer_.at(channel).at(bank_idx);
-    if (buf.epoch_write_counter >= MAX_WRITE_COUNTER)
+
+    auto v_it = s.end();
+    if (buf.write_counter >= MAX_WRITE_COUNTER) 
     {
         if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
-            return lru_mod(s);
+            v_it = lru_mod(s);
         else if constexpr (IMPL::REPL == CacheReplPolicy::RAND)
-            return rand(s);
+            v_it = rand(s);
         else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
-            return rrip_mod(s);
+            v_it = rrip_mod(s);
         else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
         {
             update_psel(set_index(s[0].address));
-            return rrip_mod(s);
+            v_it = rrip_mod(s);
         }
         else
         {
@@ -93,7 +95,9 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
         }
     }
     else
-        return __TEMPLATE_PARENT__::find_victim(s);
+        v_it = __TEMPLATE_PARENT__::find_victim(s);
+
+    return v_it;
 }
 
 ////////////////////////////////////////////////////////////////////////////

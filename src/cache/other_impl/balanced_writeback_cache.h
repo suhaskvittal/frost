@@ -27,26 +27,22 @@ class BalancedWritebackCache : public __TEMPLATE_PARENT__
 {
 public:
 protected:
-    constexpr static size_t BANK_BUFFER_SIZE = IMPL::WB_QUEUE_SIZE / (DRAM_CHANNELS*DRAM_TOT_BANKS_PER_CHANNEL);
-    constexpr static size_t MAX_WRITE_COUNTER = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
-
     struct wb_buffer_type : std::vector<Transaction>
     {
-        size_t epoch_write_counter =0;
-
-        wb_buffer_type(void)
-            :std::vector<Transaction>()
-        {
-            reserve(BANK_BUFFER_SIZE);
-        }
+        size_t write_counter =0;
     };
 
     using wb_buffer_array = std::array<std::array<wb_buffer_type, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
-    using epoch_write_counter_array = std::array<size_t, DRAM_CHANNELS>;
+    using wb_counter_array = std::array<size_t, DRAM_CHANNELS>;
 
+    constexpr static size_t BANK_BUFFER_SIZE = IMPL::WB_QUEUE_SIZE / (DRAM_CHANNELS*DRAM_TOT_BANKS_PER_CHANNEL);
+    constexpr static size_t MAX_WRITE_COUNTER = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
+    /*
+     * These structures are used to buffer writes and determine when to use the modified replacement policy
+     * (i.e., see `lru_mod` and `rrip_mod` below)
+     * */
     wb_buffer_array balanced_buffer_{};
-    epoch_write_counter_array total_writebacks_in_epoch_{};
-
+    wb_counter_array total_writebacks_{};
     size_t issue_to_channel_ =0;
 
     using __TEMPLATE_PARENT__::next_;
@@ -61,6 +57,8 @@ public:
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
 
     void tick(void) override;
+
+    using __TEMPLATE_PARENT__::set_index;
 protected:
     way_iterator find_victim(cset_type&) override;
 
@@ -92,6 +90,7 @@ protected:
         size_t channel = dram_channel(trans.address),
                bank_idx = dram_bank_idx(trans.address);
         balanced_buffer_[channel][bank_idx].push_back(trans);
+
         pending_writebacks_.insert(trans.address);
     }
 };

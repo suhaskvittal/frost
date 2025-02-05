@@ -1,5 +1,4 @@
-/*
- *  author: Suhas Vittal
+/* author: Suhas Vittal
  *  date:   31 January 2025
  * */
 
@@ -111,6 +110,7 @@ protected:
     constexpr static size_t    LEADER_SETS = 64;
     constexpr static size_t    PSEL_WIDTH = 11;
     constexpr static psel_type PSEL_DEFAULT = (1<<(PSEL_WIDTH-1))-1;
+    constexpr static psel_type PSEL_MSB_MASK = 1 << (PSEL_WIDTH-1);
     /*
      * Core cache structures:
      * */

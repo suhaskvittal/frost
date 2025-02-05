@@ -13,6 +13,9 @@ __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = RRIP_MAX;
+
+    if (e.dirty)
+        e.reused_after_marked_dirty = true;
 }
 
 __TEMPLATE_HEADER__ inline void
@@ -22,6 +25,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs,
     e.dirty = mark_dirty;
     e.address = address;
     e.timestamp = GL_CYCLE;
+    e.reused_after_marked_dirty = false;
     e.likely_dead = false;
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
@@ -35,7 +39,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs,
             SetDuelingRole r = get_set_role(idx);
             // Resolve `r` if it is a follower set.
             if (r == SetDuelingRole::FOLLOWER)
-                r = (psel_ & (1<<PSEL_WIDTH)) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
+                r = (psel_ & PSEL_MSB_MASK) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
             if (r == SetDuelingRole::LEADER_1)
             {
                 e.rrpv = 1;

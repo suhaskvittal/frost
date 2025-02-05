@@ -34,6 +34,7 @@ struct CacheEntry
     uint64_t timestamp;
     int8_t  rrpv;
 
+    bool reused_after_marked_dirty =false;
     bool likely_dead =false;
 
     CacheEntry(void) =default;
