@@ -16,14 +16,6 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <size_t TABLE_IDX, size_t TABLE_SIZE>
-inline size_t hash(uint64_t ip, uint8_t coreid)
-{
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 template <class IMPL>
 class SamplingDeadBlockPredictor
 {
@@ -72,12 +64,6 @@ private:
     const size_t set_modulus_;
 public:
     SamplingDeadBlockPredictor(void);
-
-    SamplingDeadBlockPredictor(size_t g_sets)
-        :global_sets_(g_sets),
-        set_modulus_(g_sets / NUM_SETS)
-    {
-    }
 
     bool predict_if_dead(const Transaction&) const;
     void update_on_probe_or_fill(const Transaction&);

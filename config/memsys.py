@@ -26,14 +26,20 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
     f_ports =       cfg['fill_ports']
     wb_mode =       cfg['writeback_mode']
     cache_type =    cfg['cache_type']
+    dbp_type =      cfg['dead_block_predictor']
+
+    dbp_bypass =    cfg['allow_dbp_bypass'] == 'on'
 
     write_alloc = str(write_alloc).lower()
+    dbp_bypass = str(dbp_bypass).lower()
+
+    dbp_type.replace('$impl', typename)
 
     cache_decl =\
 f'''
-struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typename}>
+struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typename}, {dbp_type}>
 {{
-    using parent_type = {cache_type}<{typename}, {sets}, {ways}, {next_typename}>;
+    using parent_type = {cache_type}<{typename}, {sets}, {ways}, {next_typename}, {dbp_type}>;
 
     constexpr static size_t NUM_SETS =         {sets};
     constexpr static size_t NUM_WAYS =         {ways};
@@ -53,6 +59,7 @@ struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typena
     constexpr static size_t NUM_FILL_PORTS =   {f_ports};
 
     constexpr static bool WRITE_ALLOCATE = {write_alloc};
+    constexpr static bool ALLOW_DBP_BYPASS = {dbp_bypass};
 
     constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
 
@@ -82,6 +89,7 @@ f'''{AUTOGEN_HEADER}
 #include "dram.h"
 {ptw_inc}
 
+#include "cache/dead_block/all.h"
 #include "cache/other_impl/all.h"
 
 #include <memory>

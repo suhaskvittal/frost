@@ -8,8 +8,8 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_HEADER__ template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
-#define __TEMPLATE_CLASS__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>
+#define __TEMPLATE_HEADER__ template <class IMPL, class NEXT_TYPE>
+#define __TEMPLATE_CLASS__ Cache<IMPL,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -17,8 +17,9 @@
 __TEMPLATE_HEADER__
 __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     :cache_name_(cache_name),
+    csets_(IMPL::NUM_SETS, cset_type(IMPL::NUM_WAYS)),
     next_(n),
-    dbp_(new DBP_TYPE)
+    dbp_(new IMPL::DEAD_BLOCK_PREDICTOR_TYPE)
 {
     pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
     pending_writes_.reserve(IMPL::WQ_SIZE);
@@ -415,7 +416,7 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
             // Invoke dead block predictor:
             if (dbp_->predict_if_dead(trans))
                 mark_likely_dead(trans.address);
-            dbp_->update_on_probe_or_fill(trans.address);
+            dbp_->update_on_probe_or_fill(trans);
         }
         else
         {
@@ -440,7 +441,7 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
             {
                 // We need to tell the dead block predictor that we have marked
                 // the line as dirty (is not dead when clean):
-                dbp_->update_on_mark_dirty(trans.address);
+                dbp_->update_on_mark_dirty(trans);
             }
             else
                 fill_queue_.push_back(trans);
@@ -478,7 +479,7 @@ __TEMPLATE_CLASS__::do_next_fill()
     // If the dead block predictor is allowed to bypass installs, then we need to handle this
     // here:
     bool bypass = false;
-    if constexpr (IMPL::ALLOW_DPB_BYPASS)
+    if constexpr (IMPL::ALLOW_DBP_BYPASS)
         bypass = dbp_->predict_if_dead(trans);
 
     if (bypass)

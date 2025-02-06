@@ -59,7 +59,9 @@ def validate_cache_section(cfg) -> bool:
         ('write_ports', 2),
         ('fill_ports', 2),
         ('writeback_mode', 'NORMAL'),
-        ('cache_type', 'Cache')
+        ('cache_type', 'Cache'),
+        ('dead_block_predictor', 'NoDeadBlockPredictor'),
+        ('allow_dbp_bypass', 'on')
     ]
     # Now check if the number of sets or the size of the cache
     # is specified.

@@ -160,12 +160,12 @@ __TEMPLATE_CLASS__::update_prediction_counters(uint64_t ip, uint8_t coreid, bool
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::data_store_type
-__TEMPLATE_CLASS__::get_ip_and_coreid_from(const Transaction& trans)
+__TEMPLATE_CLASS__::get_ip_and_coreid_from(const Transaction& trans) const
 {
     uint64_t ip = trans.get_front_ip();
     uint8_t coreid = trans.coreid;
 
-    if (trans_is_write(trnas.type))
+    if (trans_is_write(trans.type))
     {
         ip = ~ip;
         coreid += NUM_THREADS;

@@ -9,12 +9,12 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-class NoDeadBlockPredictor : public BaseDeadBlockPredictor
+struct NoDeadBlockPredictor
 {
-    bool predict_if_dead(Transaction) { return false; }
-    void update_on_probe_or_fill(Transaction) {}
-    void update_on_mark_dirty(Transaction) {}
-}
+    bool predict_if_dead(const Transaction&) { return false; }
+    void update_on_probe_or_fill(const Transaction&) {}
+    void update_on_mark_dirty(const Transaction&) {}
+};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -11,12 +11,12 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_PARENT__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE>
+#define __TEMPLATE_PARENT__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
+template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
 class VirtualWriteQueue : public __TEMPLATE_PARENT__
 {
 public:
@@ -68,8 +68,8 @@ protected:
 template <class>
 struct is_virtual_write_queue : std::false_type {};
 
-template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE>
-struct is_virtual_write_queue<VirtualWriteQueue<IMPL, NUM_SETS, NUM_WAYS, NEXT_TYPE>> : std::true_type {};
+template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
+struct is_virtual_write_queue<VirtualWriteQueue<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>> : std::true_type {};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

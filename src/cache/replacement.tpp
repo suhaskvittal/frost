@@ -35,7 +35,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs,
         else
         {
             // Check whether or not to use BRRIP.
-            size_t idx = set_index(address);
+            size_t idx = cache_set_index<NUM_SETS>(address);
             SetDuelingRole r = get_set_role(idx);
             // Resolve `r` if it is a follower set.
             if (r == SetDuelingRole::FOLLOWER)

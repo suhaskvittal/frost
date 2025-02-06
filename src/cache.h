@@ -51,11 +51,16 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class IMPL, 
-            size_t NUM_SETS, 
-            size_t NUM_WAYS,
-            class NEXT_TYPE,
-            class DBP_TYPE=NoDeadBlockPredictor>
+template <class IMPL>
+inline size_t cache_set_index(uint64_t x)
+{
+    return fast_mod<IMPL::NUM_SETS>(x);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class IMPL, class NEXT_TYPE>
 class Cache
 {
 public:
@@ -63,7 +68,7 @@ public:
     using stat_type =      VecStat<uint32_t, NUM_THREADS>;
     using in_queue_type =  std::vector<Transaction>;
     using pending_type =   std::unordered_set<uint64_t>;
-    using dbp_type =       std::unique_ptr<DBP_TYPE>;
+    using dbp_ptr =        std::unique_ptr<DeadBlockPredictorBase>;
 
     stat_type s_reads_{};
     stat_type s_writes_{};
@@ -95,22 +100,11 @@ public:
     const std::string cache_name_;
 protected:
     enum class SetDuelingRole { FOLLOWER =0, LEADER_1 =1, LEADER_2 =-1 };
-
-    struct cset_type : std::array<CacheEntry, NUM_WAYS>
-    {
-        using parent_type = std::array<CacheEntry, NUM_WAYS>;
-
-        inline typename parent_type::iterator 
-        find(uint64_t address)
-        {
-            return std::find_if(parent_type::begin(), parent_type::end(),
-                        [address] (const auto& e) { return e.valid && e.address == address; });
-        }
-    };
     
     using psel_type = int16_t;
 
-    using cset_array =      std::array<cset_type, NUM_SETS>;
+    using cset_type =       std::vector<CacheEntry>;
+    using cset_array =      std::vector<cset_type>;
     using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
     using wb_queue_type =   std::deque<Transaction>;
     using fill_queue_type = std::deque<Transaction>;
@@ -154,8 +148,8 @@ protected:
 public:
     Cache(std::string cache_name, next_ptr&);
 
-    void warmup_access(uint64_t, bool write);
-    void warmup_fill(uint64_t, bool dirty);
+    void warmup_access(Transaction);
+    void warmup_fill(Transaction);
 
     virtual void tick(void);
 
@@ -184,28 +178,29 @@ protected:
     /*
      * Cache access implementation:
      * */
-    virtual bool probe(uint64_t, bool write=false);
-    virtual bool mark(uint64_t, bool dirty);
+    virtual bool probe(const Transaction&);
+    virtual bool mark_dirty(const Transaction&);
     virtual void invalidate(uint64_t);
     /*
      * Cache fill implementations:
      * */
-    virtual multi_fill_result_type fill(uint64_t, size_t num_mshr_refs, bool dirty);
-    virtual multi_fill_result_type fill_with_eager_writeback(uint64_t, size_t num_refs, bool dirty); 
-    virtual multi_fill_result_type fill_with_same_set_row_harvest(uint64_t, size_t num_refs, bool dirty);
+    virtual multi_fill_result_type fill(const Transaction&, size_t num_refs);
+    virtual multi_fill_result_type fill_with_eager_writeback(const Transaction&, size_t num_refs); 
 
     virtual way_iterator find_victim(cset_type&);
     /*
      * Insertion implementation:
      * */
     virtual void update_entry(CacheEntry&);
-    virtual void init_entry(CacheEntry&, uint64_t address, size_t num_refs, bool dirty);
+    virtual void init_entry(CacheEntry&, const Transaction&, size_t num_refs);
     /*
      * Replacement implementation:
      * */
     way_iterator lru(cset_type&);
     way_iterator rand(cset_type&);
     way_iterator rrip(cset_type&);
+
+    way_iterator lru_dead_block(cset_type&);
     /*
      * Set Dueling implementation:
      * */
@@ -217,10 +212,6 @@ protected:
     virtual void do_next_fill(void);
     virtual bool do_next_access(bool do_read);
     virtual void add_mshr_entry(Transaction);
-    /*
-     * Function for setting dead block prediction to cache line (sets `likely_dead`):
-     * */
-    virtual void mark_likely_dead(uint64_t);
 
     inline in_queue_type& get_queue_ref(TransactionType t)
     {
@@ -272,14 +263,8 @@ protected:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <size_t NUM_SETS>
-inline size_t cache_set_index(uint64_t x)
-{
-    return fast_mod<NUM_SETS>(x);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
+template <class ITER>
+ITER cset_find(uint64_t address, ITER begin, ITER end);
 
 template <class ITER>
 size_t cset_get_lru_position_of_entry(const CacheEntry&, ITER begin, ITER end);
