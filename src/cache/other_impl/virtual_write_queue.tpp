@@ -8,8 +8,8 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_HEADER__ template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
-#define __TEMPLATE_CLASS__ VirtualWriteQueue<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>
+#define __TEMPLATE_HEADER__ template <class IMPL, class NEXT_TYPE>
+#define __TEMPLATE_CLASS__ VirtualWriteQueue<IMPL,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -28,6 +28,7 @@ __TEMPLATE_CLASS__::tick()
     else if (in_write_mode_ && queue_size_ < VWQ_LOW_WATERMARK)
         in_write_mode_ = false;
 
+    // Issue writebacks to memory controller (need to reach below low watermark)
     if (in_write_mode_ && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
     {
         if (next_it_ == critical_map_.end())
@@ -105,25 +106,25 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::probe(uint64_t address, bool write)
+__TEMPLATE_CLASS__::probe(const Transaction& trans)
 {
-    bool hit = __TEMPLATE_PARENT__::probe(address, write);
+    bool hit = __TEMPLATE_PARENT__::probe(trans);
 
     // Update set criticality if this is a hit:
     if (hit)
-        update_criticality_via_count(cache_set_index<NUM_SETS>(address));
+        update_criticality_via_count(cache_set_index<IMPL>(trans.address));
 
     return hit;
 }
 
 __TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::mark(uint64_t address, bool dirty)
+__TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
 {
-    bool hit = __TEMPLATE_PARENT__::mark(address, dirty);
+    bool hit = __TEMPLATE_PARENT__::mark_dirty(trans);
 
     // Update set criticality if this is a hit:
     if (hit)
-        update_criticality_via_count(cache_set_index<NUM_SETS>(address));
+        update_criticality_via_count(cache_set_index<IMPL>(trans.address));
 
     return hit;
 }
@@ -132,12 +133,12 @@ __TEMPLATE_CLASS__::mark(uint64_t address, bool dirty)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
-__TEMPLATE_CLASS__::fill(uint64_t address, size_t refs, bool dirty)
+__TEMPLATE_CLASS__::fill(const Transaction& trans, size_t refs)
 {
-    auto out = __TEMPLATE_PARENT__::fill(address, refs, dirty);
+    auto out = __TEMPLATE_PARENT__::fill(trans, refs);
 
     // Update set criticality:
-    update_criticality_via_count(cache_set_index<NUM_SETS>(address));
+    update_criticality_via_count(cache_set_index<IMPL>(trans.address));
 
     return out;
 }

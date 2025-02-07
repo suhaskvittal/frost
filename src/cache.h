@@ -7,6 +7,7 @@
 
 #include "cache/entry.h"
 #include "cache/enums.h"
+#include "cache/indexing.h"
 #include "transaction.h"
 #include "util/numerics.h"
 #include "util/out_queue.h"
@@ -45,7 +46,6 @@
  *      -- CacheWBMode WRITEBACK_MODE
  *
  *      -- bool WRITE_ALLOCATE
- *      -- bool ALLOW_DBP_BYPASS
  * */
 
 ////////////////////////////////////////////////////////////////////////////
@@ -54,7 +54,13 @@
 template <class IMPL>
 inline size_t cache_set_index(uint64_t x)
 {
-    return fast_mod<IMPL::NUM_SETS>(x);
+    reutrn default_cache_set_index<IMPL::NUM_SETS>(x);
+}
+
+template <size_t NUM_SETS>
+inline size_t default_cache_set_index(uint64_t x)
+{
+    return fast_mod<NUM_SETS>(x);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -103,8 +109,6 @@ protected:
     
     using psel_type = int16_t;
 
-    using cset_type =       std::vector<CacheEntry>;
-    using cset_array =      std::vector<cset_type>;
     using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
     using wb_queue_type =   std::deque<Transaction>;
     using fill_queue_type = std::deque<Transaction>;
@@ -186,8 +190,11 @@ protected:
      * */
     virtual multi_fill_result_type fill(const Transaction&, size_t num_refs);
     virtual multi_fill_result_type fill_with_eager_writeback(const Transaction&, size_t num_refs); 
-
-    virtual way_iterator find_victim(cset_type&);
+    /*
+     * When searching for a victim, we also provide the calling Transaction in case the replacement
+     * policy would like to bypass, in which case the `way_iterator` should be the end of the `cset_type`.
+     * */
+    virtual way_iterator find_victim(size_t set_index, cset_type&, const Transaction&);
     /*
      * Insertion implementation:
      * */
@@ -196,11 +203,11 @@ protected:
     /*
      * Replacement implementation:
      * */
-    way_iterator lru(cset_type&);
-    way_iterator rand(cset_type&);
-    way_iterator rrip(cset_type&);
+    way_iterator lru(cset_type&, const Transaction&);
+    way_iterator rand(cset_type&, const Transaction&);
+    way_iterator rrip(cset_type&, const Transaction&);
 
-    way_iterator lru_dead_block(cset_type&);
+    way_iterator lru_dead_block(cset_type&, const Transaction&);
     /*
      * Set Dueling implementation:
      * */
@@ -233,16 +240,6 @@ protected:
             return IMPL::RQ_SIZE;
     }
 
-    inline cset_type& get_set(uint64_t x)
-    {
-        return csets_[cache_set_index<NUM_SETS>(x)];
-    }
-
-    inline const cset_type& get_const_set(uint64_t x) const
-    {
-        return csets_.at(cache_set_index<NUM_SETS>(x));
-    }
-
     virtual inline bool allow_access(void)
     {
         return mshr_.size() < IMPL::NUM_MSHR && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE;
@@ -262,15 +259,6 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-template <class ITER>
-ITER cset_find(uint64_t address, ITER begin, ITER end);
-
-template <class ITER>
-size_t cset_get_lru_position_of_entry(const CacheEntry&, ITER begin, ITER end);
-
-template <class ITER>
-ITER cset_get_way_in_lru_position(ITER begin, ITER end, size_t position);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

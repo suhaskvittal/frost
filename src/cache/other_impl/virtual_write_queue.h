@@ -11,17 +11,17 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_PARENT__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>
+#define __TEMPLATE_PARENT__ Cache<IMPL,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
+template <class IMPL, class NEXT_TYPE>
 class VirtualWriteQueue : public __TEMPLATE_PARENT__
 {
 public:
-    constexpr static size_t VWQ_WAYS = NUM_WAYS / 4;
-    constexpr static size_t VWQ_HIGH_WATERMARK = (NUM_SETS*VWQ_WAYS) / 2;
+    constexpr static size_t VWQ_WAYS = IMPL::NUM_WAYS / 4;
+    constexpr static size_t VWQ_HIGH_WATERMARK = (IMPL::NUM_SETS*VWQ_WAYS) / 2;
     constexpr static size_t VWQ_LOW_WATERMARK = VWQ_HIGH_WATERMARK - DRAM_WQ_SIZE;
 
     using __TEMPLATE_PARENT__::s_writebacks_;
@@ -49,9 +49,9 @@ public:
     void tick(void) override;
     void channel_request_demand_writeback(size_t channel_id);
 protected:
-    bool probe(uint64_t, bool write=false) override;
-    bool mark(uint64_t, bool dirty) override;
-    multi_fill_result_type fill(uint64_t, size_t, bool) override;
+    bool probe(const Transaction&) override;
+    bool mark_dirty(const Transaction&) override;
+    multi_fill_result_type fill(const Transaction&, size_t num_refs) override;
 
     way_iterator find_dirty_way(cset_type&);
     size_t count_dirty_lines_in_vwq_ways(const cset_type&) const;

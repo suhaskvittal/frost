@@ -17,12 +17,12 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_PARENT__ Cache<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>
+#define __TEMPLATE_PARENT__ Cache<IMPL,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
+template <class IMPL, class NEXT_TYPE>
 class BalancedWritebackCache : public __TEMPLATE_PARENT__
 {
 public:
@@ -58,11 +58,13 @@ public:
 
     void tick(void) override;
 protected:
-    way_iterator find_victim(cset_type&) override;
+    way_iterator find_victim(size_t idx, cset_type&, const Transaction&) override;
 
-    way_iterator lru_mod(cset_type&);
-    way_iterator rrip_mod(cset_type&);
-
+    way_iterator lru_mod(cset_type&, const Transaction&);
+    way_iterator rrip_mod(cset_type&, const Transaction&);
+    /*
+     * Useful inlines:
+     * */
     inline bool no_buffers_are_full(void)
     {
         return std::all_of(balanced_buffer_.begin(), balanced_buffer_.end(),

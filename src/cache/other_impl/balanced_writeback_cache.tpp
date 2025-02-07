@@ -11,8 +11,8 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#define __TEMPLATE_HEADER__ template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
-#define __TEMPLATE_CLASS__ BalancedWritebackCache<IMPL, NUM_SETS, NUM_WAYS, NEXT_TYPE, DBP_TYPE>
+#define __TEMPLATE_HEADER__ template <class IMPL, class NEXT_TYPE>
+#define __TEMPLATE_CLASS__ BalancedWritebackCache<IMPL, NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -65,10 +65,10 @@ __TEMPLATE_CLASS__::tick()
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::find_victim(cset_type& s)
+__TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& trans)
 {
-    size_t channel = dram_channel(s[0].address),
-           bank_idx = dram_bank_idx(s[0].address);
+    size_t channel = dram_channel(idx),
+           bank_idx = dram_bank_idx(idx);
     
     // Check if corresponding write counter is saturated: if so, then evict a
     // clean line:
@@ -78,15 +78,21 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
     if (buf.write_counter >= MAX_WRITE_COUNTER) 
     {
         if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
-            v_it = lru_mod(s);
+        {
+            v_it = lru_mod(s, trans);
+        }
         else if constexpr (IMPL::REPL == CacheReplPolicy::RAND)
-            v_it = rand(s);
+        {
+            v_it = rand(s, trans);
+        }
         else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
-            v_it = rrip_mod(s);
+        {
+            v_it = rrip_mod(s, trans);
+        }
         else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
         {
-            update_psel(cache_set_index<NUM_SETS>(s[0].address));
-            v_it = rrip_mod(s);
+            update_psel(idx);
+            v_it = rrip_mod(s, trans);
         }
         else
         {
@@ -95,7 +101,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
         }
     }
     else
-        v_it = __TEMPLATE_PARENT__::find_victim(s);
+        v_it = __TEMPLATE_PARENT__::find_victim(idx, s, trans);
 
     return v_it;
 }
@@ -104,7 +110,7 @@ __TEMPLATE_CLASS__::find_victim(cset_type& s)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::lru_mod(cset_type& s)
+__TEMPLATE_CLASS__::lru_mod(cset_type& s, const Transaction& trans)
 {
     return std::min_element(s.begin(), s.end(),
                 [] (const auto& x, const auto& y)
@@ -117,7 +123,7 @@ __TEMPLATE_CLASS__::lru_mod(cset_type& s)
 }
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::rrip_mod(cset_type& s)
+__TEMPLATE_CLASS__::rrip_mod(cset_type& s, const Transaction& trans)
 {
     return std::min_element(s.begin(), s.end(),
                 [] (const auto& x, const auto& y)
