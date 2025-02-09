@@ -19,61 +19,58 @@ __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 }
 
 __TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::init_entry(CacheEntry& e, uint64_t address, size_t num_refs, bool mark_dirty)
+__TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
 {
     e.valid = true;
-    e.dirty = mark_dirty;
-    e.address = address;
+    e.dirty = trans_is_write(trans.type);
+    e.address = trans.address;
     e.timestamp = GL_CYCLE;
     e.reused_after_marked_dirty = false;
     e.likely_dead = false;
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
-        if (num_refs > 1)
-            e.rrpv = RRIP_MAX;
+        // Check whether or not to use BRRIP.
+        size_t idx = cache_set_index<IMPL>(trans.address);
+        SetDuelingRole r = get_set_role(idx);
+        // Resolve `r` if it is a follower set.
+        if (r == SetDuelingRole::FOLLOWER)
+            r = (psel_ & PSEL_MSB_MASK) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
+        if (r == SetDuelingRole::LEADER_1)
+        {
+            e.rrpv = 1;
+            ++s_dueling_pol1_installs_;
+        }
         else
         {
-            // Check whether or not to use BRRIP.
-            size_t idx = cache_set_index<NUM_SETS>(address);
-            SetDuelingRole r = get_set_role(idx);
-            // Resolve `r` if it is a follower set.
-            if (r == SetDuelingRole::FOLLOWER)
-                r = (psel_ & PSEL_MSB_MASK) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
-            if (r == SetDuelingRole::LEADER_1)
-            {
-                e.rrpv = 1;
-                ++s_dueling_pol1_installs_;
-            }
-            else
-            {
-                e.rrpv = (bimodal_counter_ == 32) ? 1 : 0;
-                ++s_dueling_pol2_installs_;
-                fast_increment_and_mod_inplace<32>(bimodal_counter_);
-            }
+            e.rrpv = (bimodal_counter_ == 32) ? 1 : 0;
+            ++s_dueling_pol2_installs_;
+            fast_increment_and_mod_inplace<32>(bimodal_counter_);
         }
     }
     else
-        e.rrpv = (num_refs > 1) ? RRIP_MAX : 1;
+    {
+        e.rrpv = 1;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::lru(cset_type& s, const Transaction&)
+__TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction&)
 {
     return cset_get_way_in_lru_position(s.begin(), s.end(), 0);
 }
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::rand(cset_type& s, const Transaction&)
+__TEMPLATE_CLASS__::repl_rand(cset_type& s, const Transaction&)
 {
-    return std::next(s.begin(), fast_mod<NUM_WAYS>(std::rand()));
+    return std::next(s.begin(), fast_mod<IMPL::NUM_WAYS>(std::rand()));
 }
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::rrip(cset_type& s, const Transaction&)
+__TEMPLATE_CLASS__::repl_rrip(cset_type& s, const Transaction&)
 {
     auto v_it = std::min_element(s.begin(), s.end(),
                         [] (const auto& x, const auto& y) { return x.rrpv < y.rrpv; });
@@ -86,7 +83,7 @@ __TEMPLATE_CLASS__::rrip(cset_type& s, const Transaction&)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::lru_dead_block(cset_type& s, const Transaction& trans)
+__TEMPLATE_CLASS__::repl_lru_dead_block(cset_type& s, const Transaction& trans)
 {
     auto v_it = s.end();
 
@@ -101,7 +98,7 @@ __TEMPLATE_CLASS__::lru_dead_block(cset_type& s, const Transaction& trans)
 
     // If no dead block exists, use LRU:
     if (v_it == s.end())
-        v_it = lru(s, trans);
+        v_it = repl_lru(s, trans);
 
     return v_it;
 }

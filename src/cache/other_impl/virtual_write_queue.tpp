@@ -133,9 +133,9 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
-__TEMPLATE_CLASS__::fill(const Transaction& trans, size_t refs)
+__TEMPLATE_CLASS__::fill(const Transaction& trans)
 {
-    auto out = __TEMPLATE_PARENT__::fill(trans, refs);
+    auto out = __TEMPLATE_PARENT__::fill(trans);
 
     // Update set criticality:
     update_criticality_via_count(cache_set_index<IMPL>(trans.address));

@@ -1,0 +1,24 @@
+/*
+ *  author: Suhas Vittal
+ *  date:   9 February 2025
+ * */
+
+#ifndef CACHE_DEAD_BLOCK_BASE_h
+#define CACHE_DEAD_BLOCK_BASE_h
+
+#include "transaction.h"
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+struct DeadBlockPredictorBase
+{
+    virtual bool predict_if_dead(const Transaction&) const =0;
+    virtual void update_on_probe_or_fill(const Transaction&) =0;
+    virtual void update_on_mark_dirty(const Transaction&) =0;
+};
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+#endif  // CACHE_DEAD_BLOCK_BASE_h

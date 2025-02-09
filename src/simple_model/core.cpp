@@ -34,7 +34,11 @@ Core::tick_warmup()
     ++inst_warmup_;
 
     if (inst != nullptr)
-        GL_LLC->warmup_access(inst->p_lineaddr, inst->is_store);
+    {
+        TransactionType t = inst->is_store ?  TransactionType::READ : TransactionType::WRITE;
+        Transaction trans(coreid_, inst, t, inst->p_lineaddr);
+        GL_LLC->warmup_access(trans);
+    }
 
     delete inst;
 }

@@ -257,8 +257,6 @@ private:
 template <class CACHE_TYPE> void
 DRAMChannel::update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>& c)
 {
-    if constexpr (is_bank_balanced_cache<typename CACHE_TYPE::parent_type>::value)
-        c->handle_write_drain(channel_id_, writes_issued_per_bank_);
 }
 
 template <class CACHE_TYPE> void

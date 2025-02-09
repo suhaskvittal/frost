@@ -37,9 +37,11 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
 
     cache_decl =\
 f'''
-struct {typename} : public {cache_type}<{typename}, {sets}, {ways}, {next_typename}, {dbp_type}>
+struct {typename} : public {cache_type}<{typename}, {next_typename}>
 {{
-    using parent_type = {cache_type}<{typename}, {sets}, {ways}, {next_typename}, {dbp_type}>;
+    using parent_type = {cache_type}<{typename}, {next_typename}>;
+
+    using DEAD_BLOCK_PREDICTOR_TYPE = {dbp_type};
 
     constexpr static size_t NUM_SETS =         {sets};
     constexpr static size_t NUM_WAYS =         {ways};

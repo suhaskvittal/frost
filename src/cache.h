@@ -5,6 +5,7 @@
 #ifndef CACHE_h
 #define CACHE_h
 
+#include "cache/dead_block/base.h"
 #include "cache/entry.h"
 #include "cache/enums.h"
 #include "cache/indexing.h"
@@ -47,21 +48,6 @@
  *
  *      -- bool WRITE_ALLOCATE
  * */
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-template <class IMPL>
-inline size_t cache_set_index(uint64_t x)
-{
-    reutrn default_cache_set_index<IMPL::NUM_SETS>(x);
-}
-
-template <size_t NUM_SETS>
-inline size_t default_cache_set_index(uint64_t x)
-{
-    return fast_mod<NUM_SETS>(x);
-}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -152,8 +138,8 @@ protected:
 public:
     Cache(std::string cache_name, next_ptr&);
 
-    void warmup_access(Transaction);
-    void warmup_fill(Transaction);
+    void warmup_access(const Transaction&);
+    void warmup_fill(const Transaction&);
 
     virtual void tick(void);
 
@@ -188,8 +174,8 @@ protected:
     /*
      * Cache fill implementations:
      * */
-    virtual multi_fill_result_type fill(const Transaction&, size_t num_refs);
-    virtual multi_fill_result_type fill_with_eager_writeback(const Transaction&, size_t num_refs); 
+    virtual multi_fill_result_type fill(const Transaction&);
+    virtual multi_fill_result_type fill_with_eager_writeback(const Transaction&); 
     /*
      * When searching for a victim, we also provide the calling Transaction in case the replacement
      * policy would like to bypass, in which case the `way_iterator` should be the end of the `cset_type`.
@@ -199,15 +185,15 @@ protected:
      * Insertion implementation:
      * */
     virtual void update_entry(CacheEntry&);
-    virtual void init_entry(CacheEntry&, const Transaction&, size_t num_refs);
+    virtual void init_entry(CacheEntry&, const Transaction&);
     /*
      * Replacement implementation:
      * */
-    way_iterator lru(cset_type&, const Transaction&);
-    way_iterator rand(cset_type&, const Transaction&);
-    way_iterator rrip(cset_type&, const Transaction&);
+    way_iterator repl_lru(cset_type&, const Transaction&);
+    way_iterator repl_rand(cset_type&, const Transaction&);
+    way_iterator repl_rrip(cset_type&, const Transaction&);
 
-    way_iterator lru_dead_block(cset_type&, const Transaction&);
+    way_iterator repl_lru_dead_block(cset_type&, const Transaction&);
     /*
      * Set Dueling implementation:
      * */

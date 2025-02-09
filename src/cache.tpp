@@ -19,7 +19,7 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     :cache_name_(cache_name),
     csets_(IMPL::NUM_SETS, cset_type(IMPL::NUM_WAYS)),
     next_(n),
-    dbp_(new IMPL::DEAD_BLOCK_PREDICTOR_TYPE)
+    dbp_(new typename IMPL::DEAD_BLOCK_PREDICTOR_TYPE)
 {
     pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
     pending_writes_.reserve(IMPL::WQ_SIZE);
@@ -33,7 +33,7 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::warmup_access(Transaction trans)
+__TEMPLATE_CLASS__::warmup_access(const Transaction& trans)
 {
     bool is_write = trans_is_write(trans.type);
 
@@ -56,9 +56,9 @@ __TEMPLATE_CLASS__::warmup_access(Transaction trans)
 }
 
 __TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::warmup_fill(Transaction trans)
+__TEMPLATE_CLASS__::warmup_fill(const Transaction& trans)
 {
-    auto out = fill(trans, 1)[0];
+    auto out = fill(trans)[0];
     if (out.entry.valid && out.entry.dirty)
     {
         Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, out.entry.address);
@@ -182,6 +182,7 @@ __TEMPLATE_CLASS__::add_incoming_fill(Transaction trans)
 {
     if (fill_queue_.size() >= IMPL::FILL_QUEUE_SIZE)
         return false;
+
     fill_queue_.push_back(trans);
     return true;
 }
@@ -248,13 +249,15 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
         it->dirty |= trans_is_write(trans.type);
         
         // Invoke dead block predictor:
-        dbp_->update_on_probe_and_fill(trans);
+        dbp_->update_on_probe_or_fill(trans);
         it->likely_dead = dbp_->predict_if_dead(trans);
 
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 __TEMPLATE_HEADER__ bool
@@ -266,7 +269,7 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
     auto it = cset_find(trans.address, s.begin(), s.end());
     if (it != s.end())
     {
-        it->dirty = dirty;
+        it->dirty = true;
         
         // Invoke dead block predictor:
         dbp_->update_on_mark_dirty(trans);
@@ -275,7 +278,9 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 __TEMPLATE_HEADER__ void
@@ -293,7 +298,7 @@ __TEMPLATE_CLASS__::invalidate(uint64_t address)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
-__TEMPLATE_CLASS__::fill(const Transaction& trans, size_t num_refs)
+__TEMPLATE_CLASS__::fill(const Transaction& trans)
 {
     fill_result_type out;
 
@@ -311,7 +316,7 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans, size_t num_refs)
         if (it == s.end())
         {
             CacheEntry e;
-            init_entry(e, trans, num_refs);
+            init_entry(e, trans);
             out = fill_result_type(e, IMPL::NUM_WAYS);
             return multi_fill_result_type{out};
         }
@@ -319,7 +324,7 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans, size_t num_refs)
         // Otherwise, move the contents of the victim to the result output
         out = fill_result_type(std::move(*it), 0);
     }
-    init_entry(*it, trans, num_refs);
+    init_entry(*it, trans);
     return multi_fill_result_type{out};
 }
 
@@ -327,15 +332,15 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans, size_t num_refs)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
-__TEMPLATE_CLASS__::fill_with_eager_writeback(const Transaction& trans, size_t num_refs)
+__TEMPLATE_CLASS__::fill_with_eager_writeback(const Transaction& trans)
 {
-    auto out = fill(trans, num_refs);
+    auto out = fill(trans);
 
     // Check if the writeback queue even has space for the writeback:
     if (writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
     {
         size_t idx = cache_set_index<IMPL>(trans.address);
-        const auto& s = csets_.at(idx);
+        auto& s = csets_.at(idx);
 
         auto lru_it = cset_get_way_in_lru_position(s.begin(), s.end(), 0);
         if (lru_it->dirty)
@@ -355,24 +360,24 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
 {
     if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
     {
-        return lru(s, trans);
+        return repl_lru(s, trans);
     }
     else if constexpr (IMPL::REPL == CacheReplPolicy::RAND)
     {
-        return rand(s, trans);
+        return repl_rand(s, trans);
     }
     else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
     {
-        return rrip(s, trans);
+        return repl_rrip(s, trans);
     }
     else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
         update_psel(idx);
-        return rrip(s, trans);
+        return repl_rrip(s, trans);
     }
     else if constexpr (IMPL::REPL == CacheReplPolicy::LRU_DEAD_BLOCK)
     {
-        return lru_dead_block(s, trans);
+        return repl_lru_dead_block(s, trans);
     }
     else
     {
@@ -421,7 +426,9 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
     {
         ++s_accesses_[trans.coreid];
         if (probe(trans))
+        {
             outgoing_queue_.emplace(trans, GL_CYCLE+IMPL::CACHE_LATENCY);
+        }
         else
         {
             ++s_misses_[trans.coreid];
@@ -440,7 +447,9 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
             }
         }
         else if (!mark_dirty(trans))
+        {
             fill_queue_.push_back(trans);
+        }
     }
     return true;
 }
@@ -458,30 +467,16 @@ __TEMPLATE_CLASS__::do_next_fill()
     const bool is_read = trans_is_read(trans.type);
     
     // Compute reference count for the given transaction:
-    auto [begin, end] = mshr_.equal_range(trans.address);
-    size_t refcnt = 0;
-    if (is_read)
-    {
-        refcnt = std::transform_reduce(begin, end,
-                        static_cast<size_t>(0),
-                        std::plus<size_t>{},
-                        [] (const auto& x) { return x.second.trans.inst_list.size(); });
-    }
 
     // Handle eviction + any writeback if necessary
     multi_fill_result_type eviction_list;
-
     if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NORMAL)
     {
-        eviction_list = fill(trans, refcnt);
+        eviction_list = fill(trans);
     }
     else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
     {
-        eviction_list = fill_with_eager_writeback(trans, refcnt);
-    }
-    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
-    {
-        eviction_list = fill_with_same_set_row_harvest(trans, refcnt);
+        eviction_list = fill_with_eager_writeback(trans);
     }
     else
     {
@@ -513,6 +508,7 @@ __TEMPLATE_CLASS__::do_next_fill()
     // Update MSHR:
     if (is_read)
     {
+        auto [begin, end] = mshr_.equal_range(trans.address);
         for (auto it = begin; it != end; it++)
         {
             MSHREntry& e = it->second;
@@ -524,7 +520,9 @@ __TEMPLATE_CLASS__::do_next_fill()
                 ++s_write_alloc_[e.trans.coreid];
             }
             else
+            {
                 outgoing_queue_.emplace(std::move(e.trans), GL_CYCLE+IMPL::CACHE_LATENCY);
+            }
 
             // Update miss penalty:
             s_tot_miss_penalty_[e.trans.coreid] += GL_CYCLE - e.cycle_fired;
@@ -558,7 +556,9 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
             ++num_mshr_asleep_;
     }
     else
+    {
         e.is_fired = true;
+    }
 
     mshr_.insert({address, e});
 }

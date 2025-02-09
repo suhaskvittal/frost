@@ -6,6 +6,8 @@
 #ifndef CACHE_INDEXING_h
 #define CACHE_INDEXING_h
 
+#include "util/numerics.h"
+
 #include <cstdint>
 #include <cstddef>
 

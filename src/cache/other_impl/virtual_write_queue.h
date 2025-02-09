@@ -51,7 +51,7 @@ public:
 protected:
     bool probe(const Transaction&) override;
     bool mark_dirty(const Transaction&) override;
-    multi_fill_result_type fill(const Transaction&, size_t num_refs) override;
+    multi_fill_result_type fill(const Transaction&) override;
 
     way_iterator find_dirty_way(cset_type&);
     size_t count_dirty_lines_in_vwq_ways(const cset_type&) const;
@@ -68,8 +68,8 @@ protected:
 template <class>
 struct is_virtual_write_queue : std::false_type {};
 
-template <class IMPL, size_t NUM_SETS, size_t NUM_WAYS, class NEXT_TYPE, class DBP_TYPE>
-struct is_virtual_write_queue<VirtualWriteQueue<IMPL,NUM_SETS,NUM_WAYS,NEXT_TYPE,DBP_TYPE>> : std::true_type {};
+template <class IMPL, class NEXT_TYPE>
+struct is_virtual_write_queue<VirtualWriteQueue<IMPL,NEXT_TYPE>> : std::true_type {};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

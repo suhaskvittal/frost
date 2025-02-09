@@ -10,7 +10,7 @@ template <class ITER> inline ITER
 cset_find(uint64_t x, ITER begin, ITER end)
 {
     return std::find_if(begin, end, 
-                [] (const auto& e) { return e.valid && e.address == x; });
+                [x] (const auto& e) { return e.valid && e.address == x; });
 }
 
 ////////////////////////////////////////////////////////////////////////////

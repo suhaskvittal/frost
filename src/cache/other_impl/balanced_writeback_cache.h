@@ -51,7 +51,6 @@ protected:
     using __TEMPLATE_PARENT__::fill_queue_;
 public:
     using __TEMPLATE_PARENT__::Cache;
-    using typename __TEMPLATE_PARENT__::cset_type;
     using typename __TEMPLATE_PARENT__::way_iterator;
     using typename __TEMPLATE_PARENT__::fill_result_type;
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
@@ -60,8 +59,8 @@ public:
 protected:
     way_iterator find_victim(size_t idx, cset_type&, const Transaction&) override;
 
-    way_iterator lru_mod(cset_type&, const Transaction&);
-    way_iterator rrip_mod(cset_type&, const Transaction&);
+    way_iterator repl_lru_mod(cset_type&, const Transaction&);
+    way_iterator repl_rrip_mod(cset_type&, const Transaction&);
     /*
      * Useful inlines:
      * */

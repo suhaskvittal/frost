@@ -79,20 +79,20 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
     {
         if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
         {
-            v_it = lru_mod(s, trans);
+            v_it = repl_lru_mod(s, trans);
         }
         else if constexpr (IMPL::REPL == CacheReplPolicy::RAND)
         {
-            v_it = rand(s, trans);
+            v_it = __TEMPLATE_PARENT__::repl_rand(s, trans);
         }
         else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
         {
-            v_it = rrip_mod(s, trans);
+            v_it = repl_rrip_mod(s, trans);
         }
         else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
         {
-            update_psel(idx);
-            v_it = rrip_mod(s, trans);
+            __TEMPLATE_PARENT__::update_psel(idx);
+            v_it = repl_rrip_mod(s, trans);
         }
         else
         {
@@ -101,7 +101,9 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
         }
     }
     else
+    {
         v_it = __TEMPLATE_PARENT__::find_victim(idx, s, trans);
+    }
 
     return v_it;
 }
@@ -110,7 +112,7 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::lru_mod(cset_type& s, const Transaction& trans)
+__TEMPLATE_CLASS__::repl_lru_mod(cset_type& s, const Transaction& trans)
 {
     return std::min_element(s.begin(), s.end(),
                 [] (const auto& x, const auto& y)
@@ -123,7 +125,7 @@ __TEMPLATE_CLASS__::lru_mod(cset_type& s, const Transaction& trans)
 }
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::rrip_mod(cset_type& s, const Transaction& trans)
+__TEMPLATE_CLASS__::repl_rrip_mod(cset_type& s, const Transaction& trans)
 {
     return std::min_element(s.begin(), s.end(),
                 [] (const auto& x, const auto& y)

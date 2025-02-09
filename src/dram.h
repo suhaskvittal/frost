@@ -34,7 +34,7 @@ private:
 public:
     DRAM(double cpu_freq_ghz, double freq_ghz);
 
-    void warmup_access(uint64_t, bool) {}
+    void warmup_access(const Transaction&) {}
 
     bool can_accept(uint64_t, TransactionType);
     bool add_incoming(Transaction);

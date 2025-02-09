@@ -9,11 +9,11 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-struct NoDeadBlockPredictor
+struct NoDeadBlockPredictor : DeadBlockPredictorBase
 {
-    bool predict_if_dead(const Transaction&) { return false; }
-    void update_on_probe_or_fill(const Transaction&) {}
-    void update_on_mark_dirty(const Transaction&) {}
+    bool predict_if_dead(const Transaction&) const override { return false; }
+    void update_on_probe_or_fill(const Transaction&) override {}
+    void update_on_mark_dirty(const Transaction&) override {}
 };
 
 ////////////////////////////////////////////////////////////////////////////

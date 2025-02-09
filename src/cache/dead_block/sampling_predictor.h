@@ -17,7 +17,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 template <class IMPL>
-class SamplingDeadBlockPredictor
+class SamplingDeadBlockPredictor : public DeadBlockPredictorBase
 {
 public:
 private:
@@ -30,10 +30,11 @@ private:
         constexpr static size_t NUM_SETS = 64 * NUM_THREADS;
         constexpr static size_t NUM_WAYS = 13;
 
-        using cset_type = std::array<CacheEntry, NUM_WAYS>;
-        using cset_array = std::array<cset_type, NUM_SETS>;
+        cset_array csets;
 
-        cset_array csets{};
+        internal_cache_type(void)
+            :csets(NUM_SETS, cset_type(NUM_WAYS))
+        {}
     };
 
     constexpr static size_t PRED_TABLE_SIZE = (1L << 12) * NUM_THREADS;
@@ -57,17 +58,12 @@ private:
     internal_cache_type sampler_;
     pred_table_array    predictor_;
     data_store_map      ip_store_;
-    /*
-     * These are the number of sets that the larger cache has:
-     * */
-    const size_t global_sets_;
-    const size_t set_modulus_;
 public:
     SamplingDeadBlockPredictor(void);
 
-    bool predict_if_dead(const Transaction&) const;
-    void update_on_probe_or_fill(const Transaction&);
-    void update_on_mark_dirty(const Transaction&);
+    bool predict_if_dead(const Transaction&) const override;
+    void update_on_probe_or_fill(const Transaction&) override;
+    void update_on_mark_dirty(const Transaction&) override;
 private:
     void update_prediction_counters(uint64_t ip, uint8_t coreid, bool inc);
     data_store_type get_ip_and_coreid_from(const Transaction&) const;
