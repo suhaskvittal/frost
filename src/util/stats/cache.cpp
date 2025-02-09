@@ -32,15 +32,11 @@ print_llc_stats(std::ostream& out)
     {
         out << "\n";
         print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);
-        if (LLCache::WRITEBACK_MODE == CacheWBMode::SAME_SET_ROW_HARVEST)
-        {
-            for (size_t i = 0; i < GL_LLC->s_ssrh_tot_lru_pos_.size(); i++)
-            {
-                double elru_pos = mean(GL_LLC->s_ssrh_tot_lru_pos_[i], GL_LLC->s_ssrh_num_harvests_[i]);
-                print_stat(out, "LLC", "SSRH_WB" + std::to_string(i+1) + "_LRU_POSITION", elru_pos);
-            }
-        }
     }
+
+    out << "\n";
+    print_stat(out, "LLC", "BYPASSES", GL_LLC->s_bypasses_);
+    print_stat(out, "LLC", "DEAD_BLOCK_EVICTIONS", GL_LLC->s_dead_block_evictions_);
 }
 
 ////////////////////////////////////////////////////////////////////////////

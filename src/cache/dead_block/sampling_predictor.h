@@ -20,6 +20,7 @@ template <class IMPL>
 class SamplingDeadBlockPredictor : public DeadBlockPredictorBase
 {
 public:
+    constexpr static bool USE_IDEAL_PREDICTOR = true;
 private:
     /*
      * Definition of internal sampler cache. We just need a simple implementation
@@ -33,7 +34,7 @@ private:
         cset_array csets;
 
         internal_cache_type(void)
-            :csets(NUM_SETS, cset_type(NUM_WAYS))
+            :csets(NUM_SETS, cset_type(NUM_WAYS, CacheEntry{}))
         {}
     };
 
@@ -43,6 +44,7 @@ private:
     using ctr_type = int8_t;
     using pred_table_type = std::array<ctr_type, PRED_TABLE_SIZE>;
     using pred_table_array = std::array<pred_table_type, 3>;
+    using ideal_pred_type = std::unordered_map<uint64_t, ctr_type>;
 
     using data_store_type = std::pair<uint64_t, uint8_t>;  // ip, coreid
     using data_store_map = std::unordered_map<uint64_t, data_store_type>;
@@ -51,13 +53,15 @@ private:
     constexpr static ctr_type CTR_MIN = 0;
     constexpr static ctr_type CTR_MAX = (1<<CTR_WIDTH)-1;
     constexpr static ctr_type CTR_DEFAULT = 1;
-    constexpr static ctr_type CTR_SUM_THRESHOLD = 8;
+    constexpr static ctr_type CTR_SUM_THRESHOLD = USE_IDEAL_PREDICTOR ? 3 : 8;
     /*
      * Structures for predicting dead blocks
      * */
     internal_cache_type sampler_;
     pred_table_array    predictor_;
     data_store_map      ip_store_;
+
+    ideal_pred_type     ideal_predictor_;
 public:
     SamplingDeadBlockPredictor(void);
 

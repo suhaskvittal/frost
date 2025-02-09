@@ -77,6 +77,7 @@ public:
     uint32_t s_eager_writebacks_ =0;
 
     uint32_t s_bypasses_ =0;
+    uint32_t s_dead_block_evictions_ =0;
 
     uint32_t s_dueling_pol1_installs_ =0;
     uint32_t s_dueling_pol2_installs_ =0;

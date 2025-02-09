@@ -35,8 +35,13 @@ Core::tick_warmup()
 
     if (inst != nullptr)
     {
+        bool is_icache_miss = false;
+#if defined(TRACE_FORMAT_IMAT)
+        is_icache_miss = (inst->ip >> numeric_traits<LINESIZE>::log2) == inst->v_lineaddr;
+#endif
+
         TransactionType t = inst->is_store ?  TransactionType::READ : TransactionType::WRITE;
-        Transaction trans(coreid_, inst, t, inst->p_lineaddr);
+        Transaction trans(coreid_, inst, t, inst->p_lineaddr, is_icache_miss);
         GL_LLC->warmup_access(trans);
     }
 
@@ -173,7 +178,11 @@ Core::do_llc_access(inst_ptr inst)
     TransactionType t = inst->is_store ? TransactionType::WRITE : TransactionType::READ;
     if (GL_LLC->can_accept(0,t))
     {
-        Transaction trans(coreid_, inst, t, inst->p_lineaddr);
+        bool is_icache_miss = false;
+#if defined(TRACE_FORMAT_IMAT)
+        is_icache_miss = (inst->ip >> numeric_traits<LINESIZE>::log2) == inst->v_lineaddr;
+#endif
+        Transaction trans(coreid_, inst, t, inst->p_lineaddr, is_icache_miss);
         GL_LLC->add_incoming(trans);
         inst->state = AccessState::IN_CACHE;
         if (inst->is_store)

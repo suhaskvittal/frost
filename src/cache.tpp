@@ -271,9 +271,11 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
     {
         it->dirty = true;
         
+        /*
         // Invoke dead block predictor:
         dbp_->update_on_mark_dirty(trans);
         it->likely_dead = dbp_->predict_if_dead(trans);
+        */
 
         return true;
     }
@@ -304,6 +306,9 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans)
 
     size_t idx = cache_set_index<IMPL>(trans.address);
     cset_type& s = csets_[idx];
+
+    // Invoke dead block predictor:
+    dbp_->update_on_probe_or_fill(trans);
 
     // First search for an invalid entry:
     auto it = std::find_if_not(s.begin(), s.end(),
@@ -493,6 +498,11 @@ __TEMPLATE_CLASS__::do_next_fill()
         if (i == 0)
         {
             ++s_evictions_;
+            if (e.likely_dead)
+                ++s_dead_block_evictions_;
+            if (eviction_list[i].lru_pos == IMPL::NUM_WAYS)
+                ++s_bypasses_;
+
             if (!e.dirty)
                 break;
         }

@@ -26,7 +26,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
     e.address = trans.address;
     e.timestamp = GL_CYCLE;
     e.reused_after_marked_dirty = false;
-    e.likely_dead = false;
+    e.likely_dead = dbp_->predict_if_dead(trans);
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {

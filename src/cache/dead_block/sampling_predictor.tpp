@@ -29,15 +29,28 @@ __TEMPLATE_CLASS__::predict_if_dead(const Transaction& trans) const
 {
     if constexpr (trace_format_does_not_support_ip())
         return false;
+        
+    if (trans.address_is_ip)
+        return false;
 
     auto [ip, coreid] = get_ip_and_coreid_from(trans);
 
     // Make prediction:
     ctr_type sum = 0;
-    for (size_t i = 0; i < predictor_.size(); i++)
-        sum += get_counter(ip, coreid, i);
-
-    return sum > CTR_SUM_THRESHOLD;
+    if constexpr (USE_IDEAL_PREDICTOR)
+    {
+        if (ideal_predictor_.count(ip))
+            sum = ideal_predictor_.at(ip);
+    }
+    else
+    {
+        for (size_t i = 0; i < predictor_.size(); i++)
+        {
+            size_t h = predictor_hash<PRED_TABLE_SIZE>(ip, coreid, i);
+            sum += predictor_.at(i).at(h);
+        }
+    }
+    return sum >= CTR_SUM_THRESHOLD;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -48,8 +61,11 @@ __TEMPLATE_CLASS__::update_on_probe_or_fill(const Transaction& trans)
 {
     if constexpr (trace_format_does_not_support_ip())
         return;
+        
+    if (trans.address_is_ip)
+        return;
 
-    size_t idx = cache_set_index<IMPL::NUM_SETS>(trans.address);
+    size_t idx = cache_set_index<IMPL>(trans.address);
     // The assumption here is that `set_modulus_` is a power of two (which is true if `NUM_SETS` is also
     // a power of two)
     if (fast_mod<SET_MODULUS>(idx) != 0)
@@ -58,11 +74,12 @@ __TEMPLATE_CLASS__::update_on_probe_or_fill(const Transaction& trans)
     auto [ip, coreid] = get_ip_and_coreid_from(trans);
 
     // Access the cache:
-    idx = cache_set_index<SET_MODULUS>(trans.address);
+    idx >>= numeric_traits<SET_MODULUS>::log2;
     auto& s = sampler_.csets[idx];
 
     auto it = std::find_if(s.begin(), s.end(),
                         [addr=trans.address] (const auto& e) { return e.valid && e.address == addr; });
+    bool inc = (it == s.end());
     if (it == s.end())
     {
         // Get a victim:
@@ -80,26 +97,23 @@ __TEMPLATE_CLASS__::update_on_probe_or_fill(const Transaction& trans)
                 it = std::min_element(s.begin(), s.end(),
                             [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
             }
-            
-            // Decrement the counters of `*it`.
-            auto d_it = ip_store_.find(it->address);
-            const auto& [v_ip, v_coreid] = d_it->second;
-            update_prediction_counters(v_ip, v_coreid, false);
-            ip_store_.erase(d_it);
         }
     }
-    else
+    
+    if (it->valid)
     {
-        // On a hit, update the predictor counters:
-        update_prediction_counters(ip, coreid, true);
+        auto d_it = ip_store_.find(it->address);
+        const auto& [v_ip, v_coreid] = d_it->second;
+        update_prediction_counters(v_ip, v_coreid, inc);
+        ip_store_.erase(d_it);
     }
 
     it->valid = true;
     it->address = trans.address;
     it->timestamp = GL_CYCLE;
-    it->likely_dead = predict_if_dead(ip, coreid);
+    it->likely_dead = predict_if_dead(trans);
 
-    ip_store_.insert({ trans.address, data_store_type{ip, coreid} });
+    ip_store_[trans.address] = data_store_type{ip, coreid};
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -111,7 +125,7 @@ __TEMPLATE_CLASS__::update_on_mark_dirty(const Transaction& trans)
     if constexpr (trace_format_does_not_support_ip())
         return;
 
-    size_t idx = cache_set_index<IMPL::NUM_SETS>(trans.address);
+    size_t idx = cache_set_index<IMPL>(trans.address);
     // The assumption here is that `set_modulus_` is a power of two (which is true if `NUM_SETS` is also
     // a power of two)
     if (fast_mod<SET_MODULUS>(idx) != 0)
@@ -120,7 +134,7 @@ __TEMPLATE_CLASS__::update_on_mark_dirty(const Transaction& trans)
     auto [ip, coreid] = get_ip_and_coreid_from(trans);
 
     // Access the cache:
-    idx = cache_set_index<SET_MODULUS>(trans.address);
+    idx >>= numeric_traits<SET_MODULUS>::log2;
     auto& s = sampler_.csets[idx];
 
     auto it = std::find_if(s.begin(), s.end(),
@@ -129,7 +143,12 @@ __TEMPLATE_CLASS__::update_on_mark_dirty(const Transaction& trans)
     // We only care about updates if this is a hit
     if (it != s.end())
     {
-        update_prediction_counters(ip, coreid, true);
+        auto d_it = ip_store_.find(it->address);
+        const auto& [v_ip, v_coreid] = d_it->second;
+        update_prediction_counters(v_ip, v_coreid, false);
+
+        it->likely_dead = predict_if_dead(trans);
+
         ip_store_[trans.address] = data_store_type(ip, coreid);
     }
 }
@@ -140,19 +159,33 @@ __TEMPLATE_CLASS__::update_on_mark_dirty(const Transaction& trans)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::update_prediction_counters(uint64_t ip, uint8_t coreid, bool inc)
 {
-    for (size_t i = 0; i < predictor_.size(); i++)
+    if constexpr (USE_IDEAL_PREDICTOR)
     {
-        size_t h = predictor_hash<PRED_TABLE_SIZE>(ip, coreid, i);
-        ctr_type& c = predictor_[i][h];
+        ctr_type& c = ideal_predictor_[ip];
 
         if (inc)
             ++c;
-        else if (i & 1)
-            c >>= 1;
         else
             --c;
 
         c = std::clamp(c, CTR_MIN, CTR_MAX);
+    }
+    else
+    {
+        for (size_t i = 0; i < predictor_.size(); i++)
+        {
+            size_t h = predictor_hash<PRED_TABLE_SIZE>(ip, coreid, i);
+            ctr_type& c = predictor_[i][h];
+
+            if (inc)
+                ++c;
+            else if (i & 1)
+                c >>= 1;
+            else
+                --c;
+
+            c = std::clamp(c, CTR_MIN, CTR_MAX);
+        }
     }
 }
 
@@ -191,7 +224,7 @@ predictor_hash(uint64_t ip, uint8_t coreid, size_t table_idx)
     ip ^= MAGIC_WORDS.at(table_idx);
 
     // Rotate the bytes:
-    std::vector<uint8_t> bytes
+    std::vector<uint32_t> bytes
     {
         ip & 0xff,
         (ip >> 8) & 0xff,

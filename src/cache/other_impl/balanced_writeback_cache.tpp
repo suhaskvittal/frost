@@ -20,43 +20,15 @@
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::tick()
 {
-    // Issue writeback:
-    auto& buf_array = balanced_buffer_[issue_to_channel_];
-    size_t& wb_ctr = total_writebacks_[issue_to_channel_];
-
-    // First search for any full buffers:
-    auto buf_it = std::find_if(buf_array.begin(), buf_array.end(),
-                        [] (const auto& buf) { return buf.size() == BANK_BUFFER_SIZE; });
-
-    // If there is no full buffer, find a buffer that can issue writes (not issued full budget to DRAM)
-    if (buf_it == buf_array.end())
+    for (size_t c = 0; c < DRAM_CHANNELS; c++)
     {
-        buf_it = std::find_if(buf_array.begin(), buf_array.end(),
-                        [] (const auto& buf) { return !buf.empty() && buf.write_counter < MAX_WRITE_COUNTER; });
-    }
-
-    if (buf_it != buf_array.end())
-    {
-        auto& trans = buf_it->back();
-        if (next_->can_accept(trans.address, trans.type) && next_->add_incoming(trans))
-        {
-            pending_writebacks_.erase(trans.address);
-            buf_it->pop_back();
-            
-            // Increment write counter (local and global)
-            ++buf_it->write_counter;
-            ++wb_ctr;
-        }
-
-        if (wb_ctr == DRAM_WQ_SIZE)
+        if (total_writebacks_[c] == DRAM_WQ_SIZE)
         {
             // Reset all counters:
-            wb_ctr = 0;
-            for (auto& buf : buf_array)
-                buf.write_counter = 0;
+            total_writebacks_[c] = 0;
+            balance_counters_[c].fill(0);
         }
     }
-    fast_increment_and_mod_inplace<DRAM_CHANNELS>(issue_to_channel_);
 
     __TEMPLATE_PARENT__::tick();
 }
@@ -72,10 +44,8 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
     
     // Check if corresponding write counter is saturated: if so, then evict a
     // clean line:
-    const auto& buf = balanced_buffer_.at(channel).at(bank_idx);
-
     auto v_it = s.end();
-    if (buf.write_counter >= MAX_WRITE_COUNTER) 
+    if (balance_counters_[channel][bank_idx] >= MAX_WRITE_COUNTER) 
     {
         if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
         {
@@ -114,19 +84,42 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::repl_lru_mod(cset_type& s, const Transaction& trans)
 {
-    return std::min_element(s.begin(), s.end(),
-                [] (const auto& x, const auto& y)
-                {
-                    if (x.dirty == y.dirty)
-                        return x.timestamp < y.timestamp;
-                    else
-                        return y.dirty;
-                });
+    // First, check if the incoming line is a clean, dead block
+    bool likely_dead = dbp_->predict_if_dead(trans);
+    if (likely_dead && trans_is_read(trans.type))
+        return s.end();
+
+    // If not, search for clean dead blocks
+    auto v_it = std::find_if(s.begin(), s.end(),
+                        [] (const auto& e) { return e.likely_dead && !e.dirty; });
+
+    // If we still failed, use the nuclear option:
+    if (v_it == s.end())
+    {
+        v_it = std::min_element(s.begin(), s.end(),
+                    [] (const auto& x, const auto& y)
+                    {
+                        if (x.dirty == y.dirty)
+                            return x.timestamp < y.timestamp;
+                        else
+                            return y.dirty;
+                    });
+    }
+    return v_it;
 }
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::repl_rrip_mod(cset_type& s, const Transaction& trans)
 {
+    // First, check if the incoming line is a clean, dead block
+    bool likely_dead = dbp_->predict_if_dead(trans);
+    if (likely_dead && trans_is_read(trans.type))
+        return s.end();
+
+    // If not, search for clean dead blocks
+    auto v_it = std::find_if(s.begin(), s.end(),
+                        [] (const auto& e) { return e.likely_dead && !e.dirty; });
+
     return std::min_element(s.begin(), s.end(),
                 [] (const auto& x, const auto& y)
                 {

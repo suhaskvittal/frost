@@ -28,12 +28,9 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
     cache_type =    cfg['cache_type']
     dbp_type =      cfg['dead_block_predictor']
 
-    dbp_bypass =    cfg['allow_dbp_bypass'] == 'on'
-
     write_alloc = str(write_alloc).lower()
-    dbp_bypass = str(dbp_bypass).lower()
 
-    dbp_type.replace('$impl', typename)
+    dbp_type = dbp_type.replace('$impl', typename)
 
     cache_decl =\
 f'''
@@ -61,7 +58,6 @@ struct {typename} : public {cache_type}<{typename}, {next_typename}>
     constexpr static size_t NUM_FILL_PORTS =   {f_ports};
 
     constexpr static bool WRITE_ALLOCATE = {write_alloc};
-    constexpr static bool ALLOW_DBP_BYPASS = {dbp_bypass};
 
     constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
 
