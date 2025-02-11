@@ -477,12 +477,13 @@ DRAMChannel::update_modal_stats_post_transition()
                                                 s_tot_write_issue_std_,
                                                 s_tot_write_issue_minmax_diff_);
 #endif
-        update_cache_post_write_drain(GL_LLC);
+        end_write_mode(GL_LLC);
         writes_issued_per_bank_.fill(0);
     }
     else
     {
         drain_start_cycle_ = GL_DRAM_CYCLE;
+        start_write_mode(GL_LLC);
     }
 }
 

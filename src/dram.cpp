@@ -144,6 +144,8 @@ DRAM::print_stats(std::ostream& out)
     
     out << BAR << "\n";
 
+    print_stat(out, "DRAM", "CYCLES", GL_DRAM_CYCLE);
+
     print_vecstat(out, "DRAM", "NUM_READS", reads);
     print_vecstat(out, "DRAM", "NUM_WRITES", writes);
     print_vecstat(out, "DRAM", "NUM_PRECHARGE", precharges);
@@ -167,6 +169,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "MEAN_WRITE_OCCUPANCY_AT_DRAIN", mean_write_occu_at_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "DRAIN_LATENCY", drain_latency, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "WRITE_MODE_CYCLES", tot_drain_latency);
     print_vecstat(out, "DRAM", "FRACTION_OF_TIME_IN_WRITE_MODE", drain_fraction, VecAccMode::GMEAN);
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)

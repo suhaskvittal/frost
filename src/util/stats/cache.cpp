@@ -18,8 +18,12 @@ print_llc_stats(std::ostream& out)
 
     print_stat(out, "LLC", "READS", vec_sum(GL_LLC->s_reads_));
     print_stat(out, "LLC", "WRITES", vec_sum(GL_LLC->s_writes_));
+    print_stat(out, "LLC", "WRITE_FORWARDS", vec_sum(GL_LLC->s_write_forwards_));
+    print_stat(out, "LLC", "REWRITES", vec_sum(GL_LLC->s_rewrites_));
     print_stat(out, "LLC", "EVICTIONS", GL_LLC->s_evictions_);
     print_stat(out, "LLC", "WRITEBACKS", GL_LLC->s_writebacks_);
+
+    print_stat(out, "LLC", "EOS_WRITE_OCCUPANCY", GL_LLC->write_occu());
 
     if (repl_uses_set_dueling(LLCache::REPL))
     {

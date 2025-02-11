@@ -8,6 +8,7 @@
 
 #include "constants.h"
 
+#include "cache/other_impl/type_traits.h"
 #include "dram/command.h"
 #include "dram/enums.h"
 #include "dram/state.h"
@@ -213,18 +214,6 @@ private:
             const SchedulerState&,
             const DRAMBankState&);
     /*
-     * Auxilliary function for updating the LLC. This needs to be a template so functions that are
-     * not defined in `Cache` but in a different class (i.e., `BankBalancedCache`) can be used.
-     * */
-    template <class CACHE_TYPE>
-    void update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>&);
-    /*
-     * Auxilliary function for handling situation with virtual write queue:
-     * */
-    template <class CACHE_TYPE>
-    void send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>&);
-
-    /*
      * Useful inlines for accessing bank references.
      * */
     inline DRAMBankState& get_bank_ref_from_idx(size_t ii)
@@ -242,29 +231,37 @@ private:
                k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
         return state_.at(k).at(j).at(i);
     }
+    /*
+     * Auxilliary functions for updating the LLC. This needs to be a template so functions that are
+     * not defined in `Cache` but in a different class can be used.
+     * */
+    template <class CACHE_TYPE>
+    void start_write_mode(std::unique_ptr<CACHE_TYPE>& c)
+    {
+        if constexpr (cache_type_traits::is_balanced_writeback_cache<typename CACHE_TYPE::parent_type>::value)
+            c->start_write_mode(channel_id_);
+    }
 
-    friend class DRAM;
+    template <class CACHE_TYPE>
+    void end_write_mode(std::unique_ptr<CACHE_TYPE>& c)
+    {
+        if constexpr (cache_type_traits::is_balanced_writeback_cache<typename CACHE_TYPE::parent_type>::value)
+            c->end_write_mode(channel_id_, writes_issued_per_bank_);
+    }
+
+    template <class CACHE_TYPE>
+    void send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>& c)
+    {
+        if constexpr (cache_type_traits::is_virtual_write_queue<typename CACHE_TYPE::parent_type>::value)
+            c->channel_request_demand_writeback(channel_id_);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#include "cache/other_impl/all.h"
-
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
-template <class CACHE_TYPE> void
-DRAMChannel::update_cache_post_write_drain(std::unique_ptr<CACHE_TYPE>& c)
-{
-}
-
-template <class CACHE_TYPE> void
-DRAMChannel::send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>& c)
-{
-    if constexpr (is_virtual_write_queue<typename CACHE_TYPE::parent_type>::value)
-        c->channel_request_demand_writeback(channel_id_);
-}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

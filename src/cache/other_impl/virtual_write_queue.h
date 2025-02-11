@@ -41,7 +41,6 @@ private:
     using __TEMPLATE_PARENT__::csets_;
 public:
     using __TEMPLATE_PARENT__::Cache;
-    using typename __TEMPLATE_PARENT__::cset_type;
     using typename __TEMPLATE_PARENT__::way_iterator;
     using typename __TEMPLATE_PARENT__::fill_result_type;
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
@@ -58,18 +57,8 @@ protected:
 
     void update_criticality_via_count(size_t idx);
 
-    using __TEMPLATE_PARENT__::get_set;
     using __TEMPLATE_PARENT__::enqueue_writeback;
 };
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-template <class>
-struct is_virtual_write_queue : std::false_type {};
-
-template <class IMPL, class NEXT_TYPE>
-struct is_virtual_write_queue<VirtualWriteQueue<IMPL,NEXT_TYPE>> : std::true_type {};
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

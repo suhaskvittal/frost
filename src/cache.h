@@ -64,6 +64,8 @@ public:
 
     stat_type s_reads_{};
     stat_type s_writes_{};
+    stat_type s_write_forwards_{};
+    stat_type s_rewrites_{};
     stat_type s_accesses_{};
     stat_type s_misses_{};
     stat_type s_fills_{};
@@ -151,6 +153,19 @@ public:
     virtual bool add_incoming_fill(Transaction);
 
     bool deadlock_find_inst(inst_ptr) const;
+    /*
+     * Useful public inlines (i.e., for stats):
+     * */
+    inline size_t write_occu(void) const
+    {
+        return std::transform_reduce(csets_.begin(), csets_.end(), 0,
+                            std::plus<size_t>{},
+                            [] (const auto& s)
+                            {
+                                return std::count_if(s.begin(), s.end(),
+                                                [] (const auto& e) { return e.valid && e.dirty; });
+                            });
+    }
 protected:
     struct fill_result_type
     {

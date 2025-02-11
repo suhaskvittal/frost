@@ -72,7 +72,8 @@ __TEMPLATE_CLASS__::warmup_fill(const Transaction& trans)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::tick()
 {
-    // Check for sleeping MSHR entries:
+    // We assume that the LLC can either send a read request or a writeback to `next_`
+    // every cycle, not both:
     if (num_mshr_asleep_ > 0)
     {
         auto mshr_it = std::find_if_not(mshr_.begin(), mshr_.end(),
@@ -84,10 +85,8 @@ __TEMPLATE_CLASS__::tick()
             e.is_fired = true;
             --num_mshr_asleep_;
         }
-    }
-
-    // Send the next writeback to `next_`
-    if (!writeback_queue_.empty())
+    } 
+    else if (!writeback_queue_.empty())
     {
         const auto& trans = writeback_queue_.front();
         if (next_->can_accept(trans.address, trans.type) && next_->add_incoming(trans))
@@ -138,6 +137,7 @@ __TEMPLATE_CLASS__::add_incoming(Transaction trans)
     // First, check if we can forward writes:
     if (pending_writes_.count(trans.address) || pending_writebacks_.count(trans.address))
     {
+        ++s_write_forwards_[trans.coreid];
         if (is_read)
             outgoing_queue_.emplace(trans, GL_CYCLE+1);
         return true;
@@ -269,6 +269,9 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
     auto it = cset_find(trans.address, s.begin(), s.end());
     if (it != s.end())
     {
+        if (it->dirty)
+            ++s_rewrites_[trans.coreid];
+
         it->dirty = true;
         
         /*
