@@ -75,6 +75,25 @@ DRAMBaseScheduler::handle_preab_forced_transition()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+bool
+DRAMBaseScheduler::deadlock_find_inst(const inst_ptr inst) const
+{
+    std::cerr << "scheduler:\n"
+                << "\tread occupancy = " << read_occu() << "\n"
+                << "\twrite occupancy = " << write_occu() << "\n"
+                << "\tin write mode = " << in_write_mode_ << "\n"
+                << "\tin transition = " << in_transition_ << "\n"
+                << "\tactive buffer contents (size = " << active_buffer_.size() << "):";
+    for (size_t idx : active_buffer_)
+        std::cerr << " " << idx;
+    std::cerr << "\n";
+
+    return false;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 void
 DRAMBaseScheduler::try_switch_to_reads()
 {
@@ -171,7 +190,18 @@ DRAMBaseScheduler::select_from_bank_commands(bank_cmd_array bank_cmds)
 
             // Update `pending` structures:
             auto& p = cmd_is_read(ready_cmd.type) ? pending_reads_ : pending_writes_;
-            pending_erase_one(p, ready_cmd.address);
+            if (p.count(ready_cmd.address) > 1)
+            {
+                // Search and eliminate any additional commands in `p` that match this address:
+                for (auto it = q_p->begin(); it != q_p->end(); )
+                {
+                    if (it->trans.address == ready_cmd.address)
+                        it = q_p->erase(it);
+                    else
+                        ++it;
+                }
+            }
+            p.erase(ready_cmd.address);
         }
         else if (cmd_is_act(ready_cmd.type))
         {
@@ -297,5 +327,6 @@ DRAMBaseScheduler::select_cas_command(
         return cmd;
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

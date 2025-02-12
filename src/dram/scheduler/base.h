@@ -93,7 +93,6 @@ public:
         else
             try_switch_to_writes();
     }
-
     /*
      * IO functions:
      * */
@@ -106,7 +105,8 @@ public:
      * */
     void handle_preab_forced_transition(void);
     /*
-     * These return the number of pending reads/writes. Implementation specific: */
+     * These return the number of pending reads/writes. Implementation specific:
+     * */
     virtual size_t read_occu(void) const =0;
     virtual size_t write_occu(void) const =0;
 
@@ -119,6 +119,8 @@ public:
     {
         return in_transition_;
     }
+
+    virtual bool deadlock_find_inst(const inst_ptr) const;
 protected:
     using bank_cmd_type = std::tuple<DRAMCommand, dram_rw_queue_type*, dram_rw_queue_type::iterator>;
     using bank_cmd_array = std::vector<bank_cmd_type>;

@@ -13,6 +13,7 @@ __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = RRIP_MAX;
+    e.new_install = false;
 
     if (e.dirty)
         e.reused_after_marked_dirty = true;
@@ -27,6 +28,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
     e.timestamp = GL_CYCLE;
     e.reused_after_marked_dirty = false;
     e.likely_dead = dbp_->predict_if_dead(trans);
+    e.new_install = true;
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
@@ -36,6 +38,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
         // Resolve `r` if it is a follower set.
         if (r == SetDuelingRole::FOLLOWER)
             r = (psel_ & PSEL_MSB_MASK) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
+
         if (r == SetDuelingRole::LEADER_1)
         {
             e.rrpv = 1;
@@ -74,8 +77,9 @@ __TEMPLATE_CLASS__::repl_rrip(cset_type& s, const Transaction&)
 {
     auto v_it = std::min_element(s.begin(), s.end(),
                         [] (const auto& x, const auto& y) { return x.rrpv < y.rrpv; });
+    auto r = v_it->rrpv;
     for (auto& x : s)
-        x.rrpv -= v_it->rrpv;
+        x.rrpv -= r;
     return v_it;
 }
 

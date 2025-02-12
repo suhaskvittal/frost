@@ -47,6 +47,8 @@ public:
     {
         return write_queue_.size();
     }
+
+    bool deadlock_find_inst(const inst_ptr) const override;
 private:
     inline bool add_to_rw_queue(Transaction trans) override
     {

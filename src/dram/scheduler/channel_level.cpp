@@ -27,6 +27,7 @@ ChannelLevelScheduler::select_ready_command()
     SchedulerState s;
     bank_cmd_array bank_cmds(DRAM_TOT_BANKS_PER_CHANNEL);
 
+    bool any_writes_were_possible = false;
     for (auto q_it = q.begin(); q_it != q.end(); q_it++)
     {
         DRAMCommand ready_cmd;
@@ -44,6 +45,7 @@ ChannelLevelScheduler::select_ready_command()
         {
             if (pending_reads_.count(q_it->trans.address))
                 continue;
+            any_writes_were_possible = true;
         }
 
         // Determine command to issue:
@@ -72,7 +74,41 @@ ChannelLevelScheduler::select_ready_command()
         s.update_priority(bank_idx, q_it->trans.dram_issue_priority);
     }
 
+    // If we could not do any writes despite being above the watermark, force a transition back to reads:
+    if (in_write_mode_ && !any_writes_were_possible)
+        in_transition_ = true;
+
     return select_from_bank_commands(bank_cmds);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline dram_rw_queue_type::const_iterator
+search_for_inst_in_queue(const inst_ptr inst, const dram_rw_queue_type& q)
+{
+    return std::find_if(q.begin(), q.end(),
+                    [inst] (const auto& e) { return e.trans.contains_inst(inst); });
+}
+
+bool
+ChannelLevelScheduler::deadlock_find_inst(const inst_ptr inst) const
+{
+    DRAMBaseScheduler::deadlock_find_inst(inst);
+    
+    // Search for instruction in read queue:
+    auto rd_it = search_for_inst_in_queue(inst, read_queue_);
+    if (rd_it != read_queue_.end())
+    {
+        size_t p = std::distance(read_queue_.begin(), rd_it);
+        std::cerr << "\tfound in read queue, position " << p << "\n";
+        return true;
+    }
+    else
+    {
+        std::cerr << "\tnot in read queue\n";
+    }
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////

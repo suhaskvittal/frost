@@ -37,7 +37,6 @@
  *
  *      -- uint64_t CACHE_LATENCY
  *      -- size_t NUM_MSHR
- *      -- size_t WB_QUEUE_SIZE
  *      -- size_t FILL_QUEUE_SIZE
  *
  *      -- size_t NUM_READ_PORTS
@@ -242,14 +241,19 @@ protected:
             return IMPL::RQ_SIZE;
     }
 
-    virtual inline bool allow_access(void)
+    inline bool mshr_has_space(void) const
     {
-        return mshr_.size() < IMPL::NUM_MSHR && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE;
+        return mshr_.size() + writeback_queue_.size() < IMPL::NUM_MSHR;
     }
 
-    virtual inline bool allow_fill(void)
+    virtual inline bool allow_access(void) const
     {
-        return !fill_queue_.empty() && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE;
+        return mshr_has_space();
+    }
+
+    virtual inline bool allow_fill(void) const
+    {
+        return !fill_queue_.empty();
     }
 
     virtual inline void enqueue_writeback(Transaction trans)

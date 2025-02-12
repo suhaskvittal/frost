@@ -86,6 +86,13 @@ bool
 DRAMChannel::deadlock_find_inst(const inst_ptr inst) const
 {
     std::cerr << "searching in DRAM channel " << channel_id_ << "...\n";
+
+    // Search in outgoing queue:
+
+    // Search for instruction in scheduler's R/W queues:
+    if (scheduler_->deadlock_find_inst(inst))
+        return true;
+
     std::cerr << "\tnothing found\n";
     return false;
 }

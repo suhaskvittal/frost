@@ -24,7 +24,7 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
     pending_writes_.reserve(IMPL::WQ_SIZE);
     pending_misses_.reserve(IMPL::NUM_MSHR);
-    pending_writebacks_.reserve(IMPL::WB_QUEUE_SIZE);
+    pending_writebacks_.reserve(IMPL::NUM_MSHR);
 
     mshr_.reserve(IMPL::NUM_MSHR);
 }
@@ -206,6 +206,7 @@ __TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
                     << ", write_queue occupancy = " << write_queue_.size()
                     << ", prefetch queue occupancy = " << prefetch_queue_.size()
                     << ", mshr occupancy = " << mshr_.size()
+                    << ", sleeping mshr = " << num_mshr_asleep_
                     << ", writeback queue occupancy = " << writeback_queue_.size()
                     << "\n";
         return true;
@@ -223,7 +224,9 @@ __TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
             << ", write_queue occupancy = " << write_queue_.size()
             << ", prefetch queue occupancy = " << prefetch_queue_.size()
             << ", mshr occupancy = " << mshr_.size()
+            << ", sleeping mshr = " << num_mshr_asleep_
             << ", writeback queue occupancy = " << writeback_queue_.size()
+            << ", fill queue occupancy = " << fill_queue_.size()
             << "\n";
         return true;
     }
@@ -344,8 +347,8 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(const Transaction& trans)
 {
     auto out = fill(trans);
 
-    // Check if the writeback queue even has space for the writeback:
-    if (writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
+    // Check if the mshr has space:
+    if (mshr_has_space())
     {
         size_t idx = cache_set_index<IMPL>(trans.address);
         auto& s = csets_.at(idx);

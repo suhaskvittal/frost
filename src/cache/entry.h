@@ -36,6 +36,7 @@ struct CacheEntry
 
     bool reused_after_marked_dirty =false;
     bool likely_dead =false;
+    bool new_install =false;
 
     CacheEntry(void) =default;
 };
