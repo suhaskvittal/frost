@@ -32,7 +32,7 @@ DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
 ////////////////////////////////////////////////////////////////////////////
 
 bool
-DRAM::can_accept(uint64_t address, TransactionType type)
+DRAM::can_accept(uint64_t address, TransactionType type) const
 {
     bool is_write = trans_is_write(type);
 
@@ -42,10 +42,7 @@ DRAM::can_accept(uint64_t address, TransactionType type)
 #endif
 
     size_t i = dram_channel(address);
-    if (is_write)
-        return channels_[i]->write_queue_size() < DRAM_WQ_SIZE;
-    else
-        return channels_[i]->read_queue_size() < DRAM_RQ_SIZE;
+    return channels_[i]->can_accept(address, type);
 }
 
 bool

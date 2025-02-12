@@ -8,6 +8,7 @@
 
 #include "globals.h"
 #include "dram_timing.h"
+#include "util/numerics.h"
 
 #include <array>
 #include <cstdint>
@@ -76,6 +77,22 @@ bool try_and_issue_ref(DRAMRankState&, uint32_t& s_ref, uint32_t& s_pre);
 void update_dram_rank_states(DRAMChannelState&, const DRAMCommand&);
 void update_dram_bankgroup_states(DRAMRankState&, const DRAMCommand&);
 void update_dram_bank_state(DRAMBankState&, const DRAMCommand&);
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+inline const DRAMBankState& channel_get_const_bank_ref_from_idx(const DRAMChannelState& st, size_t ii)
+{
+    size_t i = fast_mod<DRAM_BANKS>(ii),
+           j = fast_mod<DRAM_BANKGROUPS>(ii >> numeric_traits<DRAM_BANKS>::log2),
+           k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
+    return st.at(k).at(j).at(i);
+}
+
+inline DRAMBankState& channel_get_bank_ref_from_idx(DRAMChannelState& st, size_t ii)
+{
+    return const_cast<DRAMBankState&>(channel_get_const_bank_ref_from_idx(st, ii));
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
