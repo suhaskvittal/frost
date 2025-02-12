@@ -31,7 +31,7 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017', 'mtf/gap', 'mtf/ligra']
+SUITES = ['mtf/spec2017', 'mtf/gap']
 
 def create_csv_file_for_build(build: str):
     wr = open(f'data/{build.lower()}.csv', 'w')
