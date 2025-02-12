@@ -1,5 +1,4 @@
-'''
-    author: Suhas Vittal
+''' author: Suhas Vittal
 '''
 
 ############################################################
@@ -24,14 +23,12 @@ page_mode = page_mode.upper()
 ############################################################
 
 CORES = 8
-REPL_POLICY = 'LRU'
+TRACE_FORMAT = 'MTF'
 
 def write_ini(filename: str,
-              write_queue_size=128,
-              write_policy='ASYNC',
-              wb_mode='FORCED',
+              write_queue_size=32,
+              repl='LRU',
               cache_type='Cache',
-              dead_block_predictor='NoDeadBlockPredictor',
               other_defines=''
 ):
     if len(other_defines) > 0:
@@ -43,7 +40,7 @@ def write_ini(filename: str,
 f'''[SYSTEM]
 model = simple
 defines = {other_defines}
-trace_format = IMAT
+trace_format = {TRACE_FORMAT}
 
 [CORE]
 frequency_ghz = 4.0
@@ -60,9 +57,8 @@ banks = 4
 rows = 65536
 columns = 128
 BL = 16
-read_queue_size = 128
+read_queue_size = 32
 write_queue_size = {write_queue_size}
-write_policy = {write_policy}
 sched_policy = FRFCFS
 page_policy = {page_mode}
 address_mapping = {address_mapping}
@@ -71,37 +67,39 @@ dram_type = 4800
 [LLC]
 size_kb_per_core = 2048
 ways = 16
-num_mshr = {32*CORES}
-num_rw_ports = 4
-latency = 20
+replacement_policy = {repl}
 read_queue_size = 64
 write_queue_size = 64
 prefetch_queue_size = 32
-replacement_policy = {REPL_POLICY}
-writeback_mode = {wb_mode}
-base_cache_type = {cache_type}
-dead_block_predictor = {dead_block_predictor}
+latency = 20
+num_mshr_per_core = 32
+fill_queue_size = 32
+read_ports = 4
+write_ports = 4
+fill_ports = 1
+cache_type = {cache_type}
 ''')
 
 ############################################################
 ############################################################
 # BASELINE
-write_ini('baseline')
-write_ini('baseline_dead_block', dead_block_predictor='SamplingPredictor<$base>')
+write_ini('baseline_lru', repl='LRU')
+write_ini('baseline_srrip', repl='SRRIP')
+write_ini('baseline_drrip', repl='DRRIP')
 
 ############################################################
 ############################################################
-# MOTIVATION: NO WRITES
+# MOTIVATION
 write_ini('no_writes', other_defines='DRAM_DROP_WRITES')
+write_ini('random_writes', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES')
 
 ############################################################
 ############################################################
-# WRITE SYNCHRONIZATION
-write_ini('write_sync', write_policy='SYNC')
-write_ini('write_sync_dead_block', write_policy='SYNC', dead_block_predictor='SamplingPredictor<$base>')
-write_ini('write_sync_random_writes', write_policy='SYNC', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES')
-#write_ini('bank_balanced_cache', write_policy='SYNC', cache_type='BankBalancedCache')
-#write_ini('bank_balanced_cache_dead_block', write_policy='SYNC', cache_type='BankBalancedCache', dead_block_predictor='SamplingPredictor<$base>')
+# IMPL
+write_ini('vwq_lru', cache_type='VirtualWriteQueue', repl='LRU')
+write_ini('balanced_cache_lru', cache_type='BalancedWritebackCache', repl='LRU')
+write_ini('balanced_cache_srrip', cache_type='BalancedWritebackCache', repl='SRRIP')
+write_ini('balanced_cache_drrip', cache_type='BalancedWritebackCache', repl='DRRIP')
 
 ############################################################
 ############################################################

@@ -15,6 +15,8 @@ def parse_line(out: dict, line: str):
 
 def parse_stat_line(out: dict, line: str):
     data = line.strip().split()
+    if len(data) == 0:
+        return
     who, stat, value = data[:]
     if who not in out:
         out[who] = {}
@@ -22,6 +24,8 @@ def parse_stat_line(out: dict, line: str):
 
 def parse_dram_line(out: dict, line: str):
     data = line.strip().split()
+    if len(data) == 0:
+        return
     dram, stat, acc = data[0], data[1], data[-1]
     data = data[2:-1]
     if dram not in out:
@@ -102,6 +106,7 @@ def read_results(rd) -> dict:
     while not is_bar(line):
         parse_stat_line(out, line)
         line = rd.readline()
+    line = rd.readline()  # Skips `GL_DRAM_CYCLE` line
     # Next data is all dram data. Stop when we hit a line
     while not is_bar(line):
         parse_dram_line(out, line)

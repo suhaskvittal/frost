@@ -53,7 +53,7 @@ def append_build(base: str):
     builds.append(f'{prefix}_{base}')
 
 if which == 'all':
-    for w in ['baseline', 'no_writes', 'evals_1', 'random_writes']:
+    for w in ['baseline', 'no_writes', 'random_writes', 'evals']:
         os.system(f'python scripts/w_mgt/run.py {page_mode} {w}')
         if WHERE == 'PACE':
             print('sleeping for 15 minutes...')
@@ -61,18 +61,18 @@ if which == 'all':
     exit(0)
 
 if which == 'baseline':
-    append_build('BASELINE')
-    append_build('BASELINE_DEAD_BLOCK')
+    append_build('BASELINE_LRU')
+    append_build('BASELINE_SRRIP')
+    append_build('BASELINE_DRRIP')
 elif which == 'no_writes':
     append_build('NO_WRITES')
-elif which == 'evals_1':
-    append_build('WRITE_SYNC')
-    append_build('WRITE_SYNC_DEAD_BLOCK')
 elif which == 'random_writes':
-    append_build('WRITE_SYNC_RANDOM_WRITES')
-elif which == 'evals_2':
-    append_build('BANK_BALANCED_CACHE')
-    append_build('BANK_BALANCED_CACHE_DEAD_BLOCK')
+    append_build('RANDOM_WRITES')
+elif which == 'evals':
+    append_build('VWQ_LRU')
+    append_build('BALANCED_CACHE_LRU')
+    append_build('BALANCED_CACHE_SRRIP')
+    append_build('BALANCED_CACHE_DRRIP')
 else:
     print('Unknown experiment!')
     exit(1)
@@ -80,11 +80,13 @@ else:
 ############################################################
 ############################################################
 
-for suite in ['imat/spec', 'imat/ligra']:
+for suite in ['mtf/spec2017', 'mtf/gap', 'mtf/ligra']:
+    inst_warmup = 250_000_000 if suite == 'mtf/gap' else INST_WARMUP
+
     benchmarks = [f for f in os.listdir(f'TRACES/{suite}') if f.endswith('.xz') or f.endswith('.gz')]
     for build in builds:
         os.system(f'mkdir -p out/{suite}/{build}')
         for b in benchmarks:
             name = get_name(suite, b)
-            base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {INST_WARMUP}'
+            base_cmd = f'./builds/{build}/sim TRACES/{suite}/{b} -s {INST_SIM} -w {inst_warmup}'
             issue_sbatch(base_cmd, f'out/{suite}/{build}/{name}.out')

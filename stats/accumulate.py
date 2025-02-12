@@ -15,6 +15,9 @@ MPKI_LIMIT = 1.0
 ####################################################################
 ####################################################################
 
+def amean(arr: list[float]):
+    return sum(arr) / len(arr)
+
 def gmean(arr: list[float]):
     s = sum(math.log(x) for x in arr)
     return math.exp(s/len(arr))
@@ -36,7 +39,7 @@ def print_footer(builds: list[str]):
     BAR = ''.join('-' for _ in range(32+12*len(builds)))
     print(f'\n{BAR}')
 
-def get_per_core_stat(build_data, func):
+def get_per_core_stat(build_data, func, mean_type=hmean):
     per_core = []
     i = 0
     while True:
@@ -45,7 +48,7 @@ def get_per_core_stat(build_data, func):
             i += 1
         else:
             break
-    return hmean(per_core)
+    return mean_type(per_core)
 
 ####################################################################
 ####################################################################
