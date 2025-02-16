@@ -23,27 +23,27 @@
 
 inline size_t dram_channel(uint64_t x)
 {
-    return (x >> CH_OFF) & mask(DRAM_CHANNELS);
+    return (x >> CH_OFF) & (DRAM_CHANNELS-1);
 }
 
 inline size_t dram_bankgroup(uint64_t x)
 {
-    return (x >> BG_OFF) & mask(DRAM_BANKGROUPS); 
+    return (x >> BG_OFF) & (DRAM_BANKGROUPS-1); 
 }
 
 inline size_t dram_bank(uint64_t x)
 {
-    return (x >> BA_OFF) & mask(DRAM_BANKS);
+    return (x >> BA_OFF) & (DRAM_BANKS-1);
 }
 
 inline size_t dram_rank(uint64_t x)
 {
-    return (x >> RA_OFF) & mask(DRAM_RANKS);
+    return (x >> RA_OFF) & (DRAM_RANKS-1);
 }
 
 inline size_t dram_row(uint64_t x)
 {
-    return (x >> ROW_OFF) & mask(DRAM_ROWS);
+    return (x >> ROW_OFF) & (DRAM_ROWS-1);
 }
 
 ////////////////////////////////////////////////////////////////////////////

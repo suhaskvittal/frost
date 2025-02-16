@@ -28,32 +28,26 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
     DRAMCommandType c = cmd.type;
 
     const auto& ra = ch.at(dram_rank(cmd.address));
-    if (cmd_is_act(c) && ra.faw.size() == 4)
-        return false;
-    if (GL_DRAM_CYCLE >= ra.next_ref_cycle || GL_DRAM_CYCLE < ra.next_cmd_post_ref_cycle)
-        return false;
-    if (cmd_is_read(c) && GL_DRAM_CYCLE < ra.read_ok)
-        return false;
-    if (cmd_is_write(c) && GL_DRAM_CYCLE < ra.write_ok)
-        return false;
-
     const auto& bg = ra.at(dram_bankgroup(cmd.address));
-    if (cmd_is_read(c) && GL_DRAM_CYCLE < bg.read_ok)
-        return false;
-    if (cmd_is_write(c) && GL_DRAM_CYCLE < bg.write_ok)
-        return false;
-    if (c == DRAMCommandType::ACTIVATE && GL_DRAM_CYCLE < bg.act_ok)
-        return false;
-    
     const auto& ba = bg.at(dram_bank(cmd.address));
-    if (cmd_is_act(c) && GL_DRAM_CYCLE < ba.act_ok)
-        return false;
-    if (cmd_is_cas(c) && GL_DRAM_CYCLE < ba.cas_ok)
-        return false;
-    if (cmd_is_pre_only(c) && GL_DRAM_CYCLE < ba.pre_ok)
-        return false;
 
-    return true;
+    bool ok = true;
+
+    // Check that the rank is not stalled by REF
+    ok &= (GL_DRAM_CYCLE < ra.next_ref_cycle && GL_DRAM_CYCLE > ra.next_cmd_post_ref_cycle);
+    
+    // Check ACT conditions:
+    ok &= !cmd_is_act(c) || (ra.faw.size() < 4 && GL_DRAM_CYCLE >= bg.act_ok && GL_DRAM_CYCLE >= ba.act_ok);
+    
+    // CAS conditions:
+    ok &= !cmd_is_read(c) || (GL_DRAM_CYCLE >= ra.read_ok && GL_DRAM_CYCLE >= bg.read_ok);
+    ok &= !cmd_is_write(c) || (GL_DRAM_CYCLE >= ra.write_ok && GL_DRAM_CYCLE >= bg.write_ok);
+    ok &= !cmd_is_cas(c) || (GL_DRAM_CYCLE >= ba.cas_ok);
+
+    // PRE conditions:
+    ok &= !cmd_is_pre_only(c) || (GL_DRAM_CYCLE >= ba.pre_ok);
+
+    return ok;
 }
 
 ////////////////////////////////////////////////////////////////////////////

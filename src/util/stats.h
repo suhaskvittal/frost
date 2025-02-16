@@ -87,7 +87,7 @@ vec_min(const VecStat<T,N>& arr)
     return *std::min_element(arr.begin(), arr.end());
 }
 
-template <class T, size_t N> inline T
+template <class T, size_t N> inline double
 vec_variance(const VecStat<T,N>& arr)
 {
     double amean = vec_amean(arr);
@@ -100,7 +100,7 @@ vec_variance(const VecStat<T,N>& arr)
                             }) / static_cast<double>(N);
 }
 
-template <class T, size_t N> inline T
+template <class T, size_t N> inline double
 vec_std(const VecStat<T,N>& arr)
 {
     return std::sqrt(vec_variance(arr));

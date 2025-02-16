@@ -166,7 +166,12 @@ DRAMChannel::update_modal_stats_post_transition()
 
         s_tot_read_occu_at_drain_ += scheduler_->read_occu();
         s_tot_write_occu_at_drain_ += scheduler_->write_occu();
+        ++s_num_drains_;
+        if (scheduler_->write_occu() >= scheduler_->high_watermark_ || scheduler_->any_write_queues_full())
+            ++s_num_forced_drains_;
+
         start_write_mode(GL_LLC);
+        writes_issued_per_bank_.fill(0);
     }
     else
     {
@@ -180,7 +185,6 @@ DRAMChannel::update_modal_stats_post_transition()
 #endif
         end_write_mode(GL_LLC);
         writes_issued_per_bank_.fill(0);
-        ++s_num_drains_;
     }
 }
 

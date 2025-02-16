@@ -11,7 +11,7 @@ constexpr size_t ROW_OFF = numeric_traits<DRAM_COLUMNS>::log2
 inline size_t dram_column(uint64_t x)
 {
     size_t lower = x & 1,
-           upper = (x >> (RA_OFF + numeric_traits<DRAM_RANKS>::log2)) & mask(DRAM_COLUMNS/2);
+           upper = (x >> (RA_OFF + numeric_traits<DRAM_RANKS>::log2)) & (DRAM_COLUMNS/2-1);
     return lower | (upper << 1);
 }
 

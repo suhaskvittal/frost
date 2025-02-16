@@ -92,8 +92,8 @@ else()
                 src/dram.cpp
                 src/dram/channel.cpp
                 src/dram/command.cpp
-                src/dram/scheduler/base.cpp
-                src/dram/scheduler/channel_level.cpp
+                src/dram/scheduler.cpp
+                src/dram/scheduler/impl.cpp
                 src/dram/state.cpp)
 endif()
 

@@ -67,7 +67,17 @@ __TEMPLATE_CLASS__::repl_lru_mod(cset_type& s, const Transaction& trans)
     size_t channel = dram_channel(trans.address),
            bank_idx = dram_bank_idx(trans.address);
     
-    bool prio_write = balance_counters_[channel][bank_idx] < MAX_WRITE_COUNTER;
+    const auto& ctrs = balance_counters_[channel];
+    auto [min_it, max_it] = std::minmax_element(ctrs.begin(), ctrs.end());
+    size_t c = ctrs.at(bank_idx);
+
+    bool prio_read = (c - *min_it) >= 1,
+         prio_write = (*max_it - c) >= 1;
+
+    // Use normal LRU if there is no need for balancing yet:
+    if (!prio_read && !prio_write)
+        return __TEMPLATE_PARENT__::repl_lru(s, trans);
+
     if (bypass_repl(trans, prio_write))
         return s.end();
 
@@ -85,23 +95,40 @@ __TEMPLATE_CLASS__::repl_lru_mod(cset_type& s, const Transaction& trans)
                     return std::make_pair(e.address, p);
                 });
         v_it = std::min_element(s.begin(), s.end(),
-                    [prio_write, &pos_map] (const auto& x, const auto& y)
+                    [&pos_map, prio_read] (const auto& x, const auto& y)
                     {
+                        ssize_t px = pos_map[x.address],
+                                py = pos_map[y.address];
+                        /*
+                         *
                         if (x.dirty == y.dirty)
                         {
                             return x.timestamp < y.timestamp;
                         }
+                        else if (dw >= 2)
+                        {
+                            if (std::abs(px-py) <= 3*IMPL::NUM_WAYS/4)
+                                return y.dirty;
+                            else
+                                return x.timestamp < y.timestamp;
+                        }
                         else
                         {
-                            ssize_t px = pos_map[x.address],
-                                    py = pos_map[y.address];
-                            if (std::abs(px-py) <= 8)
+                            if (std::abs(px-py) <= IMPL::NUM_WAYS/2)
                                 return prio_write ? x.dirty : y.dirty;
                             else
                                 return x.timestamp < y.timestamp;
                         }
+                        */
+                        if (x.dirty != y.dirty)
+                        {
+                            if (std::abs(px-py) <= IMPL::NUM_WAYS/2)
+                                return prio_read ? y.dirty : x.dirty;
+                        }
+                        return x.timestamp < y.timestamp;
                     });
     }
+
     return v_it;
 }
 

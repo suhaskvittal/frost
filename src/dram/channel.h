@@ -11,7 +11,7 @@
 #include "cache/other_impl/type_traits.h"
 #include "dram/command.h"
 #include "dram/enums.h"
-#include "dram/scheduler/all.h"
+#include "dram/scheduler.h"
 #include "dram/state.h"
 #include "dram/stats.h"
 #include "transaction.h"
@@ -63,6 +63,7 @@ public:
     uint64_t s_tot_write_latency_ =0;
 
     uint32_t s_num_drains_ =0;
+    uint32_t s_num_forced_drains_ =0;
     uint32_t s_tot_read_occu_at_drain_ =0;
     uint32_t s_tot_write_occu_at_drain_ =0;
     uint64_t s_tot_drain_latency_ =0;
@@ -82,7 +83,7 @@ public:
 
     const size_t virtual_write_queue_watermark_ =(0.9 * DRAM_WQ_SIZE);
 private:
-    using scheduler_impl = ChannelLevelScheduler;
+    using scheduler_impl = DRAMScheduler;
     using scheduler_ptr = std::unique_ptr<scheduler_impl>;
 
     scheduler_ptr scheduler_;

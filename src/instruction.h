@@ -35,7 +35,8 @@ struct INST_BASE
     uint32_t inst_num =0;
 
     size_t   rob_refs =1;
-    uint64_t cycle_done =std::numeric_limits<uint64_t>::max();
+    uint64_t cycle_fired =std::numeric_limits<uint64_t>::max();
+    uint64_t cycle_done  =std::numeric_limits<uint64_t>::max();
 
     virtual ~INST_BASE(void) {}
     virtual bool is_mem_inst(void) const =0;

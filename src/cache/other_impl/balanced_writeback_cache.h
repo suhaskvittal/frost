@@ -35,7 +35,7 @@ protected:
 
     using typename __TEMPLATE_PARENT__::SetDuelingRole;
 
-    constexpr static size_t MAX_WRITE_COUNTER = DRAM_WQ_SIZE / DRAM_TOT_BANKS_PER_CHANNEL;
+    constexpr static size_t MAX_WRITE_COUNTER = (DRAM_QUEUE_COUNT*DRAM_WQ_SIZE) / DRAM_TOT_BANKS_PER_CHANNEL;
     /*
      * These structures are used to buffer writes and determine when to use the modified replacement policy
      * (i.e., see `lru_mod` and `rrip_mod` below)
