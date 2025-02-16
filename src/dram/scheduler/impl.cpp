@@ -27,13 +27,13 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
     bool found = true;
 
     auto cmd_it = std::find_if(next_bank_it, bank_cmds.end(),
-                        [] (const auto& x) { return !cmd_is_invalid(std::get<0>(x).type); });
+                        [] (const auto& x) { return x.has_value(); });
 
     // If we failed, try again but start from the beginning:
     if (cmd_it == bank_cmds.end())
     {
         cmd_it = std::find_if(bank_cmds.begin(), next_bank_it,
-                        [] (const auto& x) { return !cmd_is_invalid(std::get<0>(x).type); });
+                        [] (const auto& x) { return x.has_value(); });
         found = (cmd_it != next_bank_it);
     }
 
@@ -42,7 +42,7 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
     {
         dram_rw_queue_type* q_p;
         dram_rw_queue_type::iterator q_it;
-        std::tie(ready_cmd, q_p, q_it) = *cmd_it;
+        std::tie(ready_cmd, q_p, q_it) = cmd_it->value();
 
         size_t bank_idx = dram_bank_idx(ready_cmd.address);
         if (cmd_is_cas(ready_cmd.type))
@@ -56,7 +56,7 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
             active_buffer_.erase(bank_idx);
 
             // Update `pending` structures:
-            auto& p =       cmd_is_read(ready_cmd.type) ? pending_reads_ : pending_writes_;
+            auto& p = cmd_is_read(ready_cmd.type) ? pending_reads_ : pending_writes_;
 
             // Erase one entry of `address` from `p` -- now, we have to check if there any more:
             p.erase(p.find(ready_cmd.address));
@@ -98,6 +98,8 @@ DRAMScheduler::allow_demand_precharge(
         const SchedulerState& s,
         const DRAMBankState& b)
 {
+    constexpr size_t MAX_Q_SIZE = std::max(DRAM_RQ_SIZE, DRAM_WQ_SIZE);
+
     if constexpr (DRAM_SCHED_POLICY == DRAMSchedPolicy::FCFS)
         return true;
 
@@ -110,6 +112,8 @@ DRAMScheduler::allow_demand_precharge(
 
     // Get commands relevant to this bank:
     std::vector<RWQueueEntry> cmds;
+    cmds.reserve(MAX_Q_SIZE);
+
     std::copy_if(std::next(q_it), q_end, std::back_inserter(cmds),
             [bank_idx] (const auto& e)
             {

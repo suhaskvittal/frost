@@ -57,12 +57,13 @@ class Cache
 public:
     using next_ptr =       std::unique_ptr<NEXT_TYPE>;
     using stat_type =      VecStat<uint32_t, NUM_THREADS>;
-    using in_queue_type =  std::vector<Transaction>;
-    using pending_type =   std::unordered_set<uint64_t>;
+    using in_queue_type =  std::deque<Transaction>;
+    using pending_type =   std::unordered_multiset<uint64_t>;
     using dbp_ptr =        std::unique_ptr<DeadBlockPredictorBase>;
 
     stat_type s_reads_{};
     stat_type s_writes_{};
+    stat_type s_read_forwards_{};
     stat_type s_write_forwards_{};
     stat_type s_rewrites_{};
     stat_type s_accesses_{};
@@ -220,6 +221,8 @@ protected:
     virtual void do_next_fill(void);
     virtual bool do_next_access(bool do_read);
     virtual void add_mshr_entry(Transaction);
+
+    virtual void forward_completed_read(Transaction);
 
     inline in_queue_type& get_queue_ref(TransactionType t)
     {

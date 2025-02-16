@@ -91,7 +91,7 @@ __TEMPLATE_CLASS__::tick()
         const auto& trans = writeback_queue_.front();
         if (next_->can_accept(trans.address, trans.type) && next_->add_incoming(trans))
         {
-            pending_writebacks_.erase(trans.address);
+            pending_writebacks_.erase(pending_writebacks_.find(trans.address));
             writeback_queue_.pop_front();
         }
     }
@@ -135,7 +135,8 @@ __TEMPLATE_CLASS__::add_incoming(Transaction trans)
     bool is_read = trans_is_read(trans.type);
 
     // First, check if we can forward writes:
-    if (pending_writes_.count(trans.address) || pending_writebacks_.count(trans.address))
+    if ((pending_writes_.find(trans.address) != pending_writes_.end()) 
+        || (pending_writebacks_.find(trans.address) != pending_writebacks_.end()))
     {
         ++s_write_forwards_[trans.coreid];
         if (is_read)
@@ -144,20 +145,12 @@ __TEMPLATE_CLASS__::add_incoming(Transaction trans)
     }
 
     // Now, if this is a read, check if we can merge with any other reads:
-    if (is_read)
+    if (is_read 
+            && (pending_misses_.find(trans.address) != pending_misses_.end())
+            && mshr_.size() < IMPL::NUM_MSHR)
     {
-        if (pending_reads_.count(trans.address))
-        {
-            auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
-                            [x = trans.address] (const auto& tr) { return tr.address == x; });
-            rd_it->merge(trans);
-            return true;
-        }
-        else if (pending_misses_.count(trans.address) && mshr_.size() < IMPL::NUM_MSHR)
-        {
-            add_mshr_entry(trans);
-            return true;
-        }
+        add_mshr_entry(trans);
+        return true;
     }
 
     // otherwise, we need to enqueue normally.
@@ -168,6 +161,7 @@ __TEMPLATE_CLASS__::add_incoming(Transaction trans)
 
     if (q.size() == s)
         return false;
+
     q.push_back(trans);
     p.insert(trans.address);
     ++count[trans.coreid];
@@ -418,8 +412,7 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
                         [this] (const auto& tr) 
                         { 
                             // Enforce WAR dependence
-                            return !this->pending_reads_.count(tr.address)
-                                    && !this->pending_misses_.count(tr.address);
+                            return this->pending_reads_.find(tr.address) == this->pending_reads_.end();
                         });
         if (q_it == q.end())
             return false;
@@ -427,10 +420,6 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
 
     Transaction trans = std::move(*q_it);
     q.erase(q_it);
-    if (do_read)
-        pending_reads_.erase(trans.address);
-    else
-        pending_writes_.erase(trans.address);
 
     // Perform cache access:
     if (do_read)
@@ -439,6 +428,8 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
         if (probe(trans))
         {
             outgoing_queue_.emplace(trans, GL_CYCLE+IMPL::CACHE_LATENCY);
+            pending_reads_.erase(pending_reads_.find(trans.address));
+            forward_completed_read(trans);
         }
         else
         {
@@ -461,6 +452,10 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
         {
             fill_queue_.push_back(trans);
         }
+        
+        // So, unlike reads, we know that there will always be one write, simply because duplicate
+        // writes will always be consumed.
+        pending_writes_.erase(pending_writes_.find(trans.address));
     }
     return true;
 }
@@ -476,8 +471,6 @@ __TEMPLATE_CLASS__::do_next_fill()
 
     const Transaction& trans = fill_queue_.front();
     const bool is_read = trans_is_read(trans.type);
-    
-    // Compute reference count for the given transaction:
 
     // Handle eviction + any writeback if necessary
     multi_fill_result_type eviction_list;
@@ -496,6 +489,7 @@ __TEMPLATE_CLASS__::do_next_fill()
     }
     ++s_fills_[trans.coreid]; 
 
+    // Handle writebacks + update evict stats:
     for (size_t i = 0; i < eviction_list.size(); i++)
     {
         const auto& e = eviction_list[i].entry;
@@ -521,7 +515,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         enqueue_writeback(wb_trans);
     }
 
-    // Update MSHR:
+    // Update MSHR -- need to send back all Transactions matching the fill address:
     if (is_read)
     {
         auto [begin, end] = mshr_.equal_range(trans.address);
@@ -546,6 +540,9 @@ __TEMPLATE_CLASS__::do_next_fill()
         }
         mshr_.erase(begin, end);
         pending_misses_.erase(trans.address);
+
+        // If there are any pending reads, complete those as well:
+        forward_completed_read(trans);
     }
 
     fill_queue_.pop_front();
@@ -564,7 +561,10 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
     if (write_miss)  // Need to switch transaction type in the case of a write allocate
         e.trans.type = TransactionType::READ;
 
-    if (mshr_.count(address) == 0)
+    // Check if there is already an MSHR entry for this address. If so, we can mark the entry as fired. If not,
+    // we need to issue a read request
+    auto mshr_it = pending_misses_.find(address);
+    if (mshr_it == pending_misses_.end())
     {
         e.is_fired = next_->can_accept(address, e.trans.type) && next_->add_incoming(e.trans);
         pending_misses_.insert(address);
@@ -577,6 +577,41 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
     }
 
     mshr_.insert({address, e});
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::forward_completed_read(Transaction trans)
+{
+    // Search for other pending reads in the `read_queue_` and `prefetch_queue_`.
+    auto p_it = pending_reads_.find(trans.address);
+    if (p_it != pending_reads_.end())
+    {
+        // There are other pending reads/prefetches, so we need to remove them:
+        for (auto q_ref : {std::ref(read_queue_), std::ref(prefetch_queue_)})
+        {
+            auto& q = q_ref.get();
+            if (q.empty())
+                continue;
+
+            auto it = std::remove_if(q.begin(), q.end(),
+                                    [addr=trans.address] (const auto& tr) { return tr.address == addr; });
+
+            std::for_each(it, q.end(),
+                    [this] (auto&& tr) 
+                    { 
+                        return this->outgoing_queue_.emplace(std::move(tr), GL_CYCLE + IMPL::CACHE_LATENCY);
+                    });
+            s_read_forwards_[trans.coreid] += std::distance(it, q.end());
+
+            // erase all of the transactions (only need to send back one completion, which we already
+            // have done)
+            q.erase(it, q.end());
+        }
+        pending_reads_.erase(trans.address);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

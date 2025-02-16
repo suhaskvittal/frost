@@ -140,7 +140,7 @@ Core::operate_rob()
 {
     for (size_t i = 0; i < CORE_FETCH_WIDTH && !rob_.empty(); )
     {
-        inst_ptr inst = rob_.front();
+        inst_ptr& inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done)
         {
             if (GL_CYCLE - rob_stall_start_cycle_ > 1'000'000)
@@ -185,12 +185,17 @@ Core::do_llc_access(inst_ptr inst)
         Transaction trans(coreid_, inst, t, inst->p_lineaddr, is_icache_miss);
         GL_LLC->add_incoming(trans);
         inst->state = AccessState::IN_CACHE;
+
+        // We can mark stores as complete early:
         if (inst->is_store)
             inst->cycle_done = GL_CYCLE+1;
+
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -202,14 +207,16 @@ Core::next_inst()
     // Fetch from trace reader.
     if (next_mem_inst_->inst_num <= curr_inst_num_ + inst_warmup_ )
     {
-        inst_ptr out = next_mem_inst_;
+        inst_ptr out = std::move(next_mem_inst_);
         next_mem_inst_ = new Instruction(trace_reader_());
         // Translate all addresses now.
         out->p_lineaddr = GL_OS->translate_lineaddr(out->v_lineaddr, coreid_);
         return out;
     } 
     else
+    {
         return nullptr;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

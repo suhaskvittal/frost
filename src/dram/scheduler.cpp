@@ -74,7 +74,7 @@ DRAMScheduler::select_ready_command()
             size_t bank_idx = dram_bank_idx(q_it->trans.address);
 
             // Check if the bank already has a ready command:
-            if (!cmd_is_invalid(std::get<0>(bank_cmds[bank_idx]).type))
+            if (bank_cmds[bank_idx].has_value())
                 continue;
             
             size_t row = dram_row(q_it->trans.address);
@@ -110,7 +110,7 @@ DRAMScheduler::select_ready_command()
                             && cmd_is_issuable(channel_state_, ready_cmd);
             if (cmd_ok)
             {
-                bank_cmds[bank_idx] = {ready_cmd, &q, q_it};
+                bank_cmds[bank_idx].emplace(ready_cmd, &q, q_it);
                 ++bank_cmds_found;
             }
             

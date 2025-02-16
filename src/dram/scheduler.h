@@ -151,7 +151,7 @@ public:
     }
 private:
     using bank_cmd_type = std::tuple<DRAMCommand, dram_rw_queue_type*, dram_rw_queue_type::iterator>;
-    using bank_cmd_array = std::array<bank_cmd_type, DRAM_TOT_BANKS_PER_CHANNEL>;
+    using bank_cmd_array = std::array<std::optional<bank_cmd_type>, DRAM_TOT_BANKS_PER_CHANNEL>;
     /*
      * Channel-level scheduling implementation:
      * */
