@@ -19,7 +19,6 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
     pq_size =       cfg['prefetch_queue_size']
     latency =       cfg['latency']
     num_mshr =      cfg['num_mshr']
-    wbq_size =      cfg['writeback_queue_size']
     fq_size =       cfg['fill_queue_size']
     r_ports =       cfg['read_ports']
     w_ports =       cfg['write_ports']
@@ -50,7 +49,6 @@ struct {typename} : public {cache_type}<{typename}, {next_typename}>
 
     constexpr static uint64_t CACHE_LATENCY =  {latency};
     constexpr static size_t NUM_MSHR =         {num_mshr};
-    constexpr static size_t WB_QUEUE_SIZE =    {wbq_size};
     constexpr static size_t FILL_QUEUE_SIZE =  {fq_size};
 
     constexpr static size_t NUM_READ_PORTS =   {r_ports};

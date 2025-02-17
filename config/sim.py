@@ -64,6 +64,7 @@ def write(cfg, build):
     dram_am = cfg['DRAM']['address_mapping']
     dram_rq_size = cfg['DRAM']['read_queue_size']
     dram_wq_size = cfg['DRAM']['write_queue_size']
+    dram_queue_count = cfg['DRAM']['queue_count']
 
     # OS params:
     ptwc_params = ''
@@ -238,7 +239,7 @@ print_config(std::ostream& out)
     list(out, "DRAM_PAGE_POLICY", "{dram_page_policy}");
     list(out, "DRAM_SCHED_POLICY", "{dram_sched_policy}");
     list(out, "DRAM_WRITE_POLICY", "{dram_write_policy}");
-    list(out, "DRAM_QUEUE_SIZE", "{dram_rq_size}:{dram_wq_size}");
+    list(out, "DRAM_QUEUE_SIZE", "{dram_rq_size}:{dram_wq_size} * {dram_queue_count}");
     list(out, "DRAM_ADDRESS_MAPPING", "{dram_am}");
 
     print_address_mapping(out);

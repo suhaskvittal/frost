@@ -25,6 +25,7 @@ def write(cfg, build):
                                 dram_cfg['banks'], dram_cfg['rows'], dram_cfg['columns']
     BL = dram_cfg['BL']
     rq_size, wq_size = dram_cfg['read_queue_size'], dram_cfg['write_queue_size']
+    queue_count = dram_cfg['queue_count']
     page_policy = dram_cfg['page_policy']
     sched_policy = dram_cfg['sched_policy']
     write_policy = dram_cfg['write_policy']
@@ -83,6 +84,7 @@ constexpr size_t DRAM_BURST_LENGTH = {BL};
 
 constexpr size_t DRAM_RQ_SIZE = {rq_size};
 constexpr size_t DRAM_WQ_SIZE = {wq_size};
+constexpr size_t DRAM_QUEUE_COUNT = {queue_count};
 
 constexpr size_t DRAM_SIZE_MB = DRAM_CHANNELS * DRAM_RANKS * DRAM_BANKGROUPS * DRAM_BANKS
                                 * DRAM_ROWS * DRAM_COLUMNS * LINESIZE / (1024*1024);

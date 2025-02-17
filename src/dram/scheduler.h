@@ -1,11 +1,12 @@
 /*
  *  author: Suhas Vittal
- *  date:   11 February 2025
+ *  date:   12 February 2025
  * */
 
-#ifndef DRAM_SCHEDULER_BASE_h
-#define DRAM_SCHEDULER_BASE_h
+#ifndef DRAM_SCHEDULER_h
+#define DRAM_SCHEDULER_h
 
+#include "dram/address.h"
 #include "dram/command.h"
 #include "dram/cmd_args.h"
 #include "dram/scheduler/entry.h"
@@ -46,14 +47,24 @@ struct SchedulerState
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-class DRAMBaseScheduler
+inline size_t dram_s_queue_index(uint64_t address)
+{
+    return fast_mod<DRAM_QUEUE_COUNT>(dram_bank_idx(address));
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+class DRAMScheduler
 {
 public:
     const size_t low_watermark_;
     const size_t high_watermark_;
-protected:
+private:
+    using queue_array = std::array<dram_rw_queue_type, DRAM_QUEUE_COUNT>;
     using pending_type = std::unordered_multiset<uint64_t>;
     using active_buffer_type = std::unordered_set<size_t>;
+    using bank_counter_array = std::array<ssize_t, DRAM_TOT_BANKS_PER_CHANNEL>;
     /*
      * `owning_channel_` is just for stats:
      * */
@@ -64,9 +75,13 @@ protected:
      * */
     bool in_write_mode_ =false;
     bool in_transition_ =false;
+    
+    bank_counter_array min_writes_per_bank_{};
     /*
      * `pending_reads_` and `pending_writes_` help with dependency enforcement and forwarding:
      * */
+    queue_array  read_queues_{};
+    queue_array  write_queues_{};
     pending_type pending_reads_;
     pending_type pending_writes_;
 
@@ -82,8 +97,15 @@ protected:
 public:
     using cmd_output_type = std::tuple<DRAMCommand, std::optional<RWQueueEntry>>;
 
-    DRAMBaseScheduler(DRAMChannel*, const DRAMChannelState&);
+    DRAMScheduler(DRAMChannel*, const DRAMChannelState&);
 
+    bool            add_incoming(Transaction);
+    cmd_output_type select_ready_command(void);
+    void            handle_preab_forced_transition(void);
+    bool            deadlock_find_inst(const inst_ptr) const;
+    /*
+     * Useful inlines:
+     * */
     inline void update_state(void)
     {
         if (in_transition_)
@@ -93,47 +115,49 @@ public:
         else
             try_switch_to_writes();
     }
-    /*
-     * IO functions:
-     * */
-    virtual bool can_accept(uint64_t, TransactionType) const =0;
-    bool add_incoming(Transaction);
-    
-    virtual cmd_output_type select_ready_command(void) =0;
-    /*
-     * This should be called if the channel needs to issue a PREab to eventually do a REFab
-     * */
-    void handle_preab_forced_transition(void);
-    /*
-     * These return the number of pending reads/writes. Implementation specific:
-     * */
-    virtual size_t read_occu(void) const =0;
-    virtual size_t write_occu(void) const =0;
 
-    inline bool is_in_write_mode(void) const
+    inline bool can_accept(uint64_t address, TransactionType t) const
     {
-        return in_write_mode_;
+        size_t q_idx = dram_s_queue_index(address);
+        const auto& q = trans_is_read(t) ? read_queues_.at(q_idx) : write_queues_.at(q_idx);
+        size_t s = trans_is_read(t) ? DRAM_RQ_SIZE : DRAM_WQ_SIZE;
+        return q.size() < s;
     }
 
-    inline bool is_in_transition(void) const
+    inline size_t read_occu(void) const
     {
-        return in_transition_;
+        return pending_reads_.size(); 
     }
 
-    virtual bool deadlock_find_inst(const inst_ptr) const;
-protected:
+    inline size_t write_occu(void) const 
+    { 
+        return pending_writes_.size();
+    }
+
+    inline bool is_in_write_mode(void) const { return in_write_mode_; }
+    inline bool is_in_transition(void) const { return in_transition_; }
+
+    inline bool any_write_queues_full() const
+    {
+        if constexpr (DRAM_QUEUE_COUNT == 1)
+        {
+            return write_occu() == DRAM_WQ_SIZE;
+        }
+        else
+        {
+            return std::any_of(write_queues_.begin(), write_queues_.end(),
+                            [] (const auto& q) { return q.size() >= DRAM_WQ_SIZE; });
+        }
+    }
+private:
     using bank_cmd_type = std::tuple<DRAMCommand, dram_rw_queue_type*, dram_rw_queue_type::iterator>;
-    using bank_cmd_array = std::vector<bank_cmd_type>;
+    using bank_cmd_array = std::array<std::optional<bank_cmd_type>, DRAM_TOT_BANKS_PER_CHANNEL>;
     /*
-     * RW queue insertion: implementation-specific
+     * Channel-level scheduling implementation:
      * */
-    virtual bool add_to_rw_queue(Transaction) =0;
+    cmd_output_type select_from_bank_commands(bank_cmd_array&&);
     /*
-     * Channel-level arbitration (which bank to accept from):
-     * */
-    cmd_output_type select_from_bank_commands(bank_cmd_array);
-    /*
-     * Bank-level arbitration (which command to prioritize/what to issue):
+     * Bank-level scheduling implementation:
      * */
     bool allow_demand_precharge(
             dram_rw_queue_type::const_iterator q_it,
@@ -149,15 +173,12 @@ protected:
     /*
      * Priority functions:
      * */
-    virtual void try_switch_to_reads(void);
-    virtual void try_switch_to_writes(void);
-
-    virtual void try_to_transition(void);
-
-    virtual bool any_write_queues_full(void) const =0;
+    void try_switch_to_reads(void);
+    void try_switch_to_writes(void);
+    void try_to_transition(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#endif  // DRAM_SCHEDULER_BASE_h
+#endif  // DRAM_SCHEDULER_h

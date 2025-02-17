@@ -53,15 +53,13 @@ def validate_cache_section(cfg) -> bool:
         ('prefetch_queue_size', 32),
         ('latency', 4),
         ('num_mshr', 8),
-        ('writeback_queue_size', 4),
         ('fill_queue_size', 4),
         ('read_ports', 3),
         ('write_ports', 2),
         ('fill_ports', 2),
         ('writeback_mode', 'NORMAL'),
         ('cache_type', 'Cache'),
-        ('dead_block_predictor', 'NoDeadBlockPredictor'),
-        ('allow_dbp_bypass', 'on')
+        ('dead_block_predictor', 'NoDeadBlockPredictor')
     ]
     # Now check if the number of sets or the size of the cache
     # is specified.
@@ -87,7 +85,8 @@ def validate_dram_section(cfg) -> bool:
         ('page_policy', 'OPEN'),
         ('write_policy', 'ASAP'),
         ('sched_policy', 'FRFCFS'),
-        ('address_mapping', 'MOP4')
+        ('address_mapping', 'MOP4'),
+        ('queue_count', '1')
     ]
     update_cfg_with_optionals(cfg, optionals)
     return True
