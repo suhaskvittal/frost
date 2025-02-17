@@ -29,7 +29,7 @@ __TEMPLATE_CLASS__::tick()
         in_write_mode_ = false;
 
     // Issue writebacks to memory controller (need to reach below low watermark)
-    if (in_write_mode_ && writeback_queue_.size() < IMPL::WB_QUEUE_SIZE)
+    if (in_write_mode_ && mshr_has_space())
     {
         if (next_it_ == critical_map_.end())
             next_it_ = critical_map_.begin();
@@ -69,7 +69,7 @@ __TEMPLATE_CLASS__::tick()
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
 {
-    if (in_write_mode_ || writeback_queue_.size() >= IMPL::WB_QUEUE_SIZE || critical_map_.empty())
+    if (in_write_mode_ || !mshr_has_space() || critical_map_.empty())
         return;
 
     // Search for critical set matching channel-id.

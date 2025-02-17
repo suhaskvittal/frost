@@ -144,15 +144,6 @@ __TEMPLATE_CLASS__::add_incoming(Transaction trans)
         return true;
     }
 
-    // Now, if this is a read, check if we can merge with any other reads:
-    if (is_read 
-            && (pending_misses_.find(trans.address) != pending_misses_.end())
-            && mshr_.size() < IMPL::NUM_MSHR)
-    {
-        add_mshr_entry(trans);
-        return true;
-    }
-
     // otherwise, we need to enqueue normally.
     auto& q =     get_queue_ref(trans.type);
     size_t s =    get_queue_size(trans.type);
@@ -428,14 +419,14 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
         if (probe(trans))
         {
             outgoing_queue_.emplace(trans, GL_CYCLE+IMPL::CACHE_LATENCY);
-            pending_reads_.erase(pending_reads_.find(trans.address));
-            forward_completed_read(trans);
+//          forward_completed_read(trans);
         }
         else
         {
             ++s_misses_[trans.coreid];
             add_mshr_entry(trans);
         }
+        pending_reads_.erase(pending_reads_.find(trans.address));
     }
     else
     {
@@ -542,7 +533,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         pending_misses_.erase(trans.address);
 
         // If there are any pending reads, complete those as well:
-        forward_completed_read(trans);
+//      forward_completed_read(trans);
     }
 
     fill_queue_.pop_front();

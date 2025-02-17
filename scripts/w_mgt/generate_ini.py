@@ -25,8 +25,11 @@ page_mode = page_mode.upper()
 CORES = 8
 TRACE_FORMAT = 'MTF'
 
+DEFAULT_QUEUE_SIZE = 128
+
 def write_ini(filename: str,
-              write_queue_size=32,
+              queue_size=DEFAULT_QUEUE_SIZE,
+              write_policy='ASYNC',
               repl='LRU',
               cache_type='Cache',
               dead_block_predictor='NoDeadBlockPredictor',
@@ -58,10 +61,11 @@ banks = 4
 rows = 65536
 columns = 128
 BL = 16
-read_queue_size = 32
-write_queue_size = {write_queue_size}
+read_queue_size = {queue_size}
+write_queue_size = {queue_size}
 sched_policy = FRFCFS
 page_policy = {page_mode}
+write_policy = {write_policy}
 address_mapping = {address_mapping}
 dram_type = 4800
 
@@ -86,16 +90,13 @@ dead_block_predictor = {dead_block_predictor}
 ############################################################
 # BASELINE
 write_ini('baseline_lru', repl='LRU')
-write_ini('baseline_srrip', repl='SRRIP')
 write_ini('baseline_drrip', repl='DRRIP')
-
-write_ini('baseline_lru_db', repl='LRU', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
 
 ############################################################
 ############################################################
 # MOTIVATION
 write_ini('no_writes', other_defines='DRAM_DROP_WRITES')
-write_ini('random_writes', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES')
+write_ini('random_writes', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES', write_policy='ASYNC')
 
 ############################################################
 ############################################################
@@ -103,12 +104,7 @@ write_ini('random_writes', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES')
 write_ini('vwq_lru', cache_type='VirtualWriteQueue', repl='LRU')
 
 write_ini('balanced_cache_lru', cache_type='BalancedWritebackCache', repl='LRU')
-write_ini('balanced_cache_srrip', cache_type='BalancedWritebackCache', repl='SRRIP')
 write_ini('balanced_cache_drrip', cache_type='BalancedWritebackCache', repl='DRRIP')
-
-write_ini('balanced_cache_lru_db', cache_type='BalancedWritebackCache', repl='LRU', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
-write_ini('balanced_cache_srrip_db', cache_type='BalancedWritebackCache', repl='SRRIP', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
-write_ini('balanced_cache_drrip_db', cache_type='BalancedWritebackCache', repl='DRRIP', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
 
 ############################################################
 ############################################################

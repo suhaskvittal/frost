@@ -31,6 +31,26 @@ DRAMScheduler::DRAMScheduler(DRAMChannel* c, const DRAMChannelState& s)
 bool
 DRAMScheduler::add_incoming(Transaction trans)
 {
+    if (pending_writes_.find(trans.address) != pending_writes_.end())
+    {
+        if (trans_is_read(trans.type))
+            owning_channel_->outgoing_queue_.emplace(trans, GL_DRAM_CYCLE+1);
+        return true;
+    }
+
+#if defined(DRAM_RANDOMIZE_WRITE_ADDRESSES)
+    if (trans_is_write(trans.type))
+    {
+        // Clear out the rank, bankgroup, and bank bits (assumed is contiguous region of address);
+        trans.address &= ~((DRAM_TOT_BANKS_PER_CHANNEL-1) << BG_OFF);
+
+        // Set bank idx
+        trans.address |= dram_randomize_write_addresses_bank_idx_ << BG_OFF;
+
+        fast_increment_and_mod_inplace<DRAM_TOT_BANKS_PER_CHANNEL>(dram_randomize_write_addresses_bank_idx_);
+    }
+#endif
+
     size_t q_idx = dram_s_queue_index(trans.address);
     auto& q =       trans_is_read(trans.type) ? read_queues_[q_idx] : write_queues_[q_idx];
     auto& p =       trans_is_read(trans.type) ? pending_reads_      : pending_writes_;

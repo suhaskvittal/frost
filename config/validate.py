@@ -83,7 +83,7 @@ def validate_dram_section(cfg) -> bool:
         ('columns', 128),
         ('BL', '16'),
         ('page_policy', 'OPEN'),
-        ('write_policy', 'ASAP'),
+        ('write_policy', 'ASYNC'),
         ('sched_policy', 'FRFCFS'),
         ('address_mapping', 'MOP4'),
         ('queue_count', '1')

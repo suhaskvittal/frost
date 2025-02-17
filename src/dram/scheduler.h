@@ -108,12 +108,13 @@ public:
      * */
     inline void update_state(void)
     {
-        if (in_transition_)
-            try_to_transition();
-        else if (in_write_mode_)
+        if (in_write_mode_)
             try_switch_to_reads();
         else
             try_switch_to_writes();
+
+        if (in_transition_)
+            try_to_transition();
     }
 
     inline bool can_accept(uint64_t address, TransactionType t) const

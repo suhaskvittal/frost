@@ -58,6 +58,7 @@ protected:
     void update_criticality_via_count(size_t idx);
 
     using __TEMPLATE_PARENT__::enqueue_writeback;
+    using __TEMPLATE_PARENT__::mshr_has_space;
 };
 
 ////////////////////////////////////////////////////////////////////////////
