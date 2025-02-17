@@ -73,6 +73,11 @@ elif which == 'evals':
     append_build('BALANCED_CACHE_LRU')
     append_build('BALANCED_CACHE_SRRIP')
     append_build('BALANCED_CACHE_DRRIP')
+elif which == 'dead_block':
+    append_build('BASELINE_LRU_DB')
+    append_build('BALANCED_CACHE_LRU_DB')
+    append_build('BALANCED_CACHE_SRRIP_DB')
+    append_build('BALANCED_CACHE_DRRIP_DB')
 else:
     print('Unknown experiment!')
     exit(1)

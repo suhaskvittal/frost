@@ -15,6 +15,6 @@ ini_folder = f'ini/simple_core/w_mgt/{prefix}'
 ini_list = [f for f in os.listdir(ini_folder) if f.endswith('.ini')]
 for f in ini_list:
     build_name = f[:f.find('.ini')]
-    build_dir = build_name.upper()
+    build_dir = f'{prefix}_{build_name}'.upper()
     if not os.path.isdir(f'builds/{build_dir}'):
         os.system(f'python config.py {prefix}_{build_name} {ini_folder}/{f} -b')

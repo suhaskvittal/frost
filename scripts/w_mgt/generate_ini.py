@@ -29,6 +29,7 @@ def write_ini(filename: str,
               write_queue_size=32,
               repl='LRU',
               cache_type='Cache',
+              dead_block_predictor='NoDeadBlockPredictor',
               other_defines=''
 ):
     if len(other_defines) > 0:
@@ -78,6 +79,7 @@ read_ports = 4
 write_ports = 4
 fill_ports = 1
 cache_type = {cache_type}
+dead_block_predictor = {dead_block_predictor}
 ''')
 
 ############################################################
@@ -86,6 +88,8 @@ cache_type = {cache_type}
 write_ini('baseline_lru', repl='LRU')
 write_ini('baseline_srrip', repl='SRRIP')
 write_ini('baseline_drrip', repl='DRRIP')
+
+write_ini('baseline_lru_db', repl='LRU', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
 
 ############################################################
 ############################################################
@@ -97,9 +101,14 @@ write_ini('random_writes', other_defines='DRAM_RANDOMIZE_WRITE_ADDRESSES')
 ############################################################
 # IMPL
 write_ini('vwq_lru', cache_type='VirtualWriteQueue', repl='LRU')
+
 write_ini('balanced_cache_lru', cache_type='BalancedWritebackCache', repl='LRU')
 write_ini('balanced_cache_srrip', cache_type='BalancedWritebackCache', repl='SRRIP')
 write_ini('balanced_cache_drrip', cache_type='BalancedWritebackCache', repl='DRRIP')
+
+write_ini('balanced_cache_lru_db', cache_type='BalancedWritebackCache', repl='LRU', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
+write_ini('balanced_cache_srrip_db', cache_type='BalancedWritebackCache', repl='SRRIP', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
+write_ini('balanced_cache_drrip_db', cache_type='BalancedWritebackCache', repl='DRRIP', dead_block_predictor='SamplingDeadBlockPredictor<$impl>')
 
 ############################################################
 ############################################################
