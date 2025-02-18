@@ -5,38 +5,13 @@
 
 #include <cstdint>
 
-uint64_t GL_CYCLE =0;
-
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-#include "cache.h"
+#include "simple_cache.h"
 #include "simple_core_driver.h"
 #include "util/argparse.h"
 #include "util/stats.h"
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-#if !defined(CACHE_SIZE_MB)
-#define CACHE_SIZE_MB     2048
-#endif
-
-#if !defined(CACHE_ASSOC)
-#define CACHE_ASSOC       16
-#endif
-
-#if !defined(CACHE_REPL)
-#define CACHE_REPL        CacheReplPolicy::LRU
-#endif
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-constexpr size_t LINESIZE = 64;
-constexpr size_t CACHE_SETS = (CACHE_SIZE_MB*1024*1024)/(CACHE_ASSOC*LINESIZE);
-
-using DefinedCache = Cache<CACHE_SETS, CACHE_ASSOC, CACHE_REPL>;
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -47,32 +22,48 @@ int main(int argc, char* argv[])
     uint64_t inst_sim;
     uint64_t inst_warmup;
 
+    size_t cache_assoc, cache_size_kb;
+
+    std::string miss_trace_file;
+
     ArgParseResult ARGS(argc, argv,
             {
                 "trace"
             },
             {
                 {"s", "number of instructions to simulate", "100000000"},
-                {"w", "number of instructions to warmup", "0"}
+                {"w", "number of instructions to warmup", "0"},
+                {"size_kb", "cache size", "2048"},
+                {"assoc", "cache associativity", "16"},
+                {"miss_trace", "file to record eviction record to", "NIL"}
             });
     ARGS("trace", trace_file);
     ARGS("s", inst_sim);
     ARGS("w", inst_warmup);
 
-    using driver_type = SimpleCoreDriver<DefinedCache>;
+    ARGS("size_kb", cache_size_kb);
+    ARGS("assoc", cache_assoc);
 
-    driver_type driver(trace_file);
+    ARGS("miss_trace", miss_trace_file);
+
+    // cache initialization
+    size_t cache_sets = (cache_size_kb*1024) / (cache_assoc*64);
+    std::unique_ptr<SimpleCache> cache{new SimpleCache(cache_assoc, cache_sets)};
+
+    SimpleCoreDriver driver(trace_file, std::move(cache));
     while (driver.s_inst < inst_warmup && !driver.trace_reader.eof_)
     {
         driver.step(true);
-        ++GL_CYCLE;
     }
     inst_warmup = driver.s_inst;
+
+    // init miss trace:
+    if (miss_trace_file != "NIL")
+        driver.cache->start_recording_miss_trace(miss_trace_file);
 
     while (driver.s_inst-inst_warmup < inst_sim && !driver.trace_reader.eof_)
     {
         driver.step();
-        ++GL_CYCLE;
     }
 
     // Print stats:

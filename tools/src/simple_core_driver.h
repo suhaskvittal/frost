@@ -8,6 +8,7 @@
 
 #include "trace/fmt.h"
 #include "trace/reader.h"
+#include "simple_cache.h"
 
 #include <cstddef>
 #include <memory>
@@ -16,11 +17,10 @@
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-template <class CACHE_TYPE>
 struct SimpleCoreDriver
 {
     using tracereader_type = TraceReader<MTF>;
-    using cache_ptr = std::unique_ptr<CACHE_TYPE>;
+    using cache_ptr = std::unique_ptr<SimpleCache>;
 
     uint64_t s_misses =0;
     uint64_t s_accesses =0;
@@ -33,7 +33,7 @@ struct SimpleCoreDriver
     
     cache_ptr cache;
 
-    SimpleCoreDriver(std::string trace_file);
+    SimpleCoreDriver(std::string trace_file, cache_ptr&&);
     /*
      * Reads next instruction in the trace and issues it to the
      * LLC.
@@ -44,15 +44,15 @@ struct SimpleCoreDriver
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-template <class CACHE_TYPE>
-SimpleCoreDriver<CACHE_TYPE>::SimpleCoreDriver(std::string f)
+inline 
+SimpleCoreDriver::SimpleCoreDriver(std::string f, cache_ptr&& c)
     :trace_file(f),
     trace_reader(f),
-    cache(new CACHE_TYPE)
+    cache(std::move(c))
 {}
 
-template <class CACHE_TYPE> void
-SimpleCoreDriver<CACHE_TYPE>::step(bool warmup)
+inline void
+SimpleCoreDriver::step(bool warmup)
 {
     // Get next instruction from trace reader.
     auto& fmt = trace_reader();
@@ -73,7 +73,7 @@ SimpleCoreDriver<CACHE_TYPE>::step(bool warmup)
         ++s_accesses;
     if (!hit)
     {
-        auto victim = cache->fill(v_lineaddr, 1, is_write);
+        auto victim = cache->fill(v_lineaddr, is_write);
         if (!warmup)
         {
             if (!is_write)

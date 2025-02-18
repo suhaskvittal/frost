@@ -50,39 +50,32 @@ add_executable(cachesim cachesim.cpp
     # from Frost src
     ../src/util/argparse.cpp
     # From tools src
+    src/simple_cache.cpp
     )
 target_compile_options(cachesim PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(cachesim PRIVATE "src" "../src")
 target_link_libraries(cachesim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
 
-if (NOT CACHESIM_SIZE_MB)
-    set(CACHESIM_SIZE_MB 2)
-endif()
-
-if (NOT CACHESIM_ASSOC)
-    set(CACHESIM_ASSOC 16)
-endif()
-
-if (NOT CACHESIM_REPL)
-    set(CACHESIM_REPL LRU)
-endif()
-
-target_compile_definitions(cachesim PRIVATE CACHE_SIZE_MB=${CACHESIM_SIZE_MB}
-                                            CACHE_ASSOC=${CACHESIM_ASSOC}
-                                            CACHE_REPL=CacheReplPolicy::${CACHESIM_REPL})
-
 ########################################################################
 ########################################################################
 ### PORT_CHAMPSIM_TO_MTF ###
 
-add_executable(port_from_champsim port_from_champsim.cpp)
-target_compile_options(port_from_champsim PRIVATE ${COMPILE_OPTIONS})
-target_include_directories(port_from_champsim PRIVATE "src" "../src")
-target_link_libraries(port_from_champsim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
+#add_executable(port_from_champsim port_from_champsim.cpp)
+#target_compile_options(port_from_champsim PRIVATE ${COMPILE_OPTIONS})
+#target_include_directories(port_from_champsim PRIVATE "src" "../src")
+#target_link_libraries(port_from_champsim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
 
-if (PORT_CTF_OUTPUT_FORMAT)
-    target_compile_definitions(port_from_champsim PRIVATE TRACE_FORMAT_${PORT_CTF_OUTPUT_FORMAT})
-endif()
+#if (PORT_CTF_OUTPUT_FORMAT)
+#    target_compile_definitions(port_from_champsim PRIVATE TRACE_FORMAT_${PORT_CTF_OUTPUT_FORMAT})
+#endif()
+
+########################################################################
+########################################################################
+# MISS TRACE ANALYSIS
+
+add_executable(mta miss_trace_analysis.cpp)
+target_compile_options(mta PRIVATE ${COMPILE_OPTIONS})
+target_include_directories(mta PRIVATE "src" "../src")
 
 ########################################################################
 ########################################################################

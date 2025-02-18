@@ -69,6 +69,16 @@ SimpleCache::fill(uint64_t address, bool dirty)
     {
         it = std::min_element(s.begin(), s.end(),
                         [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
+
+        // only record to miss trace if there is a victim
+        // fmt: access count (s_count), incoming, outgoing
+        if (record_miss_trace_)
+        {
+            fwrite(&s_count_, 4, 1, miss_trace_);
+            fwrite(&it->address, 8, 1, miss_trace_);
+            fwrite(&address, 8, 1, miss_trace_);
+        }
+
         out.emplace(std::move(*it));
     }
     it->valid = true;
