@@ -16,11 +16,25 @@
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
+void
+print_cache_stats(std::string cache_name, const SimpleCache& c, uint64_t inst)
+{
+    double miss_rate = mean(c.s_misses_, c.s_accesses_);
+    double mpki = mean(c.s_misses_, inst) * 1000.0;
+
+    print_stat(std::cout, cache_name, "ACCESSES", c.s_accesses_);
+    print_stat(std::cout, cache_name, "MISSES", c.s_misses_);
+    print_stat(std::cout, cache_name, "MISS_RATE", miss_rate);
+    print_stat(std::cout, cache_name, "MPKI", mpki);
+}
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
 int main(int argc, char* argv[])
 {
     std::string trace_file;
     uint64_t inst_sim;
-    uint64_t inst_warmup;
 
     size_t cache_assoc, cache_size_kb;
 
@@ -32,14 +46,13 @@ int main(int argc, char* argv[])
             },
             {
                 {"s", "number of instructions to simulate", "100000000"},
-                {"w", "number of instructions to warmup", "0"},
                 {"size_kb", "cache size", "2048"},
                 {"assoc", "cache associativity", "16"},
-                {"miss_trace", "file to record eviction record to", "NIL"}
+                {"miss_trace", "file to record eviction record to", "NIL"},
+                {"memento", "Testing \"memento\" prefetcher for LLC", ""}
             });
     ARGS("trace", trace_file);
     ARGS("s", inst_sim);
-    ARGS("w", inst_warmup);
 
     ARGS("size_kb", cache_size_kb);
     ARGS("assoc", cache_assoc);
@@ -48,37 +61,37 @@ int main(int argc, char* argv[])
 
     // cache initialization
     size_t cache_sets = (cache_size_kb*1024) / (cache_assoc*64);
-    std::unique_ptr<SimpleCache> cache{new SimpleCache(cache_assoc, cache_sets)};
 
-    SimpleCoreDriver driver(trace_file, std::move(cache));
-    while (driver.s_inst < inst_warmup && !driver.trace_reader.eof_)
-    {
-        driver.step(true);
-    }
-    inst_warmup = driver.s_inst;
+    SimpleCache l1i_cache(8, 64);   // 32 KB
+    SimpleCache l1d_cache(12, 64);  // 48 KB
+    SimpleCache l2_cache(8, 512);   // 256 KB
 
-    // init miss trace:
+    SimpleCache l3_cache(cache_assoc, cache_sets);
+
+    // Setup any optional policies:
+    ARGS("memento", l3_cache.enable_memento_test_);
+
     if (miss_trace_file != "NIL")
-        driver.cache->start_recording_miss_trace(miss_trace_file);
+        l3_cache.start_recording_miss_trace(miss_trace_file);
 
-    while (driver.s_inst-inst_warmup < inst_sim && !driver.trace_reader.eof_)
+    uint64_t total_inst = inst_sim;
+
+    SimpleCoreDriver driver(trace_file, std::move(l1i_cache), std::move(l1d_cache), std::move(l2_cache), std::move(l3_cache));
+
+    while (inst_sim-- && !driver.trace_reader.eof_)
     {
         driver.step();
     }
 
-    // Print stats:
-    double miss_rate = mean(driver.s_misses, driver.s_accesses);
-    double apki = mean(driver.s_accesses*1000, driver.s_inst);
-    double mpki = mean(driver.s_misses*1000, driver.s_inst);
+    std::cout << "============================================================="
+                << "\nTRACE = " << trace_file
+                << "\n============================================================="
+                << "\n";
 
-    print_stat(std::cout, "CACHE", "MISSES", driver.s_misses);
-    print_stat(std::cout, "CACHE", "ACCESSES", driver.s_accesses);
-    print_stat(std::cout, "CACHE", "FILLS", driver.s_fills);
-    print_stat(std::cout, "CACHE", "WRITEBACKS", driver.s_writebacks);
-    print_stat(std::cout, "CACHE", "MISS_RATE", miss_rate);
-    print_stat(std::cout, "WORKLOAD", "APKI", apki);
-    print_stat(std::cout, "WORKLOAD", "MPKI", mpki);
-    print_stat(std::cout, "SIM", "INSTRUCTIONS", driver.s_inst - inst_warmup);
+    print_cache_stats("L1I$", driver.l1i_cache, total_inst);
+    print_cache_stats("L1D$", driver.l1d_cache, total_inst);
+    print_cache_stats("L2$", driver.l2_cache, total_inst);
+    print_cache_stats("L3$ (LLC)", driver.l3_cache, total_inst);
     
     return 0;
 }

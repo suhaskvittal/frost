@@ -1,10 +1,40 @@
-./build/port_champsim_to_mtf /traces/champsim/Ligra/ligra_BC.com-lj.ungraph.gcc_6.3.0_O3.drop_15500M.length_250M.champsimtrace.xz ../TRACES/mtf/ligra/bc.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/Ligra/ligra_BellmanFord.com-lj.ungraph.gcc_6.3.0_O3.drop_33750M.length_250M.champsimtrace.xz ../TRACES/mtf/ligra/bellmanford.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/Ligra/ligra_BFSCC.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz ../TRACES/mtf/ligra/bfscc.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/Ligra/ligra_MIS.com-lj.ungraph.gcc_6.3.0_O3.drop_750M.length_250M.champsimtrace.xz ../TRACES/mtf/ligra/mis.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/Ligra/ligra_PageRank.com-lj.ungraph.gcc_6.3.0_O3.drop_79500M.length_250M.champsimtrace.xz ../TRACES/mtf/ligra/pagerank.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/PARSEC-2.1/parsec_2.1.canneal.simlarge.prebuilt.drop_500M.length_250M.champsimtrace.xz ../TRACES/mtf/parsec/canneal.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/PARSEC-2.1/parsec_2.1.facesim.simlarge.prebuilt.drop_21500M.length_250M.champsimtrace.xz ../TRACES/mtf/parsec/facesim.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/PARSEC-2.1/parsec_2.1.fluidanimate.simlarge.prebuilt.drop_9500M.length_250M.champsimtrace.xz ../TRACES/mtf/parsec/fluidanimate.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/PARSEC-2.1/parsec_2.1.raytrace.simlarge.prebuilt.drop_23750M.length_250M.champsimtrace.xz ../TRACES/mtf/parsec/raytrace.mtf.gz
-./build/port_champsim_to_mtf /traces/champsim/PARSEC-2.1/parsec_2.1.streamcluster.simlarge.prebuilt.drop_4750M.length_250M.champsimtrace.xz ../TRACES/mtf/parsec/streamcluster.mtf.gz
+./build/cachesim ../TRACES/ctf/spec2017/602.gcc_s-1850B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/gcc/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/602.gcc_s-1850B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/gcc/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/657.xz_s-2302B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/xz/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/657.xz_s-2302B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/xz/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/649.fotonik3d_s-10881B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/fotonik3d/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/649.fotonik3d_s-10881B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/fotonik3d/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/619.lbm_s-2676B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/lbm/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/619.lbm_s-2676B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/lbm/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/627.cam4_s-490B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/cam4/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/627.cam4_s-490B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/cam4/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/607.cactuBSSN_s-2421B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/cactuBSSN/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/607.cactuBSSN_s-2421B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/cactuBSSN/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/641.leela_s-1052B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/leela/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/641.leela_s-1052B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/leela/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/631.deepsjeng_s-928B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/deepsjeng/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/631.deepsjeng_s-928B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/deepsjeng/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/600.perlbench_s-1273B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/perlbench/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/600.perlbench_s-1273B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/perlbench/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/625.x264_s-12B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/x264/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/625.x264_s-12B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/x264/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/644.nab_s-12459B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/nab/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/644.nab_s-12459B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/nab/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/620.omnetpp_s-141B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/omnetpp/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/620.omnetpp_s-141B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/omnetpp/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/648.exchange2_s-1227B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/exchange2/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/648.exchange2_s-1227B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/exchange2/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/603.bwaves_s-2931B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/bwaves/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/603.bwaves_s-2931B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/bwaves/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/621.wrf_s-6673B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/wrf/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/621.wrf_s-6673B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/wrf/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/654.roms_s-1007B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/roms/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/654.roms_s-1007B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/roms/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/623.xalancbmk_s-592B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/xalancbmk/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/623.xalancbmk_s-592B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/xalancbmk/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/628.pop2_s-17B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/pop2/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/628.pop2_s-17B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/pop2/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/605.mcf_s-994B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/mcf/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/605.mcf_s-994B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/mcf/memento.out
+./build/cachesim ../TRACES/ctf/spec2017/638.imagick_s-10316B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 > out/headroom/assoc4/ctf/spec2017/imagick/baseline.out
+./build/cachesim ../TRACES/ctf/spec2017/638.imagick_s-10316B.champsimtrace.xz -s 500000000 -assoc 4 -size_kb 2048 -memento > out/headroom/assoc4/ctf/spec2017/imagick/memento.out

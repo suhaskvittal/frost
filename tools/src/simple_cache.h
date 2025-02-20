@@ -11,7 +11,10 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
+
+#include <zlib.h>
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -19,6 +22,9 @@
 class SimpleCache
 {
 public:
+    uint64_t s_accesses_ =0;
+    uint64_t s_misses_ =0;
+        
     struct Entry
     {
         bool valid =false;
@@ -26,6 +32,8 @@ public:
         uint64_t address;
         uint64_t timestamp;
     };
+
+    bool enable_memento_test_ =false;
 
     const size_t assoc_;
     const size_t sets_;
@@ -35,22 +43,33 @@ private:
 
     cset_array csets_;
 
-    uint32_t s_count_ =0;
+    uint32_t init_count_ =0;
 
     bool record_miss_trace_ =false;
-    FILE* miss_trace_ =nullptr;
+    gzFile miss_trace_;
+    /*
+     * Testing stuff:
+     * */
+    using address_map_type = std::unordered_map<uint64_t, uint64_t>;
+    /*
+     * `memento`: idea is that on a probe, if the LRU way had evicted the requested address,
+     * we return a hit (simulates a perfect prefetch)
+     * */
+    address_map_type memento_eviction_map_;
 public:
+    enum class ProbeResultType { HIT, MISS, HIT_BUT_DO_FILL };
+
     using victim_type = std::optional<Entry>;
 
     SimpleCache(size_t assoc, size_t sets);
     ~SimpleCache(void)
     {
         if (record_miss_trace_)
-            fclose(miss_trace_);
+            gzclose(miss_trace_);
     }
 
-    bool probe(uint64_t address, bool write=false);
-    bool mark(uint64_t address, bool dirty);
+    ProbeResultType probe(uint64_t address, bool write=false);
+    ProbeResultType mark_dirty(uint64_t address);
 
     victim_type fill(uint64_t address, bool dirty);
     /*
@@ -58,10 +77,12 @@ public:
      * */
     inline void start_recording_miss_trace(std::string output_file)
     {
-        miss_trace_ = fopen(output_file.c_str(), "wb");
+        miss_trace_ = gzopen(output_file.c_str(), "w");
         record_miss_trace_ = true;
     }
 private:
+    cset_type get_lru_ways(const cset_type& s, size_t num_ways) const;
+
     inline size_t set_index(uint64_t address)
     {
         return address & (sets_-1);

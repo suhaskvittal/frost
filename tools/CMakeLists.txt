@@ -50,6 +50,7 @@ add_executable(cachesim cachesim.cpp
     # from Frost src
     ../src/util/argparse.cpp
     # From tools src
+    src/simple_core_driver.cpp
     src/simple_cache.cpp
     )
 target_compile_options(cachesim PRIVATE ${COMPILE_OPTIONS})
@@ -76,6 +77,7 @@ target_link_libraries(cachesim PRIVATE ZLIB::ZLIB LibLZMA::LibLZMA)
 add_executable(mta miss_trace_analysis.cpp)
 target_compile_options(mta PRIVATE ${COMPILE_OPTIONS})
 target_include_directories(mta PRIVATE "src" "../src")
+target_link_libraries(mta PRIVATE ZLIB::ZLIB)
 
 ########################################################################
 ########################################################################
