@@ -83,6 +83,7 @@ Core::checkpoint_stats()
 
     stats_stream_ << BAR << "\n";
 
+    print_stat(stats_stream_, header, "TRACE", trace_file_);
     print_stat(stats_stream_, header, "INST", finished_inst_num_);
     print_stat(stats_stream_, header, "CYCLES", GL_CYCLE);
     print_stat(stats_stream_, header, "IPC", ipc);

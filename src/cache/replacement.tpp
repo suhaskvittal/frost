@@ -8,47 +8,45 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline void
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = RRIP_MAX;
-    e.new_install = false;
-
-    if (e.dirty)
-        e.reused_after_marked_dirty = true;
 }
 
-__TEMPLATE_HEADER__ inline void
+__TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
 {
+    e.coreid = trans.coreid;
     e.valid = true;
     e.dirty = trans_is_write(trans.type);
     e.address = trans.address;
     e.timestamp = GL_CYCLE;
-    e.reused_after_marked_dirty = false;
-    e.likely_dead = dbp_->predict_if_dead(trans);
-    e.new_install = true;
+    e.likely_dead = dead_block_pred_->predict_if_dead(trans);
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
         // Check whether or not to use BRRIP.
         size_t idx = cache_set_index<IMPL>(trans.address);
-        SetDuelingRole r = get_set_role(idx);
+        SetDuelingMonitor::Role r = set_dueling_arbiter_.get_role_of_set(idx);
         // Resolve `r` if it is a follower set.
-        if (r == SetDuelingRole::FOLLOWER)
-            r = (psel_ & PSEL_MSB_MASK) ? SetDuelingRole::LEADER_2 : SetDuelingRole::LEADER_1;
+        if (r == SetDuelingMonitor::Role::FOLLOWER)
+        {
+            r = (set_dueling_arbiter_.psel & SetDuelingMonitor::PSEL_MSB_MASK) 
+                                ? SetDuelingMonitor::Role::LEADER_2 : SetDuelingMonitor::Role::LEADER_1;
+        }
 
-        if (r == SetDuelingRole::LEADER_1)
+        if (r == SetDuelingMonitor::Role::LEADER_1)
         {
             e.rrpv = 1;
             ++s_dueling_pol1_installs_;
         }
         else
         {
-            e.rrpv = (bimodal_counter_ == 32) ? 1 : 0;
+            e.rrpv = (set_dueling_arbiter_.bimodal_counter == 32) ? 1 : 0;
             ++s_dueling_pol2_installs_;
-            fast_increment_and_mod_inplace<32>(bimodal_counter_);
+            fast_increment_and_mod_inplace<32>(set_dueling_arbiter_.bimodal_counter);
         }
     }
     else
@@ -61,9 +59,61 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction&)
+__TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
 {
-    return cset_get_way_in_lru_position(s.begin(), s.end(), 0);
+    // Check if we need to deal with partitioning:
+    if constexpr (std::is_same<typename IMPL::PARTITION_MANAGER_TYPE, NoPartitionManager>::value)
+    {
+        return cset_get_way_in_lru_position(s.begin(), s.end(), 0);
+    }
+    else
+    {
+        // So, we need to select carefully, first compute the number of ways currently 
+        // belonging to the incoming line.
+        size_t cnt = std::count_if(s.begin(), s.end(),
+                                [c=trans.coreid] (const auto& e) { return e.coreid == c; });
+
+        // Determine if we need to evict from other cores or not
+        bool match_coreid = (cnt >= partition_[trans.coreid]);
+        if (match_coreid)
+        {
+            return std::min_element(s.begin(), s.end(),
+                                [c=trans.coreid] (const auto& x, const auto& y)
+                                {
+                                    bool x_match = (x.coreid == c),
+                                         y_match = (y.coreid == c);
+
+                                    if (x_match == y_match)
+                                        return x.timestamp < y.timestamp;
+                                    else
+                                        return x_match;
+                                });
+                                
+        }
+        else
+        {
+            // Need to determine which cores have used their entire budget:
+            std::vector<bool> ok_to_evict(NUM_THREADS, false);
+            for (uint8_t c = 0; c < NUM_THREADS; c++)
+            {
+                size_t ccnt = std::count_if(s.begin(), s.end(),
+                                        [c] (const auto& e) { return e.coreid == c; });
+                ok_to_evict[c] = (ccnt >= partition_[c]);
+            }
+
+            return std::min_element(s.begin(), s.end(),
+                                [&ok_to_evict] (const auto& x, const auto& y)
+                                {
+                                    bool x_ok = ok_to_evict[x.coreid],
+                                         y_ok = ok_to_evict[y.coreid];
+
+                                    if (x_ok == y_ok)
+                                        return x.timestamp < y.timestamp;
+                                    else
+                                        return x_ok;
+                                });
+        }
+    }
 }
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
@@ -92,7 +142,7 @@ __TEMPLATE_CLASS__::repl_lru_dead_block(cset_type& s, const Transaction& trans)
     auto v_it = s.end();
 
     // Perform a prediction on the fill address:
-    bool fill_is_likely_dead = dbp_->predict_if_dead(trans);
+    bool fill_is_likely_dead = dead_block_pred_->predict_if_dead(trans);
     if (fill_is_likely_dead)  // if so, do bypass:
         return v_it;
     
@@ -105,35 +155,6 @@ __TEMPLATE_CLASS__::repl_lru_dead_block(cset_type& s, const Transaction& trans)
         v_it = repl_lru(s, trans);
 
     return v_it;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::SetDuelingRole
-__TEMPLATE_CLASS__::get_set_role(size_t s) const
-{
-    size_t grp = s >> numeric_traits<LEADER_SETS>::log2,
-            off = fast_mod<LEADER_SETS>(s);
-    size_t coff = off ^ (LEADER_SETS-1);
-
-    if (grp == off)
-        return SetDuelingRole::LEADER_1;
-    else if (grp == coff)
-        return SetDuelingRole::LEADER_2;
-    else
-        return SetDuelingRole::FOLLOWER;
-}
-
-__TEMPLATE_HEADER__ inline void
-__TEMPLATE_CLASS__::update_psel(size_t s)
-{
-    constexpr static psel_type PSEL_MAX = (1<<PSEL_WIDTH)-1;
-    constexpr static psel_type PSEL_MIN = 0;
-
-    SetDuelingRole r = get_set_role(s);
-    psel_ += static_cast<psel_type>(r);
-    psel_ = std::clamp(psel_, PSEL_MIN, PSEL_MAX);
 }
 
 ////////////////////////////////////////////////////////////////////////////

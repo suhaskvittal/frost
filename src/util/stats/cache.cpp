@@ -42,6 +42,15 @@ print_llc_stats(std::ostream& out)
     out << "\n";
     print_stat(out, "LLC", "BYPASSES", GL_LLC->s_bypasses_);
     print_stat(out, "LLC", "DEAD_BLOCK_EVICTIONS", GL_LLC->s_dead_block_evictions_);
+
+    if (!std::is_same<LLCache::PARTITION_MANAGER_TYPE, NoPartitionManager>::value)
+    {
+        out << "\n";
+        // Print out partitions for each core:
+        const auto& parts = GL_LLC->get_partition_array_const_ref();
+        for (size_t i = 0; i < NUM_THREADS; i++)
+            print_stat(out, "LLC", "CORE_" + std::to_string(i) + "_PARTITION_SIZE", parts.at(i));
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

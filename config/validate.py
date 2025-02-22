@@ -59,7 +59,8 @@ def validate_cache_section(cfg) -> bool:
         ('fill_ports', 2),
         ('writeback_mode', 'NORMAL'),
         ('cache_type', 'Cache'),
-        ('dead_block_predictor', 'NoDeadBlockPredictor')
+        ('dead_block_predictor', 'NoDeadBlockPredictor'),
+        ('partition_manager', 'NoPartitionManager')
     ]
     # Now check if the number of sets or the size of the cache
     # is specified.

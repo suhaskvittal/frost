@@ -6,8 +6,10 @@
 #define CACHE_h
 
 #include "cache/dead_block/base.h"
+#include "cache/partitioning/base.h"
 #include "cache/entry.h"
 #include "cache/enums.h"
+#include "cache/ext/set_dueling.h"
 #include "cache/indexing.h"
 #include "transaction.h"
 #include "util/numerics.h"
@@ -46,6 +48,9 @@
  *      -- CacheWBMode WRITEBACK_MODE
  *
  *      -- bool WRITE_ALLOCATE
+ *
+ *      -- type DEAD_BLOCK_PREDICTOR_TYPE
+ *      -- type PARTITION_MANAGER_TYPE
  * */
 
 ////////////////////////////////////////////////////////////////////////////
@@ -55,11 +60,9 @@ template <class IMPL, class NEXT_TYPE>
 class Cache
 {
 public:
-    using next_ptr =       std::unique_ptr<NEXT_TYPE>;
     using stat_type =      VecStat<uint32_t, NUM_THREADS>;
     using in_queue_type =  std::deque<Transaction>;
     using pending_type =   std::unordered_multiset<uint64_t>;
-    using dbp_ptr =        std::unique_ptr<DeadBlockPredictorBase>;
 
     stat_type s_reads_{};
     stat_type s_writes_{};
@@ -94,24 +97,13 @@ public:
 
     const std::string cache_name_;
 protected:
-    enum class SetDuelingRole { FOLLOWER =0, LEADER_1 =1, LEADER_2 =-1 };
-    
-    using psel_type = int16_t;
-
     using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
     using wb_queue_type =   std::deque<Transaction>;
     using fill_queue_type = std::deque<Transaction>;
-
-    constexpr static size_t    LEADER_SETS = 64;
-    constexpr static size_t    PSEL_WIDTH = 11;
-    constexpr static psel_type PSEL_DEFAULT = (1<<(PSEL_WIDTH-1))-1;
-    constexpr static psel_type PSEL_MSB_MASK = 1 << (PSEL_WIDTH-1);
     /*
      * Core cache structures:
      * */
     cset_array csets_{};
-    psel_type  psel_ =PSEL_DEFAULT;
-    size_t     bimodal_counter_ =0;
     /*
      * I/O structures
      * */
@@ -133,11 +125,30 @@ protected:
     /*
      * Pointer to next structure in the memory hierarchy.
      * */
+    using next_ptr = std::unique_ptr<NEXT_TYPE>;
+
     next_ptr& next_;
     /*
      * Pointer to dead block predictor:
      * */
-    dbp_ptr dbp_;
+    using dbp_ptr = std::unique_ptr<DeadBlockPredictorBase>;
+
+    dbp_ptr dead_block_pred_;
+    /*
+     * Below this are non-standard cache implementation structures (i.e., set dueling, cache partitioning).
+     * These are non-standard in the sense that they are not offered in standard simulators.
+     *
+     * To isolate each one and prevent name collisions, we implement them in their own structs where appropriate.
+     *
+     * Some structures like `ucp_` will be implemented as pointers as they are expensive to allocate (i.e., UCP
+     * requires ATDs per core). If they are not used, they will be left as null.
+     * */
+    using cpart_ptr = std::unique_ptr<PartitionManagerBase>;
+
+    SetDuelingMonitor set_dueling_arbiter_{};
+
+    cache_partition_array partition_;
+    cpart_ptr             partition_manager_;
 public:
     Cache(std::string cache_name, next_ptr&);
 
@@ -165,6 +176,11 @@ public:
                                 return std::count_if(s.begin(), s.end(),
                                                 [] (const auto& e) { return e.valid && e.dirty; });
                             });
+    }
+
+    inline const cache_partition_array& get_partition_array_const_ref(void) const
+    {
+        return partition_;
     }
 protected:
     struct fill_result_type
@@ -211,18 +227,11 @@ protected:
 
     way_iterator repl_lru_dead_block(cset_type&, const Transaction&);
     /*
-     * Set Dueling implementation:
-     * */
-    virtual SetDuelingRole get_set_role(size_t set_idx) const;
-    virtual void update_psel(size_t set_idx);
-    /*
      * IO functions for R/W/P queues (`do_next_access`) and fills (`do_next_fill`)
      * */
     virtual void do_next_fill(void);
     virtual bool do_next_access(bool do_read);
     virtual void add_mshr_entry(Transaction);
-
-    virtual void forward_completed_read(Transaction);
 
     inline in_queue_type& get_queue_ref(TransactionType t)
     {

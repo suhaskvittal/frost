@@ -33,10 +33,9 @@ struct CacheEntry
      * */
     uint64_t timestamp;
     int8_t  rrpv;
+    int8_t coreid =-1;
 
-    bool reused_after_marked_dirty =false;
     bool likely_dead =false;
-    bool new_install =false;
 
     CacheEntry(void) =default;
 };

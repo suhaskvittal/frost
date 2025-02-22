@@ -26,10 +26,9 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
     wb_mode =       cfg['writeback_mode']
     cache_type =    cfg['cache_type']
     dbp_type =      cfg['dead_block_predictor']
+    cpart_type =    cfg['partition_manager']
 
     write_alloc = str(write_alloc).lower()
-
-    dbp_type = dbp_type.replace('$impl', typename)
 
     cache_decl =\
 f'''
@@ -38,6 +37,7 @@ struct {typename} : public {cache_type}<{typename}, {next_typename}>
     using parent_type = {cache_type}<{typename}, {next_typename}>;
 
     using DEAD_BLOCK_PREDICTOR_TYPE = {dbp_type};
+    using PARTITION_MANAGER_TYPE = {cpart_type};
 
     constexpr static size_t NUM_SETS =         {sets};
     constexpr static size_t NUM_WAYS =         {ways};
@@ -62,6 +62,8 @@ struct {typename} : public {cache_type}<{typename}, {next_typename}>
     using parent_type::{cache_type};
 }};
 '''
+    cache_decl = cache_decl.replace('$impl', typename)
+
     return cache_decl
 
 ####################################################################
@@ -86,6 +88,7 @@ f'''{AUTOGEN_HEADER}
 {ptw_inc}
 
 #include "cache/dead_block/all.h"
+#include "cache/partitioning/all.h"
 #include "cache/other_impl/all.h"
 
 #include <memory>

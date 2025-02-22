@@ -3,8 +3,6 @@
  *  date:   31 January 2025
  * */
 
-#include "dram/address.h"
-
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -19,7 +17,8 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     :cache_name_(cache_name),
     csets_(IMPL::NUM_SETS, cset_type(IMPL::NUM_WAYS)),
     next_(n),
-    dbp_(new typename IMPL::DEAD_BLOCK_PREDICTOR_TYPE)
+    dead_block_pred_(new typename IMPL::DEAD_BLOCK_PREDICTOR_TYPE),
+    partition_manager_(new typename IMPL::PARTITION_MANAGER_TYPE)
 {
     pending_reads_.reserve(IMPL::RQ_SIZE + IMPL::PQ_SIZE);
     pending_writes_.reserve(IMPL::WQ_SIZE);
@@ -27,6 +26,9 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     pending_writebacks_.reserve(IMPL::NUM_MSHR);
 
     mshr_.reserve(IMPL::NUM_MSHR);
+
+    // Initialize `partitions_` so each core gets as much as they want (initially)
+    partition_.fill(IMPL::NUM_WAYS);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -104,6 +106,10 @@ __TEMPLATE_CLASS__::tick()
 
     for (size_t ii = 0; ii < IMPL::NUM_WRITE_PORTS; ii++)
         do_next_access(false);
+
+    // Update partitioning policy:
+    if (GL_CYCLE - partition_manager_->last_update_cycle_ >= OPT_CACHE_PARTITION_UPDATE_CYCLES)
+        partition_manager_->update_partition(partition_.begin(), partition_.end());
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -237,8 +243,11 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
         it->dirty |= trans_is_write(trans.type);
         
         // Invoke dead block predictor:
-        dbp_->update_on_probe_or_fill(trans);
-        it->likely_dead = dbp_->predict_if_dead(trans);
+        dead_block_pred_->update_on_probe_or_fill(trans);
+        it->likely_dead = dead_block_pred_->predict_if_dead(trans);
+
+        // Update partitioning policies:
+        partition_manager_->update_on_access(trans);
 
         return true;
     }
@@ -261,13 +270,6 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
             ++s_rewrites_[trans.coreid];
 
         it->dirty = true;
-        
-        /*
-        // Invoke dead block predictor:
-        dbp_->update_on_mark_dirty(trans);
-        it->likely_dead = dbp_->predict_if_dead(trans);
-        */
-
         return true;
     }
     else
@@ -299,7 +301,10 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans)
     cset_type& s = csets_[idx];
 
     // Invoke dead block predictor:
-    dbp_->update_on_probe_or_fill(trans);
+    dead_block_pred_->update_on_probe_or_fill(trans);
+
+    // Update partitioning policies:
+    partition_manager_->update_on_fill(trans);
 
     // First search for an invalid entry:
     auto it = std::find_if_not(s.begin(), s.end(),
@@ -368,7 +373,7 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
     }
     else if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
-        update_psel(idx);
+        set_dueling_arbiter_.update_psel(idx);
         return repl_rrip(s, trans);
     }
     else if constexpr (IMPL::REPL == CacheReplPolicy::LRU_DEAD_BLOCK)
@@ -419,7 +424,6 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
         if (probe(trans))
         {
             outgoing_queue_.emplace(trans, GL_CYCLE+IMPL::CACHE_LATENCY);
-//          forward_completed_read(trans);
         }
         else
         {
@@ -531,9 +535,6 @@ __TEMPLATE_CLASS__::do_next_fill()
         }
         mshr_.erase(begin, end);
         pending_misses_.erase(trans.address);
-
-        // If there are any pending reads, complete those as well:
-//      forward_completed_read(trans);
     }
 
     fill_queue_.pop_front();
@@ -570,40 +571,6 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
     mshr_.insert({address, e});
 }
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::forward_completed_read(Transaction trans)
-{
-    // Search for other pending reads in the `read_queue_` and `prefetch_queue_`.
-    auto p_it = pending_reads_.find(trans.address);
-    if (p_it != pending_reads_.end())
-    {
-        // There are other pending reads/prefetches, so we need to remove them:
-        for (auto q_ref : {std::ref(read_queue_), std::ref(prefetch_queue_)})
-        {
-            auto& q = q_ref.get();
-            if (q.empty())
-                continue;
-
-            auto it = std::remove_if(q.begin(), q.end(),
-                                    [addr=trans.address] (const auto& tr) { return tr.address == addr; });
-
-            std::for_each(it, q.end(),
-                    [this] (auto&& tr) 
-                    { 
-                        return this->outgoing_queue_.emplace(std::move(tr), GL_CYCLE + IMPL::CACHE_LATENCY);
-                    });
-            s_read_forwards_[trans.coreid] += std::distance(it, q.end());
-
-            // erase all of the transactions (only need to send back one completion, which we already
-            // have done)
-            q.erase(it, q.end());
-        }
-        pending_reads_.erase(trans.address);
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -116,7 +116,7 @@ extern uint64_t OPT_INST_WARMUP;
 /*
  *  Helper functions defined in `sim.cpp`
  * */
-void sim_init(void);
+void sim_init(bool is_mix);
 void print_config(std::ostream&);
 void print_progress(std::ostream&);
 
@@ -149,12 +149,40 @@ fr'''{AUTOGEN_HEADER}
 ////////////////////////////////////////////////////////////////////////////
 
 void
-sim_init(void)
+sim_init(bool is_mix)
 {{
     GL_DRAM = dram_ptr(new DRAM({cpu_freq}, {dram_freq}));
     GL_LLC = llc_ptr(new LLCache("LLC", GL_DRAM));
-    for (size_t i = 0; i < NUM_THREADS; i++)
-        GL_CORES[i] = core_ptr(new Core(i, OPT_TRACE_FILE));
+
+    if (is_mix)
+    {{
+        std::cout << "parsing mix...\n";
+        // Need to parse `OPT_TRACE_FILE`:
+        int curr_pos = 0; 
+        size_t i = 0;
+        while (curr_pos < OPT_TRACE_FILE.size())
+        {{
+            if (i >= NUM_THREADS)
+                exit(1);
+
+            int next_pos = OPT_TRACE_FILE.find(";", curr_pos);
+            if (next_pos == std::string::npos)
+                next_pos = OPT_TRACE_FILE.size();
+
+            std::string trace = OPT_TRACE_FILE.substr(curr_pos, next_pos-curr_pos);
+            GL_CORES[i] = core_ptr(new Core(i, trace));
+
+            std::cout << "\tcore " << i << " : " << trace << "\n";
+            
+            curr_pos = next_pos+1;
+            ++i;
+        }}
+    }}
+    else
+    {{
+        for (size_t i = 0; i < NUM_THREADS; i++)
+            GL_CORES[i] = core_ptr(new Core(i, OPT_TRACE_FILE));
+    }}
     GL_OS = os_ptr(new OS({ptwc_params}));
 }}
 

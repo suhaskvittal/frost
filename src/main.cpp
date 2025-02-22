@@ -38,6 +38,8 @@ uint64_t OPT_INST_WARMUP;
 double OPT_DRAM_LOW_WATERMARK;
 double OPT_DRAM_HIGH_WATERMARK;
 
+uint64_t OPT_CACHE_PARTITION_UPDATE_CYCLES;
+
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -46,9 +48,14 @@ std::string OPT_DRAMSIM3_CONFIG_FILE;
 template <class ARCH_PTR> inline uint64_t
 tick_and_measure(ARCH_PTR& x)
 {
+#if defined(ENABLE_TIMER)
     timer.start();
     x->tick();
     return timer.end();
+#else
+    x->tick();
+    return 0;
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -56,29 +63,42 @@ tick_and_measure(ARCH_PTR& x)
 
 int main(int argc, char* argv[])
 {
+    bool is_mix;
+
     std::ios_base::sync_with_stdio(false);
     ArgParseResult ARGS(argc, argv,
             { // Required
                 "trace"
             },
             { // Optional
+                // Simulation setup:
                 {"w", "Number of warmup instructions", "10000000"},
                 {"s", "Number of instructions to simulate", "10000000"},
+                {"mix", "Flag to indicate trace is a mix", ""},
+                
+                // DRAMsim:
                 {"dram_wm_low", "DRAM Low Watermark", "0.3"},
                 {"dram_wm_high", "DRAM High Watermark", "1.0"},
+
+                // Cache partitioning:
+                {"cpart_update_freq", "Number of cycles between cache partitioning updates", "5000000"},
+
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
             });
     ARGS("trace", OPT_TRACE_FILE);
     ARGS("w", OPT_INST_WARMUP);
     ARGS("s", OPT_INST_SIM);
+    ARGS("mix", is_mix);
 
     ARGS("dram_wm_low", OPT_DRAM_LOW_WATERMARK);
     ARGS("dram_wm_high", OPT_DRAM_HIGH_WATERMARK);
 
+    ARGS("cpart_update_freq", OPT_CACHE_PARTITION_UPDATE_CYCLES);
+
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 
-    sim_init();
+    sim_init(is_mix);
     print_config(std::cout);
 
     std::cout << "WARMUP:\t";
