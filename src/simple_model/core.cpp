@@ -16,6 +16,22 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+inline Transaction init_trans_from_inst(inst_ptr inst, uint8_t coreid)
+{
+    Transaction::Type trans_type = inst->is_store ? Transaction::Type::WRITE : Transaction::Type::READ;
+    uint64_t ip = 0;
+#if defined(TRACE_FORMAT_IMAT)
+    ip = inst->ip;
+    if ((ip >> numeric_traits<LINESIZE>::log2) == inst->v_lineaddr)
+        trans_type = Transaction::Type::INSTRUCTION;
+#endif
+
+    return Transaction{coreid, ip, inst->p_lineaddr, inst, trans_type};
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 Core::Core(uint8_t coreid, std::string trace_file)
     :coreid_(coreid),
     trace_file_(trace_file),
@@ -32,19 +48,7 @@ Core::tick_warmup()
 {
     inst_ptr inst = next_inst();
     ++inst_warmup_;
-
-    if (inst != nullptr)
-    {
-        bool is_icache_miss = false;
-#if defined(TRACE_FORMAT_IMAT)
-        is_icache_miss = (inst->ip >> numeric_traits<LINESIZE>::log2) == inst->v_lineaddr;
-#endif
-
-        TransactionType t = inst->is_store ?  TransactionType::READ : TransactionType::WRITE;
-        Transaction trans(coreid_, inst, t, inst->p_lineaddr, is_icache_miss);
-        GL_LLC->warmup_access(trans);
-    }
-
+    GL_LLC->warmup_access(init_trans_from_inst(inst, coreid_));
     delete inst;
 }
 
@@ -148,6 +152,8 @@ Core::operate_rob()
             {
                 // Simulator is deadlocked:
                 std::cerr << "\nCore " << (coreid_+0) << " deadlock in cycle " << GL_CYCLE << " detected:\n";
+                std::cerr << "Instruction is " << (inst->is_store ? "store" : "load") 
+                    << " to " << inst->p_lineaddr << "\n";
                 GL_LLC->deadlock_find_inst(inst);
                 GL_DRAM->deadlock_find_inst(inst);
                 exit(1);
@@ -176,22 +182,11 @@ Core::operate_rob()
 bool
 Core::do_llc_access(inst_ptr inst)
 {
-    TransactionType t = inst->is_store ? TransactionType::WRITE : TransactionType::READ;
-    if (GL_LLC->can_accept(0,t))
-    {
-        bool is_icache_miss = false;
-#if defined(TRACE_FORMAT_IMAT)
-        is_icache_miss = (inst->ip >> numeric_traits<LINESIZE>::log2) == inst->v_lineaddr;
-#endif
-        Transaction trans(coreid_, inst, t, inst->p_lineaddr, is_icache_miss);
-        GL_LLC->add_incoming(trans);
-        inst->state = AccessState::IN_CACHE;
-        if (inst->is_store)
-            inst->cycle_done = GL_CYCLE+1;
-        return true;
-    }
-    else
-        return false;
+    Transaction trans = init_trans_from_inst(inst, coreid_);
+    bool success = GL_LLC->can_accept(trans) && GL_LLC->add_incoming(trans);
+    if (inst->is_store && success)
+        inst->cycle_done = GL_CYCLE + 1;
+    return success;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -222,11 +217,8 @@ drain_llc_outgoing_queue()
     drain_cache_outgoing_queue(GL_LLC,
             [] (const Transaction& t)
             {
-                for (auto inst : t.inst_list)
-                {
-                    inst->cycle_done = GL_CYCLE;
-                    inst->state = AccessState::DONE;
-                }
+                t.inst->cycle_done = GL_CYCLE;
+                t.inst->state = AccessState::DONE;
             });
 }
 

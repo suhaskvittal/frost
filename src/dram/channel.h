@@ -108,19 +108,25 @@ public:
     DRAMChannel(size_t channel_id, double freq_ghz);
 
     void tick(void);
-
-    inline bool can_accept(uint64_t address, TransactionType t) const
+    bool deadlock_find_inst(const inst_ptr) const;
+    void update_modal_stats_post_transition(void);
+    /*
+     * Public inlines:
+     * */
+    inline bool can_accept(const Transaction& trans) const
     {
-        return scheduler_->can_accept(address, t);
+        return scheduler_->can_accept(trans);
     }
 
     inline bool add_incoming(Transaction trans)
     {
         return scheduler_->add_incoming(trans);
     }
-
-    bool deadlock_find_inst(const inst_ptr) const;
-    void update_modal_stats_post_transition(void);
+    
+    inline bool precharge_do_counter_update(void)
+    {
+        return false;
+    }
 private:
     void issue_next_command(void);
     /*
@@ -130,15 +136,11 @@ private:
     template <class CACHE_TYPE>
     void start_write_mode(std::unique_ptr<CACHE_TYPE>& c)
     {
-        if constexpr (cache_type_traits::is_balanced_writeback_cache<typename CACHE_TYPE::parent_type>::value)
-            c->start_write_mode(channel_id_);
     }
 
     template <class CACHE_TYPE>
     void end_write_mode(std::unique_ptr<CACHE_TYPE>& c)
     {
-        if constexpr (cache_type_traits::is_balanced_writeback_cache<typename CACHE_TYPE::parent_type>::value)
-            c->end_write_mode(channel_id_, writes_issued_per_bank_);
     }
 
     template <class CACHE_TYPE>

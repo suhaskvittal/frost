@@ -36,7 +36,7 @@ public:
 
     void warmup_access(const Transaction&) {}
 
-    bool can_accept(uint64_t, TransactionType) const;
+    bool can_accept(const Transaction&) const;
     bool add_incoming(Transaction);
 
     void tick(void);

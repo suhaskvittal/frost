@@ -32,31 +32,27 @@ DRAM::DRAM(double cpu_freq_ghz, double freq_ghz)
 ////////////////////////////////////////////////////////////////////////////
 
 bool
-DRAM::can_accept(uint64_t address, TransactionType type) const
+DRAM::can_accept(const Transaction& trans) const
 {
-    bool is_write = trans_is_write(type);
-
 #if defined(DRAM_DROP_WRITES)
-    if (is_write)
+    if (trans.is_write())
         return true;
 #endif
 
-    size_t i = dram_channel(address);
-    return channels_[i]->can_accept(address, type);
+    size_t i = dram_channel(trans.address);
+    return channels_[i]->can_accept(trans);
 }
 
 bool
-DRAM::add_incoming(Transaction t)
+DRAM::add_incoming(Transaction trans)
 {
-    bool is_write = trans_is_write(t.type);
-
 #if defined(DRAM_DROP_WRITES)
-    if (is_write)
+    if (trans.is_write())
         return true;
 #endif
 
-    size_t i = dram_channel(t.address);
-    return channels_[i]->add_incoming(t);
+    size_t i = dram_channel(trans.address);
+    return channels_[i]->add_incoming(trans);
 }
 
 ////////////////////////////////////////////////////////////////////////////

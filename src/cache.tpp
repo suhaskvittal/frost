@@ -37,11 +37,9 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::warmup_access(const Transaction& trans)
 {
-    bool is_write = trans_is_write(trans.type);
-
     if constexpr (!IMPL::WRITE_ALLOCATE)
     {
-        if (is_write)
+        if (trans.is_write())
         {
             if (!mark_dirty(trans))
                 warmup_fill(trans);
@@ -63,7 +61,7 @@ __TEMPLATE_CLASS__::warmup_fill(const Transaction& trans)
     auto out = fill(trans)[0];
     if (out.entry.valid && out.entry.dirty)
     {
-        Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, out.entry.address);
+        Transaction wb_trans{trans.coreid, trans.ip, out.entry.address, nullptr, Transaction::Type::WRITE};
         next_->warmup_access(wb_trans);
     }
 }
@@ -82,7 +80,7 @@ __TEMPLATE_CLASS__::tick()
                                 [] (const auto& x) { return x.second.is_fired; });
         auto& [address, e] = *mshr_it;
         // Try access to next level:
-        if (next_->can_accept(address, e.trans.type) && next_->add_incoming(e.trans))
+        if (next_->can_accept(e.trans) && next_->add_incoming(e.trans))
         {
             e.is_fired = true;
             --num_mshr_asleep_;
@@ -91,7 +89,7 @@ __TEMPLATE_CLASS__::tick()
     else if (!writeback_queue_.empty())
     {
         const auto& trans = writeback_queue_.front();
-        if (next_->can_accept(trans.address, trans.type) && next_->add_incoming(trans))
+        if (next_->can_accept(trans) && next_->add_incoming(trans))
         {
             pending_writebacks_.erase(pending_writebacks_.find(trans.address));
             writeback_queue_.pop_front();
@@ -115,30 +113,10 @@ __TEMPLATE_CLASS__::tick()
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline bool
-__TEMPLATE_CLASS__::can_accept(uint64_t, TransactionType t)
-{
-    if (t == TransactionType::PREFETCH)
-        return prefetch_queue_.size() < IMPL::PQ_SIZE;
-    else if (t == TransactionType::WRITE)
-        return write_queue_.size() < IMPL::WQ_SIZE;
-    else
-        return read_queue_.size() < IMPL::RQ_SIZE;
-}
-
-__TEMPLATE_HEADER__ inline bool
-__TEMPLATE_CLASS__::can_accept_fill()
-{
-    return fill_queue_.size() < IMPL::FILL_QUEUE_SIZE;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::add_incoming(Transaction trans)
 {
-    bool is_read = trans_is_read(trans.type);
+    bool is_read = trans.is_read();
 
     // First, check if we can forward writes:
     if ((pending_writes_.find(trans.address) != pending_writes_.end()) 
@@ -188,7 +166,7 @@ __TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
 
     // Search in read queue:
     auto rd_it = std::find_if(read_queue_.begin(), read_queue_.end(),
-                        [inst] (const auto& tr) { return tr.contains_inst(inst); });
+                        [inst] (const auto& tr) { return tr.inst == inst; });
     if (rd_it != read_queue_.end())
     {
         size_t rd_pos = std::distance(read_queue_.begin(), rd_it);
@@ -205,7 +183,7 @@ __TEMPLATE_CLASS__::deadlock_find_inst(inst_ptr inst) const
     
     // Search in MSHR
     auto mshr_it = std::find_if(mshr_.begin(), mshr_.end(),
-                        [inst] (const auto& x) { return x.second.trans.contains_inst(inst); });
+                        [inst] (const auto& x) { return x.second.trans.inst == inst; });
     if (mshr_it != mshr_.end())
     {
         const auto& [address, e] = *mshr_it;
@@ -240,7 +218,7 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
     {
         // Update entry data:
         update_entry(*it);
-        it->dirty |= trans_is_write(trans.type);
+        it->dirty |= trans.is_write();
         
         // Invoke dead block predictor:
         dead_block_pred_->update_on_probe_or_fill(trans);
@@ -465,7 +443,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         return;
 
     const Transaction& trans = fill_queue_.front();
-    const bool is_read = trans_is_read(trans.type);
+    const bool is_read = trans.is_read();
 
     // Handle eviction + any writeback if necessary
     multi_fill_result_type eviction_list;
@@ -506,7 +484,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         if (i > 0)
             ++s_eager_writebacks_;
 
-        Transaction wb_trans(trans.coreid, nullptr, TransactionType::WRITE, e.address);
+        Transaction wb_trans{trans.coreid, trans.ip, e.address, nullptr, Transaction::Type::WRITE};
         enqueue_writeback(wb_trans);
     }
 
@@ -546,19 +524,19 @@ __TEMPLATE_CLASS__::do_next_fill()
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
 {
-    bool write_miss = trans_is_write(trans.type);
+    bool write_miss = trans.is_write();
     uint64_t address = trans.address;
 
     MSHREntry e(trans, write_miss);
     if (write_miss)  // Need to switch transaction type in the case of a write allocate
-        e.trans.type = TransactionType::READ;
+        e.trans.type = Transaction::Type::READ;
 
     // Check if there is already an MSHR entry for this address. If so, we can mark the entry as fired. If not,
     // we need to issue a read request
     auto mshr_it = pending_misses_.find(address);
     if (mshr_it == pending_misses_.end())
     {
-        e.is_fired = next_->can_accept(address, e.trans.type) && next_->add_incoming(e.trans);
+        e.is_fired = next_->can_accept(e.trans) && next_->add_incoming(e.trans);
         pending_misses_.insert(address);
         if (!e.is_fired)
             ++num_mshr_asleep_;

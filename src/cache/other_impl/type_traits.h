@@ -21,7 +21,6 @@
 namespace cache_type_traits
 {
     DECL_TYPE_CHECK(virtual_write_queue, VirtualWriteQueue)
-    DECL_TYPE_CHECK(balanced_writeback_cache, BalancedWritebackCache)
 }   // cache_type_traits
 
 ////////////////////////////////////////////////////////////////////////////

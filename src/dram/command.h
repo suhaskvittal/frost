@@ -6,8 +6,6 @@
 #ifndef DRAM_COMMAND_h
 #define DRAM_COMMAND_h
 
-#include "transaction.h"
-
 #include <cstdint>
 #include <iosfwd>
 #include <string>
@@ -15,75 +13,64 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-enum class DRAMCommandType {
-    READ,
-    READ_PRECHARGE,
-    WRITE,
-    WRITE_PRECHARGE,
-    ACTIVATE,
-    PRECHARGE,
-    INVALID
-};
-
-inline bool cmd_is_invalid(DRAMCommandType t)
-{
-    return t == DRAMCommandType::INVALID;
-}
-
-inline bool cmd_is_read(DRAMCommandType t)
-{
-    return t == DRAMCommandType::READ || t == DRAMCommandType::READ_PRECHARGE;
-}
-
-inline bool cmd_is_write(DRAMCommandType t)
-{
-    return t == DRAMCommandType::WRITE || t == DRAMCommandType::WRITE_PRECHARGE;
-}
-
-inline bool cmd_is_cas(DRAMCommandType t)
-{
-    return cmd_is_read(t) || cmd_is_write(t);
-}
-
-inline bool cmd_is_autopre(DRAMCommandType t)
-{
-    return t == DRAMCommandType::READ_PRECHARGE || t == DRAMCommandType::WRITE_PRECHARGE;
-}
-
-inline bool cmd_is_act(DRAMCommandType t)
-{
-    return t == DRAMCommandType::ACTIVATE;
-}
-
-inline bool cmd_is_pre(DRAMCommandType t)
-{
-    return t == DRAMCommandType::READ_PRECHARGE
-        || t == DRAMCommandType::WRITE_PRECHARGE
-        || t == DRAMCommandType::PRECHARGE;
-}
-
-inline bool cmd_is_pre_only(DRAMCommandType t)
-{
-    return t == DRAMCommandType::PRECHARGE;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 struct DRAMCommand
 {
-    uint64_t address;
-    DRAMCommandType type;
+    enum class Type
+    {
+        // Column commands:
+        READ,
+        WRITE,
+        // Row commands:
+        ACTIVATE,
+        PRECHARGE,
+        INVALID
+    };
 
-    DRAMCommand(void);
-    DRAMCommand(uint64_t, DRAMCommandType);
-    DRAMCommand(const DRAMCommand&) =default;
+    uint64_t address;
+    Type     type =Type::INVALID;
+    bool     autopre =false;
+    bool     counter_update =false;
+
+    inline bool is_read(void) const
+    {
+        return type == Type::READ;
+    }
+
+    inline bool is_write(void) const
+    {
+        return type == Type::WRITE;
+    }
+
+    inline bool is_cas(void) const
+    {
+        return type == Type::READ || type == Type::WRITE;
+    }
+
+    inline bool is_act(void) const
+    {
+        return type == Type::ACTIVATE;
+    }
+
+    inline bool is_pre(void) const
+    {
+        return type == Type::PRECHARGE || autopre;
+    }
+
+    inline bool is_pre_only(void) const
+    {
+        return type == Type::PRECHARGE;
+    }
+
+    inline bool is_invalid(void) const
+    {
+        return type == Type::INVALID;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-std::string   cmd_string(DRAMCommandType);
+std::string   cmd_string(const DRAMCommand&);
 std::ostream& operator<<(std::ostream&, const DRAMCommand&);
 
 ////////////////////////////////////////////////////////////////////////////

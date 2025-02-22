@@ -45,7 +45,7 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
         std::tie(ready_cmd, q_p, q_it) = cmd_it->value();
 
         size_t bank_idx = dram_bank_idx(ready_cmd.address);
-        if (cmd_is_cas(ready_cmd.type))
+        if (ready_cmd.is_cas())
         {
             const auto& b = channel_get_const_bank_ref_from_idx(channel_state_, bank_idx);
             q_it->is_row_buffer_hit = b.next_cas_is_row_buffer_hit;
@@ -56,7 +56,7 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
             active_buffer_.erase(bank_idx);
 
             // Update `pending` structures:
-            auto& p = cmd_is_read(ready_cmd.type) ? pending_reads_ : pending_writes_;
+            auto& p = ready_cmd.is_read() ? pending_reads_ : pending_writes_;
 
             // Erase one entry of `address` from `p` -- now, we have to check if there any more:
             p.erase(p.find(ready_cmd.address));
@@ -74,10 +74,10 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
                 p.erase(ready_cmd.address);
             }
 
-            if (cmd_is_write(ready_cmd.type))
+            if (ready_cmd.is_write())
                 --min_writes_per_bank_[bank_idx];
         }
-        else if (cmd_is_act(ready_cmd.type))
+        else if (ready_cmd.is_act())
         {
             // Insert into bank idx to ensure this is used:
             active_buffer_.insert(bank_idx);
@@ -107,7 +107,7 @@ DRAMScheduler::allow_demand_precharge(
 
     // Note that this is the same as checking if a cmd is first (as `highest_priority = -128` at the beginning
     // of the queue)
-    if (s.highest_priority.at(bank_idx) >= q_it->trans.dram_issue_priority)
+    if (s.highest_priority.at(bank_idx) >= q_it->trans.dram_issue_prio)
         return false;
 
     // Get commands relevant to this bank:
@@ -125,10 +125,10 @@ DRAMScheduler::allow_demand_precharge(
     {
         // Now check in front of `q_it`
         bool any_higher_priority = std::any_of(cmds.begin(), cmds.end(),
-                                        [p=q_it->trans.dram_issue_priority] 
+                                        [p=q_it->trans.dram_issue_prio] 
                                         (const auto& e)
                                         {
-                                            return e.trans.dram_issue_priority > p;
+                                            return e.trans.dram_issue_prio > p;
                                         });
         if (any_higher_priority)
             return false;
@@ -150,27 +150,20 @@ DRAMScheduler::allow_demand_precharge(
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAMCommandType
-DRAMScheduler::select_cas_command(
+bool
+DRAMScheduler::enable_autopre(
         dram_rw_queue_type::const_iterator q_it,
         dram_rw_queue_type::const_iterator q_end,
         const SchedulerState& st,
         const DRAMBankState& b)
 {
-    DRAMClosureHint hint = q_it->trans.dram_closure_hint;
-
-    DRAMCommandType cmd =         in_write_mode_ ? DRAMCommandType::WRITE 
-                                                 : DRAMCommandType::READ,
-                    cmd_autopre = in_write_mode_ ? DRAMCommandType::WRITE_PRECHARGE 
-                                                 : DRAMCommandType::READ_PRECHARGE;
-
     if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::OPEN)
     {
-        return cmd;
+        return false;
     }
     else if constexpr (DRAM_PAGE_POLICY == DRAMPagePolicy::CLOSE)
     {
-        return cmd_autopre;
+        return true;
     }
     else
     {
@@ -178,14 +171,18 @@ DRAMScheduler::select_cas_command(
 
         // If we are in transition, then we know that there will be no more activations, nor
         // row buffer hits.
-        if (in_transition_)
-            return cmd_autopre;
+        bool do_autopre = false;
+
+        do_autopre |= in_transition_;
 
         // Predict if we will start transitioning:
-        if (in_write_mode_ && read_occu() != 0 && write_occu() <= low_watermark_+4)
-            return cmd_autopre;
-        if (!in_write_mode_ && (read_occu() < 4 || write_occu() >= high_watermark_-4))
-            return cmd_autopre;
+        constexpr int X_TOL = 4;
+
+        do_autopre |= (in_write_mode_ && read_occu() != 0 && write_occu() <= low_watermark_+X_TOL);
+        do_autopre |= (!in_write_mode_ && (read_occu() < 4 || write_occu() >= high_watermark_-4));
+
+        if (do_autopre)
+            return true;
 
         // For ease of checking, get all commands in the queue that belong to the given bank:
         std::vector<RWQueueEntry> cmds;
@@ -198,11 +195,11 @@ DRAMScheduler::select_cas_command(
             bool any_pending_hits = std::any_of(cmds.begin(), cmds.end(),
                                             [row=b.open_row.value()]
                                             (const auto& e) { return dram_row(e.trans.address) == row; });
-            if (!any_pending_hits || b.num_cas_to_open_row >= 3)
-                return cmd_autopre;
+
+            do_autopre |= (!any_pending_hits || b.num_cas_to_open_row >= 3);
         }
 
-        return cmd;
+        return do_autopre;
     }
 }
 

@@ -33,13 +33,13 @@ DRAMScheduler::add_incoming(Transaction trans)
 {
     if (pending_writes_.find(trans.address) != pending_writes_.end())
     {
-        if (trans_is_read(trans.type))
+        if (trans.is_read())
             owning_channel_->outgoing_queue_.emplace(trans, GL_DRAM_CYCLE+1);
         return true;
     }
 
 #if defined(DRAM_RANDOMIZE_WRITE_ADDRESSES)
-    if (trans_is_write(trans.type))
+    if (trans.is_write())
     {
         // Clear out the rank, bankgroup, and bank bits (assumed is contiguous region of address);
         trans.address &= ~((DRAM_TOT_BANKS_PER_CHANNEL-1) << BG_OFF);
@@ -52,9 +52,9 @@ DRAMScheduler::add_incoming(Transaction trans)
 #endif
 
     size_t q_idx = dram_s_queue_index(trans.address);
-    auto& q =       trans_is_read(trans.type) ? read_queues_[q_idx] : write_queues_[q_idx];
-    auto& p =       trans_is_read(trans.type) ? pending_reads_      : pending_writes_;
-    size_t s =      trans_is_read(trans.type) ? DRAM_RQ_SIZE        : DRAM_WQ_SIZE;
+    auto& q =       trans.is_read() ? read_queues_[q_idx] : write_queues_[q_idx];
+    auto& p =       trans.is_read() ? pending_reads_      : pending_writes_;
+    size_t s =      trans.is_read() ? DRAM_RQ_SIZE        : DRAM_WQ_SIZE;
 
     if (q.size() < s)
     {
@@ -110,23 +110,28 @@ DRAMScheduler::select_ready_command()
             }
 
             // Determine command to issue:
-            DRAMCommandType type = DRAMCommandType::INVALID;
+            ready_cmd.address = q_it->trans.address;
             if (b.open_row.has_value())
             {
                 if (b.open_row == row)
-                    type = select_cas_command(q_it, q.end(), s, b);
+                {
+                    ready_cmd.type = q_it->trans.is_read() ? DRAMCommand::Type::READ : DRAMCommand::Type::WRITE;
+                    ready_cmd.autopre = enable_autopre(q_it, q.end(), s, b);
+                }
                 else if (!active_buffer_.count(bank_idx) && allow_demand_precharge(q_it, q.end(), s, b))
-                    type = DRAMCommandType::PRECHARGE;
+                {
+                    ready_cmd.type = DRAMCommand::Type::PRECHARGE;
+                    ready_cmd.counter_update = owning_channel_->precharge_do_counter_update();
+                }
             }
             else
             {
-                type = DRAMCommandType::ACTIVATE;
+                ready_cmd.type = DRAMCommand::Type::ACTIVATE;
             }
-            ready_cmd = DRAMCommand(q_it->trans.address, type);
 
             // In transition condition: do not allow ACTs
-            bool cmd_ok = !cmd_is_invalid(type)
-                            && (!in_transition_ || !cmd_is_act(type))
+            bool cmd_ok = !ready_cmd.is_invalid()
+                            && (!in_transition_ || !ready_cmd.is_act())
                             && cmd_is_issuable(channel_state_, ready_cmd);
             if (cmd_ok)
             {
@@ -135,7 +140,7 @@ DRAMScheduler::select_ready_command()
             }
             
             // Update scheduler state:
-            s.update_priority(bank_idx, q_it->trans.dram_issue_priority);
+            s.update_priority(bank_idx, q_it->trans.dram_issue_prio);
         }
 
         // We can exit early if we have found any bank commands, as we can now find a ready command
@@ -191,7 +196,7 @@ DRAMScheduler::deadlock_find_inst(const inst_ptr inst) const
         std::cerr << "in read queue " << i << " (size = " << q.size() << ") ...\t";
 
         auto rd_it = std::find_if(q.begin(), q.end(),
-                                [inst] (const auto& x) { return x.trans.contains_inst(inst); });
+                                [inst] (const auto& x) { return x.trans.inst == inst; });
         if (rd_it == q.end())
         {
             std::cerr << "not in queue\n";

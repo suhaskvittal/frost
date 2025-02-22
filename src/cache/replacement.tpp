@@ -20,7 +20,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
 {
     e.coreid = trans.coreid;
     e.valid = true;
-    e.dirty = trans_is_write(trans.type);
+    e.dirty = trans.is_write();
     e.address = trans.address;
     e.timestamp = GL_CYCLE;
     e.likely_dead = dead_block_pred_->predict_if_dead(trans);

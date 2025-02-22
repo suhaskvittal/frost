@@ -12,6 +12,7 @@
 #include "dram/scheduler/entry.h"
 #include "dram/state.h"
 
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <tuple>
@@ -117,11 +118,11 @@ public:
             try_to_transition();
     }
 
-    inline bool can_accept(uint64_t address, TransactionType t) const
+    inline bool can_accept(const Transaction& trans) const
     {
-        size_t q_idx = dram_s_queue_index(address);
-        const auto& q = trans_is_read(t) ? read_queues_.at(q_idx) : write_queues_.at(q_idx);
-        size_t s = trans_is_read(t) ? DRAM_RQ_SIZE : DRAM_WQ_SIZE;
+        size_t q_idx = dram_s_queue_index(trans.address);
+        const auto& q = trans.is_read() ? read_queues_.at(q_idx) : write_queues_.at(q_idx);
+        size_t s = trans.is_read() ? DRAM_RQ_SIZE : DRAM_WQ_SIZE;
         return q.size() < s;
     }
 
@@ -166,7 +167,7 @@ private:
             const SchedulerState&,
             const DRAMBankState&);
 
-    DRAMCommandType select_cas_command(
+    bool enable_autopre(
             dram_rw_queue_type::const_iterator q_it,
             dram_rw_queue_type::const_iterator end,
             const SchedulerState&,

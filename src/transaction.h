@@ -9,15 +9,7 @@
 #include "instruction.h"
 #include "dram/enums.h"
 
-#include <algorithm>
 #include <cstdint>
-#include <memory>
-#include <vector>
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-enum class TransactionType { READ, WRITE, PREFETCH, TRANSLATION };
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -32,64 +24,38 @@ enum class TransactionType { READ, WRITE, PREFETCH, TRANSLATION };
  * */
 struct Transaction
 {
-    using inst_list_type = std::vector<inst_ptr>;
-
-    uint8_t         coreid;
-    inst_list_type  inst_list;
-    TransactionType type;
-
-    uint64_t address;
-    bool     address_is_ip;
+    enum class Type { READ, WRITE, PREFETCH, INSTRUCTION, TRANSLATION };
     /*
-     * These are DRAM related parameters -- by default, these are "neutral", but
-     * they can be set by the LLC, for example, to manipulate the scheduler.
+     * Explanation of unclear data:
+     *  `ip`: if `inst != nullptr`, then this is `inst->ip`. Otherwise, this is a writeback,
+     *          and is the ip of the evicting instruction.
+     *  `type`: what type of instruction. Used to determine priority and where to send the data.
      * */
-    DRAMClosureHint dram_closure_hint =DRAMClosureHint::NONE;
-    int8_t          dram_issue_priority =0;
-    uint8_t         dram_sequence_size =1;
+    uint8_t  coreid;
+    uint64_t ip;
+    uint64_t address;
+    inst_ptr inst;
+    Type     type;
+    /*
+     * Other optional variables:
+     * */
+    int8_t dram_issue_prio =0;
 
-    Transaction(uint8_t cid, inst_ptr inst, TransactionType t, uint64_t addr, bool addr_is_ip=false)
-        :coreid(cid),
-        inst_list({inst}),
-        type(t),
-        address(addr),
-        address_is_ip(addr_is_ip)
-    {}
-
-    Transaction(const Transaction&) =default;
-
-    inline bool contains_inst(inst_ptr inst) const
+    inline bool is_read(void) const
     {
-        return std::find(inst_list.begin(), inst_list.end(), inst) != inst_list.end();
+        return type != Type::WRITE;
+    }
+    
+    inline bool is_write(void) const
+    {
+        return type == Type::WRITE;
     }
 
-    inline void merge(Transaction& t)
+    inline bool is_prefetch(void) const
     {
-        std::move(t.inst_list.begin(), t.inst_list.end(), std::back_inserter(inst_list));
-    }
-
-    inline uint64_t get_front_ip(void) const
-    {
-#if defined(TRACE_FORMAT_MTF)
-        return 0;
-#else
-        return inst_list.at(0)->ip;
-#endif
+        return type == Type::PREFETCH;
     }
 };
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-inline bool trans_is_read(TransactionType t)
-{
-    return t != TransactionType::WRITE;
-}
-
-inline bool trans_is_write(TransactionType t)
-{
-    return t == TransactionType::WRITE;
-}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

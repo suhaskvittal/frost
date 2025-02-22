@@ -11,54 +11,38 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-DRAMCommand::DRAMCommand()
-    :type(DRAMCommandType::INVALID)
-{}
-
-DRAMCommand::DRAMCommand(uint64_t addr, DRAMCommandType t)
-    :address(addr),
-    type(t)
-{}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 std::string
-cmd_string(DRAMCommandType t)
+cmd_string(const DRAMCommand& cmd)
 {
-    switch (t)
-    {
-    case DRAMCommandType::READ:
-        return "READ";
-    case DRAMCommandType::WRITE:
-        return "WRITE";
-    case DRAMCommandType::READ_PRECHARGE:
-        return "READp";
-    case DRAMCommandType::WRITE_PRECHARGE:
-        return "WRITEp";
-    case DRAMCommandType::ACTIVATE: 
-        return "ACT";
-    case DRAMCommandType::PRECHARGE:
-        return "PRE";
-    default:
-        return "INVALID";
-    }
+    std::string base_string;
+
+    if (cmd.type == DRAMCommand::Type::READ)
+        base_string = "READ";
+    else if (cmd.type == DRAMCommand::Type::WRITE)
+        base_string = "WRITE";
+    else if (cmd.type == DRAMCommand::Type::ACTIVATE)
+        base_string = "ACT";
+    else if (cmd.type == DRAMCommand::Type::PRECHARGE)
+        base_string = "PRE";
+    else
+        base_string = "INV";
+
+    if (cmd.autopre)
+        base_string += "p";
+    if (cmd.counter_update)
+        base_string += "cu";
+
+    base_string += "( " + std::to_string(dram_channel(cmd.address))
+                + " | " + std::to_string(dram_bank_idx(cmd.address))
+                + " | " + std::to_string(dram_row(cmd.address)) + " )";
+
+    return base_string;
 }
 
 std::ostream&
 operator<<(std::ostream& out, const DRAMCommand& cmd)
 {
-    size_t ch = dram_channel(cmd.address),
-           ra = dram_rank(cmd.address),
-           bg = dram_bankgroup(cmd.address),
-           ba = dram_bank(cmd.address),
-           ro = dram_row(cmd.address);
-    out << cmd_string(cmd.type) << "("
-        << ch << "_"
-        << ra << "_"
-        << bg << "_"
-        << ba << "_"
-        << ro << ")";
+    out << cmd_string(cmd);
     return out;
 }
 

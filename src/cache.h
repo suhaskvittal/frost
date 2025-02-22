@@ -156,17 +156,23 @@ public:
     void warmup_fill(const Transaction&);
 
     virtual void tick(void);
-
-    virtual bool can_accept(uint64_t, TransactionType);
-    virtual bool can_accept_fill(void);
-
     virtual bool add_incoming(Transaction);
     virtual bool add_incoming_fill(Transaction);
 
     bool deadlock_find_inst(inst_ptr) const;
     /*
-     * Useful public inlines (i.e., for stats):
+     * Useful inlines:
      * */
+    virtual inline bool can_accept(const Transaction& trans) const
+    {
+        return get_const_queue_ref(trans.type).size() < get_queue_size(trans.type);
+    }
+
+    virtual inline bool can_accept_fill(void) const
+    {
+        return fill_queue_.size() < IMPL::FILL_QUEUE_SIZE;
+    }
+
     inline size_t write_occu(void) const
     {
         return std::transform_reduce(csets_.begin(), csets_.end(), 0,
@@ -233,21 +239,26 @@ protected:
     virtual bool do_next_access(bool do_read);
     virtual void add_mshr_entry(Transaction);
 
-    inline in_queue_type& get_queue_ref(TransactionType t)
+    inline in_queue_type& get_queue_ref(Transaction::Type t)
     {
-        if (t == TransactionType::PREFETCH)
+        return const_cast<in_queue_type&>(get_const_queue_ref(t));
+    }
+
+    inline const in_queue_type& get_const_queue_ref(Transaction::Type t) const
+    {
+        if (t == Transaction::Type::PREFETCH)
             return prefetch_queue_;
-        else if (t == TransactionType::WRITE)
+        else if (t == Transaction::Type::WRITE)
             return write_queue_;
         else
             return read_queue_;
     }
 
-    inline size_t get_queue_size(TransactionType t) const
+    inline size_t get_queue_size(Transaction::Type t) const
     {
-        if (t == TransactionType::PREFETCH)
+        if (t == Transaction::Type::PREFETCH)
             return IMPL::PQ_SIZE;
-        else if (t == TransactionType::WRITE)
+        else if (t == Transaction::Type::WRITE)
             return IMPL::WQ_SIZE;
         else
             return IMPL::RQ_SIZE;

@@ -30,7 +30,7 @@ __TEMPLATE_CLASS__::predict_if_dead(const Transaction& trans) const
     if constexpr (trace_format_does_not_support_ip())
         return false;
         
-    if (trans.address_is_ip)
+    if (trans.type == Transaction::Type::INSTRUCTION)
         return false;
 
     auto [ip, coreid] = get_ip_and_coreid_from(trans);
@@ -62,7 +62,7 @@ __TEMPLATE_CLASS__::update_on_probe_or_fill(const Transaction& trans)
     if constexpr (trace_format_does_not_support_ip())
         return;
         
-    if (trans.address_is_ip)
+    if (trans.type == Transaction::Type::INSTRUCTION)
         return;
 
     size_t idx = cache_set_index<IMPL>(trans.address);
@@ -195,10 +195,10 @@ __TEMPLATE_CLASS__::update_prediction_counters(uint64_t ip, uint8_t coreid, bool
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::data_store_type
 __TEMPLATE_CLASS__::get_ip_and_coreid_from(const Transaction& trans) const
 {
-    uint64_t ip = trans.get_front_ip();
+    uint64_t ip = trans.ip;
     uint8_t coreid = trans.coreid;
 
-    if (trans_is_write(trans.type))
+    if (trans.is_write())
     {
         ip = ~ip;
         coreid += NUM_THREADS;

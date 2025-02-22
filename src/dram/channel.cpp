@@ -104,18 +104,18 @@ void
 DRAMChannel::issue_next_command()
 {
     auto [ready_cmd, opt_q_entry] = scheduler_->select_ready_command();
-    if (cmd_is_invalid(ready_cmd.type))
+    if (ready_cmd.is_invalid())
         return;
 
     update_dram_state(state_, ready_cmd);
 
     size_t bank_idx = dram_bank_idx(ready_cmd.address);
-    if (cmd_is_cas(ready_cmd.type))
+    if (ready_cmd.is_cas())
     {
         auto& q_entry = opt_q_entry.value();
         Transaction& trans = q_entry.trans;
 
-        bool is_read = cmd_is_read(ready_cmd.type);
+        const bool is_read = ready_cmd.is_read();
         auto& count     = is_read ? s_reads_            : s_writes_;
         auto& row_hits  = is_read ? s_read_row_hits_    : s_write_row_hits_;
         auto& latency   = is_read ? s_tot_read_latency_ : s_tot_write_latency_; 
@@ -123,7 +123,7 @@ DRAMChannel::issue_next_command()
         ++count;
         if (q_entry.is_row_buffer_hit)
             ++row_hits;
-        if (cmd_is_autopre(ready_cmd.type))
+        if (ready_cmd.autopre)
             ++s_precharges_;
         latency += GL_DRAM_CYCLE - q_entry.cycle_entered_queue;
 
@@ -138,7 +138,7 @@ DRAMChannel::issue_next_command()
             ++s_bank_usage_.writes[bank_idx];
         }
     }
-    else if (cmd_is_act(ready_cmd.type))
+    else if (ready_cmd.is_act())
     {
         ++s_activates_;
     }
@@ -150,7 +150,7 @@ DRAMChannel::issue_next_command()
     // additional stats:
 #if defined(DRAM_ENABLE_LOGGER)
     tmp_logger_ << "selected command: " << ready_cmd << "\n";
-    if (cmd_is_cas(ready_cmd.type))
+    if (ready_cmd.is_cas())
         dram_logger_ << tmp_logger_.str();
 #endif
 }

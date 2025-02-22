@@ -25,8 +25,6 @@ update(uint64_t& t, uint64_t by)
 bool
 cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
 {
-    DRAMCommandType c = cmd.type;
-
     const auto& ra = ch.at(dram_rank(cmd.address));
     const auto& bg = ra.at(dram_bankgroup(cmd.address));
     const auto& ba = bg.at(dram_bank(cmd.address));
@@ -37,15 +35,15 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
     ok &= (GL_DRAM_CYCLE < ra.next_ref_cycle && GL_DRAM_CYCLE > ra.next_cmd_post_ref_cycle);
     
     // Check ACT conditions:
-    ok &= !cmd_is_act(c) || (ra.faw.size() < 4 && GL_DRAM_CYCLE >= bg.act_ok && GL_DRAM_CYCLE >= ba.act_ok);
+    ok &= !cmd.is_act() || (ra.faw.size() < 4 && GL_DRAM_CYCLE >= bg.act_ok && GL_DRAM_CYCLE >= ba.act_ok);
     
     // CAS conditions:
-    ok &= !cmd_is_read(c) || (GL_DRAM_CYCLE >= ra.read_ok && GL_DRAM_CYCLE >= bg.read_ok);
-    ok &= !cmd_is_write(c) || (GL_DRAM_CYCLE >= ra.write_ok && GL_DRAM_CYCLE >= bg.write_ok);
-    ok &= !cmd_is_cas(c) || (GL_DRAM_CYCLE >= ba.cas_ok);
+    ok &= !cmd.is_read() || (GL_DRAM_CYCLE >= ra.read_ok && GL_DRAM_CYCLE >= bg.read_ok);
+    ok &= !cmd.is_write() || (GL_DRAM_CYCLE >= ra.write_ok && GL_DRAM_CYCLE >= bg.write_ok);
+    ok &= !cmd.is_cas() || (GL_DRAM_CYCLE >= ba.cas_ok);
 
     // PRE conditions:
-    ok &= !cmd_is_pre_only(c) || (GL_DRAM_CYCLE >= ba.pre_ok);
+    ok &= !cmd.is_pre_only() || (GL_DRAM_CYCLE >= ba.pre_ok);
 
     return ok;
 }
@@ -56,15 +54,13 @@ cmd_is_issuable(const DRAMChannelState& ch, const DRAMCommand& cmd)
 void
 update_dram_state(DRAMChannelState& ch, const DRAMCommand& cmd)
 {
-    DRAMCommandType c = cmd.type;
-
     uint64_t addr = cmd.address;
 
     auto& ra = ch.at(dram_rank(addr));
     auto& bg = ra.at(dram_bankgroup(addr));
     auto& ba = bg.at(dram_bank(addr));
 
-    if (cmd_is_act(c))
+    if (cmd.is_act())
         ra.faw.push_back(GL_DRAM_CYCLE);
     // Both rank and bankgroup states need to be updated for "other" ranks/bankgroups.
     update_dram_rank_states(ch, cmd);
@@ -155,8 +151,7 @@ constexpr uint64_t OTHER_RANK_WTW = BL/2;
 void
 update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
 {
-    DRAMCommandType c = cmd.type;
-    if (!cmd_is_cas(c))
+    if (!cmd.is_cas())
         return;
     size_t raidx = dram_rank(cmd.address);
     
@@ -164,8 +159,8 @@ update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
     {
         if (i == raidx)
             continue;
-        ch[i].read_ok = cmd_is_read(c) ? OTHER_RANK_RTR : OTHER_RANK_WTR;
-        ch[i].write_ok = cmd_is_read(c) ? OTHER_RANK_RTW : OTHER_RANK_WTW;
+        ch[i].read_ok = cmd.is_read() ? OTHER_RANK_RTR : OTHER_RANK_WTR;
+        ch[i].write_ok = cmd.is_read() ? OTHER_RANK_RTW : OTHER_RANK_WTW;
     }
 }
 
@@ -177,23 +172,21 @@ update_dram_rank_states(DRAMChannelState& ch, const DRAMCommand& cmd)
 void
 update_dram_bankgroup_states(DRAMRankState& ra, const DRAMCommand& cmd)
 {
-    DRAMCommandType c = cmd.type;
-
     size_t bgidx = dram_bankgroup(cmd.address);
     for (size_t i = 0; i < ra.size(); i++)
     {
         auto& bg = ra[i];
 
-        if (cmd_is_act(c))
+        if (cmd.is_act())
         {
             UPDATE_SL(bg.act_ok, tRRD_S, tRRD_L);
         }
-        else if (cmd_is_read(c))
+        else if (cmd.is_read())
         {
             UPDATE_SL(bg.read_ok, tCCD_S, tCCD_L);
             UPDATE_SL(bg.write_ok, tCCD_S_RTW, tCCD_L_RTW);
         }
-        else if (cmd_is_write(c))
+        else if (cmd.is_write())
         {
             UPDATE_SL(bg.read_ok, tCCD_S_WTR, tCCD_L_WTR);
             UPDATE_SL(bg.write_ok, tCCD_S_WR, tCCD_L_WR);
@@ -209,11 +202,10 @@ update_dram_bankgroup_states(DRAMRankState& ra, const DRAMCommand& cmd)
 void
 update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
 {
-    DRAMCommandType c = cmd.type;
-    if (cmd_is_cas(c))
+    if (cmd.is_cas())
     {
-        uint64_t cas_to_pre = cmd_is_read(c) ? tRTP : (CWL + BL/2 + tWR);
-        if (cmd_is_autopre(c)) 
+        uint64_t cas_to_pre = cmd.is_read() ? tRTP : (CWL + BL/2 + tWR);
+        if (cmd.autopre) 
         {
             ba.open_row.reset();
             ba.num_cas_to_open_row = 0;
@@ -227,7 +219,7 @@ update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
             ba.next_cas_is_row_buffer_hit = true;
         }
     } 
-    else if (cmd_is_act(c))
+    else if (cmd.is_act())
     {
         update(ba.cas_ok, tRCD);
         update(ba.pre_ok, tRAS);
