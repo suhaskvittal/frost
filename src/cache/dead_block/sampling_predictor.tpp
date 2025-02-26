@@ -68,13 +68,13 @@ __TEMPLATE_CLASS__::update_on_probe_or_fill(const Transaction& trans)
     size_t idx = cache_set_index<IMPL>(trans.address);
     // The assumption here is that `set_modulus_` is a power of two (which is true if `NUM_SETS` is also
     // a power of two)
-    if (fast_mod<SET_MODULUS>(idx) != 0)
+    if (fast_mod(idx, SET_MODULUS) != 0)
         return;
 
     auto [ip, coreid] = get_ip_and_coreid_from(trans);
 
     // Access the cache:
-    idx >>= numeric_traits<SET_MODULUS>::log2;
+    idx >>= ilog2(SET_MODULUS);
     auto& s = sampler_.csets[idx];
 
     auto it = std::find_if(s.begin(), s.end(),
@@ -128,13 +128,13 @@ __TEMPLATE_CLASS__::update_on_mark_dirty(const Transaction& trans)
     size_t idx = cache_set_index<IMPL>(trans.address);
     // The assumption here is that `set_modulus_` is a power of two (which is true if `NUM_SETS` is also
     // a power of two)
-    if (fast_mod<SET_MODULUS>(idx) != 0)
+    if (fast_mod(idx, SET_MODULUS) != 0)
         return;
 
     auto [ip, coreid] = get_ip_and_coreid_from(trans);
 
     // Access the cache:
-    idx >>= numeric_traits<SET_MODULUS>::log2;
+    idx >>= ilog2(SET_MODULUS);
     auto& s = sampler_.csets[idx];
 
     auto it = std::find_if(s.begin(), s.end(),
@@ -234,7 +234,7 @@ predictor_hash(uint64_t ip, uint8_t coreid, size_t table_idx)
     
     // Join the bytes:
     uint32_t h = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16);
-    return fast_mod<TABLE_SIZE>(h);
+    return fast_mod(h, static_cast<uint32_t>(TABLE_SIZE));
 }
 
 ////////////////////////////////////////////////////////////////////////////

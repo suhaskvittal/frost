@@ -33,7 +33,7 @@ print_llc_stats(std::ostream& out)
         print_stat(out, "LLC", "POL_TWO_FILLS", GL_LLC->s_dueling_pol2_installs_);
     }
     
-    if (LLCache::WRITEBACK_MODE != CacheWBMode::NORMAL)
+    if (LLCache::WRITEBACK_POLICY != CacheWritebackPolicy::NORMAL)
     {
         out << "\n";
         print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);
@@ -47,9 +47,11 @@ print_llc_stats(std::ostream& out)
     {
         out << "\n";
         // Print out partitions for each core:
-        const auto& parts = GL_LLC->get_partition_array_const_ref();
         for (size_t i = 0; i < NUM_THREADS; i++)
-            print_stat(out, "LLC", "CORE_" + std::to_string(i) + "_PARTITION_SIZE", parts.at(i));
+        {
+            double way_alloc = mean(GL_LLC->s_lifetime_way_alloc_[i], GL_LLC->s_total_way_allocs);
+            print_stat(out, "LLC", "CORE_" + std::to_string(i) + "_MEAN_WAY_ALLOCATIONS", way_alloc);
+        }
     }
 }
 

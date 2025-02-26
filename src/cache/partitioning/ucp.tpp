@@ -11,89 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #define __TEMPLATE_HEADER__ template <class IMPL>
-#define __UMON_TEMPLATE__ UMON<IMPL>
-#define __UCP_TEMPLATE__ UCPManager<IMPL>
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__
-__UMON_TEMPLATE__::UMON()
-    :hit_counters(IMPL::NUM_WAYS, 0)
-{}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__UMON_TEMPLATE__::atd_probe(const Transaction& trans)
-{
-    auto s_it = atd_set_lookup(trans);
-    if (s_it == atd.csets.end())
-        return;
-
-    cset_type& s = *s_it;
-
-    auto it = cset_find(trans.address, s.begin(), s.end()); 
-    if (it != s.end())
-    {
-        // line has been found -- compute the **MRU** position of the line and update the hit counter
-        size_t p = IMPL::NUM_WAYS - cset_get_lru_position_of_entry(*it, s.begin(), s.end()) - 1;
-        ++hit_counters[p];
-
-        // update the entry:
-        it->timestamp = GL_CYCLE;
-    }
-    else
-    {
-        ++total_misses;
-        atd_fill(trans);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__UMON_TEMPLATE__::atd_fill(const Transaction& trans)
-{
-    auto s_it = atd_set_lookup(trans);
-    if (s_it == atd.csets.end())
-        return;
-
-    cset_type& s = *s_it;
-
-    auto v_it = std::find_if_not(s.begin(), s.end(),
-                            [] (const auto& e) { return e.valid; });
-    if (v_it == s.end())
-    {
-        // Search for victim via LRU:
-        v_it = std::min_element(s.begin(), s.end(),
-                            [] (const auto& x, const auto& y) { return x.timestamp < y.timestamp; });
-    }
-    
-    // Update way:
-    v_it->valid = true;
-    v_it->address = trans.address;
-    v_it->timestamp = GL_CYCLE;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ cset_array::iterator
-__UMON_TEMPLATE__::atd_set_lookup(const Transaction& trans)
-{
-    size_t idx = cache_set_index<IMPL>(trans.address);
-
-    if (fast_mod<SET_MODULUS>(idx) != 0)
-        return atd.csets.end();
-
-    idx = idx >> numeric_traits<SET_MODULUS>::log2;
-    if (idx >= atd.csets.size())
-        exit(1);
-    return atd.csets.begin() + idx;
-}
+#define __TEMPLATE_CLASS__ UCPManager<IMPL>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -101,7 +19,7 @@ __UMON_TEMPLATE__::atd_set_lookup(const Transaction& trans)
 #define UCP_ENABLE_LOGGER
 
 __TEMPLATE_HEADER__
-__UCP_TEMPLATE__::UCPManager()
+__TEMPLATE_CLASS__::UCPManager()
 #if defined(UCP_ENABLE_LOGGER)
     :ucp_logger_("ucp.log")
 #endif
@@ -111,7 +29,7 @@ __UCP_TEMPLATE__::UCPManager()
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
-__UCP_TEMPLATE__::update_partition(part_iterator begin, part_iterator end)
+__TEMPLATE_CLASS__::update_partition(part_iterator begin, part_iterator end)
 {
     if constexpr (NUM_THREADS == 1)
         return;  // Don't need to do anything
@@ -195,7 +113,8 @@ __UCP_TEMPLATE__::update_partition(part_iterator begin, part_iterator end)
                 memset(&e, 0, sizeof(lookahead_data_type));
 
 #if defined(UCP_ENABLE_LOGGER)
-                std::string header = "\n\t\tCORE " + std::to_string(i) + " MU (CURR_ALLOC = " + std::to_string(*it) + "):";
+                std::string header = "\n\t\tCORE " + std::to_string(i) 
+                                    + " MU (CURR_ALLOC = " + std::to_string(*it) + "):";
                 ucp_logger_ << std::setw(48) << std::left << header;
 #endif
 
@@ -241,7 +160,7 @@ __UCP_TEMPLATE__::update_partition(part_iterator begin, part_iterator end)
         while (remaining--)
         {
             *(begin+ii) += 1;
-            fast_increment_and_mod_inplace<NUM_THREADS>(ii);
+            fast_increment_and_mod_inplace(ii, NUM_THREADS);
         }
     }
 
@@ -266,9 +185,39 @@ __UCP_TEMPLATE__::update_partition(part_iterator begin, part_iterator end)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::update_on_probe(const Transaction& trans)
+{
+    if (trans.coreid >= NUM_THREADS)
+        return;
+
+    auto& u = umon_[trans.coreid];
+    auto r = u.atd.probe(trans,
+                [&u] (const cset_type& s, cset_type::const_iterator it)
+                {
+                    if (it == s.end())
+                    {
+                        ++u.total_misses;
+                    }
+                    else
+                    {
+                        // Compute MRU location:
+                        size_t p = std::count_if(s.begin(), s.end(),
+                                        [t=it->timestamp] (const auto& e) { return e.timestamp > t; });
+                        ++u.hit_counters[p];
+                    }
+                });
+
+    // If we had a miss, then fill the line in:
+    if (r == ATDLookupResult::MISS)
+        u.atd.fill(trans, [] (const cset_type&, const CacheEntry&) {});
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 #undef __TEMPLATE_HEADER__
-#undef __UMON_TEMPLATE__
-#undef __UCP_TEMPLATE__
+#undef __TEMPLATE_CLASS__
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

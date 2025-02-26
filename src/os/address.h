@@ -14,21 +14,17 @@
 ////////////////////////////////////////////////////////////////////////////
 
 // Makes the code a bit less verbose:
-#define N   PAGESIZE/OFFSET_SIZE
+#define N   static_cast<uint64_t>(PAGESIZE/OFFSET_SIZE)
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-using addr_split_t = std::pair<uint64_t, uint64_t>;
+using addr_split_type = std::pair<uint64_t, uint64_t>;
 
-template <size_t OFFSET_SIZE> inline addr_split_t
+template <size_t OFFSET_SIZE> inline addr_split_type
 split_address(uint64_t addr)
 {
-    addr_split_t x = {
-        addr >> numeric_traits<N>::log2,
-        fast_mod<N>(addr)
-    };
-    return x;
+    return addr_split_type{addr >> ilog2(N), fast_mod(addr, N)};
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -37,7 +33,7 @@ split_address(uint64_t addr)
 template <size_t OFFSET_SIZE> inline uint64_t
 join_address(uint64_t page, uint64_t offset)
 {
-    return (page << numeric_traits<N>::log2) | offset;
+    return (page << ilog2(N)) | offset;
 }
 
 ////////////////////////////////////////////////////////////////////////////

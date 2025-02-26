@@ -38,6 +38,7 @@ struct CacheEntry
     int8_t coreid =-1;
 
     bool likely_dead =false;
+    bool in_virtual_buffer =false;
 
     CacheEntry(void) =default;
 };

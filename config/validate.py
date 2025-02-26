@@ -57,7 +57,7 @@ def validate_cache_section(cfg) -> bool:
         ('read_ports', 3),
         ('write_ports', 2),
         ('fill_ports', 2),
-        ('writeback_mode', 'NORMAL'),
+        ('writeback_policy', 'NORMAL'),
         ('cache_type', 'Cache'),
         ('dead_block_predictor', 'NoDeadBlockPredictor'),
         ('partition_manager', 'NoPartitionManager')

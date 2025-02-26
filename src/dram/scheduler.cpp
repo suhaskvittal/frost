@@ -47,7 +47,7 @@ DRAMScheduler::add_incoming(Transaction trans)
         // Set bank idx
         trans.address |= dram_randomize_write_addresses_bank_idx_ << BG_OFF;
 
-        fast_increment_and_mod_inplace<DRAM_TOT_BANKS_PER_CHANNEL>(dram_randomize_write_addresses_bank_idx_);
+        fast_increment_and_mod_inplace(dram_randomize_write_addresses_bank_idx_, DRAM_TOT_BANKS_PER_CHANNEL);
     }
 #endif
 
@@ -80,7 +80,7 @@ DRAMScheduler::select_ready_command()
     SchedulerState s{};
     
     // Determine initial queue index from `next_bank_idx_`
-    size_t q_idx = next_bank_idx_ >> numeric_traits<BANKS_PER_QUEUE>::log2;
+    size_t q_idx = next_bank_idx_ >> ilog2(BANKS_PER_QUEUE);
     bool any_writes_are_possible = false;
     for (size_t i = 0; i < DRAM_QUEUE_COUNT; i++)
     {
@@ -148,7 +148,7 @@ DRAMScheduler::select_ready_command()
             break;
         
         // Otherwise, goto the next queue:
-        fast_increment_and_mod_inplace<DRAM_QUEUE_COUNT>(q_idx);
+        fast_increment_and_mod_inplace(q_idx, DRAM_QUEUE_COUNT);
     }
 
     if (in_write_mode_ && !any_writes_are_possible)

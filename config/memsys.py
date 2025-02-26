@@ -23,7 +23,7 @@ def declare_cache_type(cfg, typename: str, next_typename: str, write_alloc=False
     r_ports =       cfg['read_ports']
     w_ports =       cfg['write_ports']
     f_ports =       cfg['fill_ports']
-    wb_mode =       cfg['writeback_mode']
+    wb_policy =     cfg['writeback_policy']
     cache_type =    cfg['cache_type']
     dbp_type =      cfg['dead_block_predictor']
     cpart_type =    cfg['partition_manager']
@@ -57,7 +57,7 @@ struct {typename} : public {cache_type}<{typename}, {next_typename}>
 
     constexpr static bool WRITE_ALLOCATE = {write_alloc};
 
-    constexpr static CacheWBMode WRITEBACK_MODE = CacheWBMode::{wb_mode};
+    constexpr static CacheWritebackPolicy WRITEBACK_POLICY = CacheWritebackPolicy::{wb_policy};
 
     using parent_type::{cache_type};
 }};

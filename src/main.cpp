@@ -37,8 +37,11 @@ uint64_t OPT_INST_WARMUP;
  * */
 double OPT_DRAM_LOW_WATERMARK;
 double OPT_DRAM_HIGH_WATERMARK;
-
+/*
+ * Cache parameters:
+ * */
 uint64_t OPT_CACHE_PARTITION_UPDATE_CYCLES;
+size_t OPT_SSRH_COLUMN_COUNT;
 
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
@@ -76,12 +79,13 @@ int main(int argc, char* argv[])
                 {"s", "Number of instructions to simulate", "10000000"},
                 {"mix", "Flag to indicate trace is a mix", ""},
                 
-                // DRAMsim:
+                // DRAM:
                 {"dram_wm_low", "DRAM Low Watermark", "0.3"},
                 {"dram_wm_high", "DRAM High Watermark", "1.0"},
 
-                // Cache partitioning:
+                // Cache:
                 {"cpart_update_freq", "Number of cycles between cache partitioning updates", "5000000"},
+                {"ssrh_column_count", "Number of column bits to include in tag", "2"},
 
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
@@ -95,6 +99,7 @@ int main(int argc, char* argv[])
     ARGS("dram_wm_high", OPT_DRAM_HIGH_WATERMARK);
 
     ARGS("cpart_update_freq", OPT_CACHE_PARTITION_UPDATE_CYCLES);
+    ARGS("ssrh_column_count", OPT_SSRH_COLUMN_COUNT);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 
@@ -117,9 +122,9 @@ int main(int argc, char* argv[])
         for (size_t j = 0; j < NUM_THREADS; j++)
         {
             GL_CORES[ii]->tick_warmup();
-            fast_increment_and_mod_inplace<NUM_THREADS>(ii);
+            fast_increment_and_mod_inplace(ii, NUM_THREADS);
         }
-        fast_increment_and_mod_inplace<NUM_THREADS>(curr_core_idx);
+        fast_increment_and_mod_inplace(curr_core_idx, NUM_THREADS);
     }
     std::cout << "DONE\n";
 
@@ -151,9 +156,9 @@ int main(int argc, char* argv[])
                 c->done_ = true;
             }
             all_done &= c->done_;
-            fast_increment_and_mod_inplace<NUM_THREADS>(ii);
+            fast_increment_and_mod_inplace(ii, NUM_THREADS);
         }
-        fast_increment_and_mod_inplace<NUM_THREADS>(curr_core_idx);
+        fast_increment_and_mod_inplace(curr_core_idx, NUM_THREADS);
         ++GL_CYCLE;
     } while (!all_done);
 

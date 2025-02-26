@@ -83,9 +83,9 @@ void update_dram_bank_state(DRAMBankState&, const DRAMCommand&);
 
 inline const DRAMBankState& channel_get_const_bank_ref_from_idx(const DRAMChannelState& st, size_t ii)
 {
-    size_t i = fast_mod<DRAM_BANKS>(ii),
-           j = fast_mod<DRAM_BANKGROUPS>(ii >> numeric_traits<DRAM_BANKS>::log2),
-           k = fast_mod<DRAM_RANKS>(ii >> numeric_traits<DRAM_BANKS*DRAM_BANKGROUPS>::log2);
+    size_t i = fast_mod(ii, DRAM_BANKS),
+           j = fast_mod(ii >> ilog2(DRAM_BANKS), DRAM_BANKGROUPS),
+           k = fast_mod(ii >> ilog2(DRAM_BANKGROUPS), DRAM_RANKS);
     return st.at(k).at(j).at(i);
 }
 

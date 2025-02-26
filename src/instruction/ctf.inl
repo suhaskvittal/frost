@@ -150,13 +150,13 @@ Instruction::Instruction(uint32_t ii, const CTF& t)
     for (uint64_t x : t.dst_mem)
     {
         if (x != 0)
-            stores.args.emplace_back(x >> numeric_traits<LINESIZE>::log2);
+            stores.args.emplace_back(x >> ilog2(LINESIZE));
     }
     
     for (uint64_t x : t.src_mem)
     {
         if (x != 0)
-            stores.args.emplace_back(x >> numeric_traits<LINESIZE>::log2);
+            stores.args.emplace_back(x >> ilog2(LINESIZE));
     }
 }
 

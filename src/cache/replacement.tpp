@@ -30,6 +30,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
         // Check whether or not to use BRRIP.
         size_t idx = cache_set_index<IMPL>(trans.address);
         SetDuelingMonitor::Role r = set_dueling_arbiter_.get_role_of_set(idx);
+
         // Resolve `r` if it is a follower set.
         if (r == SetDuelingMonitor::Role::FOLLOWER)
         {
@@ -46,7 +47,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
         {
             e.rrpv = (set_dueling_arbiter_.bimodal_counter == 32) ? 1 : 0;
             ++s_dueling_pol2_installs_;
-            fast_increment_and_mod_inplace<32>(set_dueling_arbiter_.bimodal_counter);
+            fast_increment_and_mod_inplace(set_dueling_arbiter_.bimodal_counter, static_cast<size_t>(32));
         }
     }
     else
@@ -58,13 +59,49 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-__TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
 {
     // Check if we need to deal with partitioning:
     if constexpr (std::is_same<typename IMPL::PARTITION_MANAGER_TYPE, NoPartitionManager>::value)
     {
         return cset_get_way_in_lru_position(s.begin(), s.end(), 0);
+    }
+    else if constexpr (std::is_same<typename IMPL::PARTITION_MANAGER_TYPE, MinimalistPartitionManager<IMPL>>::value)
+    {
+        size_t max_v_ways = static_cast<MinimalistPartitionManager<IMPL>*>(partition_manager_)->get_victim_part();
+        size_t v_count = std::count_if(s.begin(), s.end(),
+                                [] (const auto& e) { return e.in_virtual_buffer; });
+
+        auto v_it = s.end();
+
+        while (true)
+        {
+            // Select LRU victim accordingly:
+            v_it = std::min_element(s.begin(), s.end(),
+                            [evict_virtual = (v_count >= max_v_ways)] 
+                            (const auto& x, const auto& y)
+                            {
+                                if (x.in_virtual_buffer == y.in_virtual_buffer)
+                                    return x.timestamp < y.timestamp;
+                                else
+                                    return evict_virtual == x.in_virtual_buffer;
+                            });
+            
+            // If `*v_it` is dirty, then move it to the virtual buffer and choose a new victim:
+            if (v_it->dirty && !v_it->in_virtual_buffer)
+            {
+                v_it->in_virtual_buffer;
+                ++v_count;
+            }
+            else
+            {
+                // We have found an appropriate victim
+                break;
+            }
+        }
+
+        return v_it;
     }
     else
     {
@@ -119,7 +156,7 @@ __TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::repl_rand(cset_type& s, const Transaction&)
 {
-    return std::next(s.begin(), fast_mod<IMPL::NUM_WAYS>(std::rand()));
+    return std::next(s.begin(), fast_mod(std::rand(), IMPL::NUM_WAYS));
 }
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator

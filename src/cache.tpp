@@ -3,6 +3,9 @@
  *  date:   31 January 2025
  * */
 
+#include "cache/partitioning/all.h"
+#include "dram/address.h"
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -27,8 +30,7 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
 
     mshr_.reserve(IMPL::NUM_MSHR);
 
-    // Initialize `partitions_` so each core gets as much as they want (initially)
-    partition_.fill(IMPL::NUM_WAYS);
+    partition_manager_->initialize_partition(partition_.begin(), partition_.end());
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -107,7 +109,14 @@ __TEMPLATE_CLASS__::tick()
 
     // Update partitioning policy:
     if (GL_CYCLE - partition_manager_->last_update_cycle_ >= OPT_CACHE_PARTITION_UPDATE_CYCLES)
+    {
         partition_manager_->update_partition(partition_.begin(), partition_.end());
+
+        // Update stats:
+        for (size_t i = 0; i < NUM_THREADS; i++)
+            s_lifetime_way_alloc_[i] += partition_[i];
+        ++s_total_way_allocs;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -213,6 +222,9 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
     size_t idx = cache_set_index<IMPL>(trans.address);
     cset_type& s = csets_[idx];
 
+    // Update partitioning policies:
+    partition_manager_->update_on_probe(trans);
+
     auto it = cset_find(trans.address, s.begin(), s.end());
     if (it != s.end())
     {
@@ -224,8 +236,8 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
         dead_block_pred_->update_on_probe_or_fill(trans);
         it->likely_dead = dead_block_pred_->predict_if_dead(trans);
 
-        // Update partitioning policies:
-        partition_manager_->update_on_access(trans);
+        // If `in_virtual_buffer` bit is set, then unset it (invalidation from virtual buffer)
+        it->in_virtual_buffer = false;
 
         return true;
     }
@@ -235,11 +247,17 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 __TEMPLATE_HEADER__ bool
 __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
 {
     size_t idx = cache_set_index<IMPL>(trans.address);
     cset_type& s = csets_[idx];
+
+    // Update partitioning policies:
+    partition_manager_->update_on_mark_dirty(trans);
 
     auto it = cset_find(trans.address, s.begin(), s.end());
     if (it != s.end())
@@ -255,6 +273,9 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
         return false;
     }
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::invalidate(uint64_t address)
@@ -319,7 +340,7 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(const Transaction& trans)
     if (mshr_has_space())
     {
         size_t idx = cache_set_index<IMPL>(trans.address);
-        auto& s = csets_.at(idx);
+        auto& s = csets_[idx];
 
         auto lru_it = cset_get_way_in_lru_position(s.begin(), s.end(), 0);
         if (lru_it->dirty)
@@ -328,6 +349,49 @@ __TEMPLATE_CLASS__::fill_with_eager_writeback(const Transaction& trans)
             lru_it->dirty = false;
         }
     }
+    return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
+__TEMPLATE_CLASS__::fill_with_ssrh(const Transaction& trans)
+{
+    auto out = fill(trans);
+
+    if (out[0].entry.valid && out[0].entry.dirty)
+    {
+        size_t bank_idx = dram_bank_idx(out[0].entry.address),
+               row =      dram_row(out[0].entry.address);
+
+        size_t idx = cache_set_index<IMPL>(trans.address);
+        auto& s = csets_[idx];
+
+        // Search for dirty row buffer hits in the same set:
+        size_t mshr_space_avail = IMPL::NUM_MSHR - (mshr_.size() + writeback_queue_.size());
+        while (mshr_space_avail > 0)
+        {
+            auto it = std::find_if(s.begin(), s.end(),
+                            [bank_idx, row] (const auto& e)
+                            {
+                                return e.valid && e.dirty 
+                                        && dram_bank_idx(e.address) == bank_idx && dram_row(e.address) == row;
+                            });
+            if (it == s.end())
+                break;
+            
+            // Add writeback to result:
+            size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
+            out.emplace_back(*it, p);
+
+            if (it->in_virtual_buffer)
+                it->valid = false;
+            else
+                it->dirty = false;
+        }
+    }
+
     return out;
 }
 
@@ -447,11 +511,11 @@ __TEMPLATE_CLASS__::do_next_fill()
 
     // Handle eviction + any writeback if necessary
     multi_fill_result_type eviction_list;
-    if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::NORMAL)
+    if constexpr (IMPL::WRITEBACK_POLICY == CacheWritebackPolicy::NORMAL)
     {
         eviction_list = fill(trans);
     }
-    else if constexpr (IMPL::WRITEBACK_MODE == CacheWBMode::EAGER)
+    else if constexpr (IMPL::WRITEBACK_POLICY == CacheWritebackPolicy::EAGER)
     {
         eviction_list = fill_with_eager_writeback(trans);
     }
@@ -460,6 +524,7 @@ __TEMPLATE_CLASS__::do_next_fill()
         std::cerr << cache_name_ << ": unknown writeback mode\n";
         exit(1);
     }
+
     ++s_fills_[trans.coreid]; 
 
     // Handle writebacks + update evict stats:

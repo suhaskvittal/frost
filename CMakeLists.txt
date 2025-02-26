@@ -72,6 +72,7 @@ message("========================================================")
 
 set(MAIN_SIM_FILES
     src/cache/ext/set_dueling.cpp
+    src/cache/indexing.cpp
     src/os/free_list.cpp
     src/util/argparse.cpp
     src/util/stats/cache.cpp

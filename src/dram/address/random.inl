@@ -24,11 +24,11 @@ inline uint64_t deterministic_random_number(uint64_t x)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr size_t CH_OFF = numeric_traits<DRAM_COLUMNS>::log2;
-constexpr size_t BG_OFF = CH_OFF + numeric_traits<DRAM_CHANNELS>::log2;
-constexpr size_t BA_OFF = BG_OFF + numeric_traits<DRAM_BANKGROUPS>::log2;
-constexpr size_t RA_OFF = BA_OFF + numeric_traits<DRAM_BANKS>::log2;
-constexpr size_t ROW_OFF = RA_OFF + numeric_traits<DRAM_RANKS>::log2;
+constexpr size_t CH_OFF = ilog2(DRAM_COLUMNS);
+constexpr size_t BG_OFF = CH_OFF + ilog2(DRAM_CHANNELS);
+constexpr size_t BA_OFF = BG_OFF + ilog2(DRAM_BANKGROUPS);
+constexpr size_t RA_OFF = BA_OFF + ilog2(DRAM_BANKS);
+constexpr size_t ROW_OFF = RA_OFF + ilog2(DRAM_RANKS);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -68,12 +68,12 @@ inline size_t dram_row(uint64_t x)
 template <size_t FROM, size_t SIZE>
 inline bool bit_is_in_region(size_t x)
 {
-    return x >= FROM && x < FROM + numeric_traits<SIZE>::log2;
+    return x >= FROM && x < FROM + ilog2(SIZE);
 }
 
 inline constexpr size_t dram_lowest_col_bit_index(void)
 {
-    for (size_t i = 0; i < numeric_traits<DRAM_SIZE_MB*1024*1024>::log2; i++)
+    for (size_t i = 0; i < ilog2(DRAM_SIZE_MB*1024*1024); i++)
     {
         if (bit_is_in_region<CH_OFF, DRAM_CHANNELS>(i)
             || bit_is_in_region<RA_OFF, DRAM_RANKS>(i)
@@ -105,9 +105,9 @@ print_address_mapping(std::ostream& out)
     // First print out indicators of page bits and line bits.
     for (size_t i = 0; i < 48; i++)
     {
-        if (i < numeric_traits<LINESIZE>::log2)
+        if (i < ilog2(LINESIZE))
             out << ".  ";
-        else if (i < numeric_traits<PAGESIZE>::log2)
+        else if (i < ilog2(PAGESIZE))
             out << "li ";
         else
             out << "pg ";
@@ -116,15 +116,15 @@ print_address_mapping(std::ostream& out)
     // Now print out parts of dram address mapping.
     std::unordered_set<size_t> endpoints{
         CH_OFF, RA_OFF, BG_OFF, BA_OFF, ROW_OFF,
-        CH_OFF+numeric_traits<DRAM_CHANNELS>::log2,
-        RA_OFF+numeric_traits<DRAM_RANKS>::log2,
-        BG_OFF+numeric_traits<DRAM_BANKGROUPS>::log2,
-        BA_OFF+numeric_traits<DRAM_BANKS>::log2,
-        ROW_OFF+numeric_traits<DRAM_ROWS>::log2
+        CH_OFF+ilog2(DRAM_CHANNELS),
+        RA_OFF+ilog2(DRAM_RANKS),
+        BG_OFF+ilog2(DRAM_BANKGROUPS),
+        BA_OFF+ilog2(DRAM_BANKS),
+        ROW_OFF+ilog2(DRAM_ROWS)
     };
-    for (size_t i = 0; i < numeric_traits<LINESIZE>::log2; i++)
+    for (size_t i = 0; i < ilog2(LINESIZE); i++)
         out << ".  ";
-    for (size_t i = 0; i < 48 - numeric_traits<LINESIZE>::log2; i++) 
+    for (size_t i = 0; i < 48 - ilog2(LINESIZE); i++) 
     {
         if (bit_is_in_region<CH_OFF, DRAM_CHANNELS>(i))
             out << "ch ";

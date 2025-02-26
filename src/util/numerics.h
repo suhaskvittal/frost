@@ -12,10 +12,20 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr inline size_t _log2(size_t n)
+template <class T>
+constexpr inline bool is_power_of_two(T n)
+{
+    return (n & (n-1)) == 0;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class T>
+constexpr inline T ilog2(T n)
 {
     if (n > 1)
-        return 1+_log2(n >> 1);
+        return 1+ilog2(n >> 1);
     else
         return 0;
 }
@@ -23,33 +33,23 @@ constexpr inline size_t _log2(size_t n)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <size_t N>
-struct numeric_traits
+template <class T>
+constexpr inline T fast_mod(T x, T m)
 {
-    constexpr static bool   is_power_of_two = (N & (N-1)) == 0;
-    constexpr static size_t log2 = _log2(N);
-};
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-template <size_t N, class T> inline T
-fast_mod(T x)
-{
-    if constexpr (numeric_traits<N>::is_power_of_two)
-        return static_cast<T>(x & (N-1));
-    else
-        return static_cast<T>(x % N);
+    return is_power_of_two(m) ? (x & (m-1)) : (x % m);
 }
 
-template <size_t N, class T> inline void
-fast_increment_and_mod_inplace(T& x)
+template <class T>
+constexpr inline void fast_increment_and_mod_inplace(T& x, T m)
 {
-    if constexpr (numeric_traits<N>::is_power_of_two) {
-        x = (x+1) & (N-1);
-    } else {
+    if (is_power_of_two(m))
+    {
+        x = (x+1) & (m-1);
+    }
+    else
+    {
         ++x;
-        if (x == N)  // Should be faster than modulo.
+        if (x == m)
             x = 0;
     }
 }

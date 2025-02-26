@@ -22,7 +22,7 @@ inline Transaction init_trans_from_inst(inst_ptr inst, uint8_t coreid)
     uint64_t ip = 0;
 #if defined(TRACE_FORMAT_IMAT)
     ip = inst->ip;
-    if ((ip >> numeric_traits<LINESIZE>::log2) == inst->v_lineaddr)
+    if ((ip >> ilog2(LINESIZE)) == inst->v_lineaddr)
         trans_type = Transaction::Type::INSTRUCTION;
 #endif
 

@@ -45,7 +45,7 @@
  *      -- size_t NUM_WRITE_PORTS
  *      -- size_t NUM_FILL_PORTS
  *
- *      -- CacheWBMode WRITEBACK_MODE
+ *      -- CacheWritebackPolicy WRITEBACK_POLICY
  *
  *      -- bool WRITE_ALLOCATE
  *
@@ -60,10 +60,9 @@ template <class IMPL, class NEXT_TYPE>
 class Cache
 {
 public:
-    using stat_type =      VecStat<uint32_t, NUM_THREADS>;
-    using in_queue_type =  std::deque<Transaction>;
-    using pending_type =   std::unordered_multiset<uint64_t>;
-
+    using stat_type = VecStat<uint32_t, NUM_THREADS>;
+    using stat_type_u64 = VecStat<uint64_t, NUM_THREADS>;
+    
     stat_type s_reads_{};
     stat_type s_writes_{};
     stat_type s_read_forwards_{};
@@ -72,31 +71,34 @@ public:
     stat_type s_accesses_{};
     stat_type s_misses_{};
     stat_type s_fills_{};
-    stat_type s_tot_miss_penalty_{};
-    stat_type s_num_miss_penalty_{};
     stat_type s_invalidates_{};
     stat_type s_write_alloc_{};
+
+    stat_type_u64 s_tot_miss_penalty_{};
+    stat_type_u64 s_num_miss_penalty_{};
 
     uint32_t s_evictions_ =0;
     uint32_t s_writebacks_ =0;
     uint32_t s_eager_writebacks_ =0;
-
     uint32_t s_bypasses_ =0;
     uint32_t s_dead_block_evictions_ =0;
-
+    /*
+     * Set Dueling Stats:
+     * */
     uint32_t s_dueling_pol1_installs_ =0;
     uint32_t s_dueling_pol2_installs_ =0;
     /*
-     * Stats exclusive to same-set-row-harvest:
+     * Cache Partitioning Stats:
      * */
-    using ssrh_lru_pos_array = std::array<uint32_t, 4>;
-    ssrh_lru_pos_array s_ssrh_tot_lru_pos_{};
-    ssrh_lru_pos_array s_ssrh_num_harvests_{};
+    stat_type s_lifetime_way_alloc_{};
+    uint32_t  s_total_way_allocs =0;
 
     out_queue_type outgoing_queue_;
 
     const std::string cache_name_;
 protected:
+    using in_queue_type =  std::deque<Transaction>;
+    using pending_type =   std::unordered_multiset<uint64_t>;
     using mshr_type =       std::unordered_multimap<uint64_t, MSHREntry>;
     using wb_queue_type =   std::deque<Transaction>;
     using fill_queue_type = std::deque<Transaction>;
@@ -183,11 +185,6 @@ public:
                                                 [] (const auto& e) { return e.valid && e.dirty; });
                             });
     }
-
-    inline const cache_partition_array& get_partition_array_const_ref(void) const
-    {
-        return partition_;
-    }
 protected:
     struct fill_result_type
     {
@@ -214,6 +211,7 @@ protected:
      * */
     virtual multi_fill_result_type fill(const Transaction&);
     virtual multi_fill_result_type fill_with_eager_writeback(const Transaction&); 
+    virtual multi_fill_result_type fill_with_ssrh(const Transaction&);
     /*
      * When searching for a victim, we also provide the calling Transaction in case the replacement
      * policy would like to bypass, in which case the `way_iterator` should be the end of the `cset_type`.

@@ -6,6 +6,7 @@
 #ifndef CACHE_INDEXING_h
 #define CACHE_INDEXING_h
 
+#include "cache/enums.h"
 #include "util/numerics.h"
 
 #include <cstdint>
@@ -14,11 +15,17 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-template <size_t NUM_SETS>
-inline size_t default_cache_set_index(uint64_t x)
+inline constexpr size_t default_cache_set_index(uint64_t x, size_t s)
 {
-    return fast_mod<NUM_SETS>(x);
+    return fast_mod(x, static_cast<uint64_t>(s));
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+extern size_t OPT_SSRH_COLUMN_COUNT;
+
+size_t ssrh_cache_set_index(uint64_t, size_t);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -28,7 +35,14 @@ inline size_t default_cache_set_index(uint64_t x)
 template <class IMPL>
 size_t cache_set_index(uint64_t x)
 {
-    return default_cache_set_index<IMPL::NUM_SETS>(x);
+    if constexpr (IMPL::WRITEBACK_POLICY == CacheWritebackPolicy::SSRH)
+    {
+        return ssrh_cache_set_index(x, IMPL::NUM_SETS);
+    }
+    else
+    {
+        return default_cache_set_index(x, IMPL::NUM_SETS);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

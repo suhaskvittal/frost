@@ -14,8 +14,8 @@
 SetDuelingMonitor::Role
 SetDuelingMonitor::get_role_of_set(size_t idx) const
 {
-    size_t grp = idx >> numeric_traits<LEADER_SETS>::log2,
-           off = fast_mod<LEADER_SETS>(idx);
+    size_t grp = idx >> ilog2(LEADER_SETS),
+           off = fast_mod(idx, LEADER_SETS);
     size_t coff = off ^ (LEADER_SETS-1);
 
     if (grp == off)

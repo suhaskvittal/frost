@@ -7,6 +7,7 @@
 #define CACHE_PARTITIONING_UCP_h
 
 #include "cache/entry.h"
+#include "cache/ext/atd.h"
 #include "util/numerics.h"
 
 #include <array>
@@ -22,46 +23,30 @@
  * UCP implementation:
  * */
 template <class IMPL>
-class UMON
+struct UMON
 {
-public:
     using ctr_type  = size_t;
     using ctr_array = std::vector<ctr_type>;
+    using atd_type = AuxTagDirectory<IMPL, 64>;
 
     ctr_array hit_counters;
     ctr_type  total_misses =0;
-private:
-    struct internal_cache_type
-    {
-        constexpr static size_t NUM_SETS = IMPL::NUM_SETS;
 
-        cset_array csets;
+    atd_type atd{};
 
-        internal_cache_type(void)
-            :csets(NUM_SETS, cset_type(IMPL::NUM_WAYS, CacheEntry{}))
-        {}
-    };
-
-    constexpr static size_t SET_MODULUS = IMPL::NUM_SETS / internal_cache_type::NUM_SETS;
-
-    internal_cache_type atd;
-public:
-    UMON(void);
+    UMON(void)
+        :hit_counters(IMPL::NUM_WAYS, 0)
+    {}
 
     inline ctr_type utility(size_t w) const
     {
-        return std::reduce(hit_counters.begin() + w, hit_counters.end(), total_misses);
+        return std::reduce(hit_counters.begin()+w, hit_counters.end(), total_misses);
     }
 
     inline ctr_type utility_difference(size_t a, size_t b) const
     {
         return std::reduce(hit_counters.begin()+a, hit_counters.begin()+b, 0);
     }
-
-    void atd_probe(const Transaction&);
-    void atd_fill(const Transaction&);
-
-    cset_array::iterator atd_set_lookup(const Transaction&);
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -82,19 +67,7 @@ public:
      * This function updates the partition sizes in the container from `begin` to `end`.
      * */
     void update_partition(part_iterator begin, part_iterator end) override;
-    /*
-     * Both of the following functions are straightforward and can be inline:
-     * */
-    inline void update_on_access(const Transaction& trans) override
-    {
-        if (trans.coreid >= NUM_THREADS)
-            return;
-        umon_[trans.coreid].atd_probe(trans);
-    }
-
-    inline void update_on_fill(const Transaction& trans) override
-    {
-    }
+    void update_on_probe(const Transaction& trans) override;
 };
 
 ////////////////////////////////////////////////////////////////////////////

@@ -82,7 +82,7 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
             // Insert into bank idx to ensure this is used:
             active_buffer_.insert(bank_idx);
         }
-        next_bank_idx_ = fast_mod<DRAM_TOT_BANKS_PER_CHANNEL>(bank_idx+1);
+        next_bank_idx_ = fast_mod(bank_idx+1, DRAM_TOT_BANKS_PER_CHANNEL);
     }
 
     return cmd_output_type{ready_cmd, q_entry};

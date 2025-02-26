@@ -50,7 +50,7 @@ struct SchedulerState
 
 inline size_t dram_s_queue_index(uint64_t address)
 {
-    return fast_mod<DRAM_QUEUE_COUNT>(dram_bank_idx(address));
+    return fast_mod(dram_bank_idx(address), DRAM_QUEUE_COUNT);
 }
 
 ////////////////////////////////////////////////////////////////////////////
