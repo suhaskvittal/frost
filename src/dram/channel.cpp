@@ -14,7 +14,7 @@
 
 #include <iomanip>
 
-//#define DRAM_ENABLE_LOGGER
+#define DRAM_ENABLE_LOGGER
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -22,11 +22,11 @@
 DRAMChannel::DRAMChannel(size_t channel_id, double freq_ghz)
     :freq_ghz_(freq_ghz),
     channel_id_(channel_id),
+    scheduler_(new scheduler_impl(this, state_)),
 #if defined(DRAM_ENABLE_LOGGER)
     dram_logger_("dram_channel." + std::to_string(channel_id) + ".log")
 #else
-    dram_logger_(),
-    scheduler_(new scheduler_impl(this, state_))
+    dram_logger_()
 #endif
 {}
 
@@ -38,25 +38,8 @@ DRAMChannel::tick()
 {
 #if defined(DRAM_ENABLE_LOGGER)
     tmp_logger_.str("");
-
-    bool any_ranks_in_refresh = std::any_of(state_.begin(), state_.end(),
-                                        [] (const auto& ra)
-                                        {
-                                            return GL_DRAM_CYCLE >= ra.next_ref_cycle;
-                                        });
-    bool any_ranks_in_trfc = std::any_of(state_.begin(), state_.end(),
-                                        [] (const auto& ra)
-                                        {
-                                            return GL_DRAM_CYCLE < ra.next_cmd_post_ref_cycle;
-                                        });
-
-    tmp_logger_ 
-        << "========================= DRAM CYCLE " << GL_DRAM_CYCLE << " ===============================\n";
-
-    tmp_logger_ << " }, in REF: " << (any_ranks_in_refresh ? "y" : "n")
-                      << ", in tRFC post REF: " << (any_ranks_in_trfc ? "y" : "n")
-                      << "\n";
 #endif
+
     // Update FAW:
     for (auto& ra : state_)
     {
@@ -71,6 +54,31 @@ DRAMChannel::tick()
     }
 
     scheduler_->update_state();
+
+#if defined(DRAM_ENABLE_LOGGER)
+    if (scheduler_->is_in_write_mode() != logger_in_write_mode_)
+    {
+        if (logger_in_write_mode_)
+            dram_logger_ << "----------- WRITE MODE END ------------";
+        else
+            dram_logger_ << "---------- WRITE MODE BEGIN -----------";
+
+        dram_logger_ << "\tCYCLE = " << GL_DRAM_CYCLE << "\n";
+
+        logger_in_write_mode_ = scheduler_->is_in_write_mode();
+    }
+
+    if (scheduler_->is_in_transition() != logger_in_transition_)
+    {
+        if (!logger_in_transition_)
+            dram_logger_ << "---------- TRANSITION START -----------";
+
+        dram_logger_ << "\tCYCLE = " << GL_DRAM_CYCLE << "\n";
+
+        logger_in_transition_ = scheduler_->is_in_transition();
+    }
+#endif
+
     issue_next_command();
 
     // If the write queue is looking empty, then request the LLC to get some writebacks so
@@ -107,6 +115,10 @@ DRAMChannel::issue_next_command()
     if (ready_cmd.is_invalid())
         return;
 
+#if defined(DRAM_ENABLE_LOGGER)
+    tmp_logger_ << "[ " << GL_DRAM_CYCLE << " ] selected command: " << ready_cmd;
+#endif
+
     update_dram_state(state_, ready_cmd);
 
     size_t bank_idx = dram_bank_idx(ready_cmd.address);
@@ -115,6 +127,8 @@ DRAMChannel::issue_next_command()
         auto& q_entry = opt_q_entry.value();
         Transaction& trans = q_entry.trans;
 
+        auto& b = channel_get_bank_ref_from_idx(state_, dram_bank_idx(trans.address));
+
         const bool is_read = ready_cmd.is_read();
         auto& count     = is_read ? s_reads_            : s_writes_;
         auto& row_hits  = is_read ? s_read_row_hits_    : s_write_row_hits_;
@@ -122,7 +136,25 @@ DRAMChannel::issue_next_command()
 
         ++count;
         if (q_entry.is_row_buffer_hit)
+        {
             ++row_hits;
+#if defined(DRAM_ENABLE_LOGGER)
+            tmp_logger_ << "\tis row buffer hit";
+#endif
+        }
+        else
+        {
+#if defined(DRAM_ENABLE_LOGGER)
+            tmp_logger_ << "\tis NOT row buffer hit";
+#endif
+        }
+#if defined(DRAM_ENABLE_LOGGER)
+        tmp_logger_ << "\tcycles since last bank access = " << (GL_DRAM_CYCLE - b.last_access_cycle)
+                    << "\t+" << (GL_DRAM_CYCLE - logger_last_cas_cycle_);
+        logger_last_cas_cycle_ = GL_DRAM_CYCLE;
+#endif
+        b.last_access_cycle = GL_DRAM_CYCLE;
+
         if (ready_cmd.autopre)
             ++s_precharges_;
         latency += GL_DRAM_CYCLE - q_entry.cycle_entered_queue;
@@ -149,9 +181,8 @@ DRAMChannel::issue_next_command()
     }
     // additional stats:
 #if defined(DRAM_ENABLE_LOGGER)
-    tmp_logger_ << "selected command: " << ready_cmd << "\n";
     if (ready_cmd.is_cas())
-        dram_logger_ << tmp_logger_.str();
+        dram_logger_ << tmp_logger_.str() << "\n";
 #endif
 }
 ////////////////////////////////////////////////////////////////////////////

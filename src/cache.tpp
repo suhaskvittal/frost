@@ -116,6 +116,8 @@ __TEMPLATE_CLASS__::tick()
         for (size_t i = 0; i < NUM_THREADS; i++)
             s_lifetime_way_alloc_[i] += partition_[i];
         ++s_total_way_allocs;
+
+        partition_manager_->last_update_cycle_ = GL_CYCLE;
     }
 }
 
@@ -299,6 +301,29 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans)
     size_t idx = cache_set_index<IMPL>(trans.address);
     cset_type& s = csets_[idx];
 
+    if (cset_find(trans.address, s.begin(), s.end()) != s.end())
+    {
+        if (trans.is_write())
+        {
+            std::cerr << "cache: address to be filled (" << std::hex << trans.address << ") already in set.\n";
+            std::cerr << "occurred at cycle = " << std::dec << GL_CYCLE << ", write fill = " << trans.is_write()
+                << "\ncache set contents:\n";
+            for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
+            {
+                std::cerr << "\tway " << std::dec << i << "\t" << std::hex << s[i].address 
+                            << "\tvalid = " << s[i].valid 
+                            << "\tdirty = " << s[i].dirty
+                            << "\ttimestamp = " << std::dec << s[i].timestamp
+                            << "\n";
+            }
+            exit(1);
+        }
+        else
+        {
+            return multi_fill_result_type{out};
+        }
+    }
+
     // Invoke dead block predictor:
     dead_block_pred_->update_on_probe_or_fill(trans);
 
@@ -373,13 +398,36 @@ __TEMPLATE_CLASS__::fill_with_ssrh(const Transaction& trans)
         while (mshr_space_avail > 0)
         {
             auto it = std::find_if(s.begin(), s.end(),
-                            [bank_idx, row] (const auto& e)
+                            [bank_idx, row, match_virtual=out[0].entry.in_virtual_buffer]
+                            (const auto& e)
                             {
-                                return e.valid && e.dirty 
-                                        && dram_bank_idx(e.address) == bank_idx && dram_row(e.address) == row;
+                                bool row_match = e.valid && e.dirty 
+                                                    && dram_bank_idx(e.address) == bank_idx
+                                                    && dram_row(e.address) == row
+                                                    && (e.in_virtual_buffer == match_virtual);
+
+                                return row_match;
                             });
             if (it == s.end())
                 break;
+
+            bool dupli = std::any_of(out.begin(), out.end(),
+                                [addr=it->address] (const auto& x) { return x.entry.address == addr; });
+            if (dupli)
+            {
+                std::cerr << "cache ssrh: duplicate detected\nentries in fill result:";
+                for (const auto& x : out)
+                    std::cerr << std::hex << " " << x.entry.address;
+                std::cerr << "\tadding " << it->address << "\n";
+
+                std::cerr << "cache set contents:\n";
+                for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
+                {
+                    std::cerr << "\tway " << i << "\t" << s[i].address 
+                                << "\tvalid = " << s[i].valid << "\tdirty = " << s[i].dirty << "\n";
+                }
+                exit(1);
+            }
             
             // Add writeback to result:
             size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
@@ -387,8 +435,9 @@ __TEMPLATE_CLASS__::fill_with_ssrh(const Transaction& trans)
 
             if (it->in_virtual_buffer)
                 it->valid = false;
-            else
-                it->dirty = false;
+            it->dirty = false;
+
+            --mshr_space_avail;
         }
     }
 
@@ -487,7 +536,7 @@ __TEMPLATE_CLASS__::do_next_access(bool do_read)
         }
         else if (!mark_dirty(trans))
         {
-            fill_queue_.push_back(trans);
+            fill_queue_.push_front(trans);
         }
         
         // So, unlike reads, we know that there will always be one write, simply because duplicate
@@ -519,6 +568,10 @@ __TEMPLATE_CLASS__::do_next_fill()
     {
         eviction_list = fill_with_eager_writeback(trans);
     }
+    else if constexpr (IMPL::WRITEBACK_POLICY == CacheWritebackPolicy::SSRH)
+    {
+        eviction_list = fill_with_ssrh(trans);
+    }
     else
     {
         std::cerr << cache_name_ << ": unknown writeback mode\n";
@@ -542,7 +595,20 @@ __TEMPLATE_CLASS__::do_next_fill()
                 ++s_bypasses_;
 
             if (!e.dirty)
+            {
+                if (eviction_list.size() > 1)
+                {
+                    std::cerr << "cache: received eager writebacks with clean victim line\n";
+                    exit(1);
+                }
                 break;
+            }
+        }
+
+        if (!e.dirty)
+        {
+            std::cerr << "cache: expected dirty line for writeback\n";
+            exit(1);
         }
 
         ++s_writebacks_;
@@ -550,6 +616,7 @@ __TEMPLATE_CLASS__::do_next_fill()
             ++s_eager_writebacks_;
 
         Transaction wb_trans{trans.coreid, trans.ip, e.address, nullptr, Transaction::Type::WRITE};
+        wb_trans.dram_issue_prio = eviction_list.size();
         enqueue_writeback(wb_trans);
     }
 

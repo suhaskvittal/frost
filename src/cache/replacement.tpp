@@ -13,6 +13,7 @@ __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = RRIP_MAX;
+    e.in_virtual_buffer = false;
 }
 
 __TEMPLATE_HEADER__ void
@@ -24,6 +25,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
     e.address = trans.address;
     e.timestamp = GL_CYCLE;
     e.likely_dead = dead_block_pred_->predict_if_dead(trans);
+    e.in_virtual_buffer = false;
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {
@@ -69,9 +71,10 @@ __TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
     }
     else if constexpr (std::is_same<typename IMPL::PARTITION_MANAGER_TYPE, MinimalistPartitionManager<IMPL>>::value)
     {
-        size_t max_v_ways = static_cast<MinimalistPartitionManager<IMPL>*>(partition_manager_)->get_victim_part();
+        size_t max_v_ways =
+            static_cast<MinimalistPartitionManager<IMPL>*>(partition_manager_.get())->get_victim_part();
         size_t v_count = std::count_if(s.begin(), s.end(),
-                                [] (const auto& e) { return e.in_virtual_buffer; });
+                                [] (const auto& e) { return e.valid && e.dirty && e.in_virtual_buffer; });
 
         auto v_it = s.end();
 
@@ -91,7 +94,7 @@ __TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
             // If `*v_it` is dirty, then move it to the virtual buffer and choose a new victim:
             if (v_it->dirty && !v_it->in_virtual_buffer)
             {
-                v_it->in_virtual_buffer;
+                v_it->in_virtual_buffer = true;
                 ++v_count;
             }
             else

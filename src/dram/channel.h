@@ -11,6 +11,7 @@
 #include "cache/other_impl/type_traits.h"
 #include "dram/command.h"
 #include "dram/enums.h"
+#include "dram/alt_scheduler.h"
 #include "dram/scheduler.h"
 #include "dram/state.h"
 #include "dram/stats.h"
@@ -48,6 +49,9 @@ class DRAMChannel
 public:
     out_queue_type outgoing_queue_;
 
+    uint32_t s_read_requests_ =0;
+    uint32_t s_write_requests_ =0;
+
     uint32_t s_reads_ =0;
     uint32_t s_writes_ =0;
     uint32_t s_precharges_ =0;
@@ -83,7 +87,11 @@ public:
 
     const size_t virtual_write_queue_watermark_ =(0.9 * DRAM_WQ_SIZE);
 private:
+#if defined(DRAM_USE_ALT_SCHEDULER)
+    using scheduler_impl = AlternateDRAMScheduler;
+#else
     using scheduler_impl = DRAMScheduler;
+#endif
     using scheduler_ptr = std::unique_ptr<scheduler_impl>;
 
     scheduler_ptr scheduler_;
@@ -104,6 +112,10 @@ private:
      * */
     std::ofstream     dram_logger_{};
     std::stringstream tmp_logger_;
+
+    bool     logger_in_transition_ =false;
+    bool     logger_in_write_mode_ =false;
+    uint64_t logger_last_cas_cycle_ =0;
 public:
     DRAMChannel(size_t channel_id, double freq_ghz);
 
@@ -120,7 +132,17 @@ public:
 
     inline bool add_incoming(Transaction trans)
     {
-        return scheduler_->add_incoming(trans);
+        bool success = scheduler_->add_incoming(trans);
+
+        if (success)
+        {
+            if (trans.is_read())
+                ++s_read_requests_;
+            else
+                ++s_write_requests_;
+        }
+
+        return success;
     }
     
     inline bool precharge_do_counter_update(void)
@@ -149,6 +171,8 @@ private:
         if constexpr (cache_type_traits::is_virtual_write_queue<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);
     }
+
+    friend class DRAM;
 };
 
 ////////////////////////////////////////////////////////////////////////////

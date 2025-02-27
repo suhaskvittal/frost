@@ -37,6 +37,7 @@ uint64_t OPT_INST_WARMUP;
  * */
 double OPT_DRAM_LOW_WATERMARK;
 double OPT_DRAM_HIGH_WATERMARK;
+int OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS;
 /*
  * Cache parameters:
  * */
@@ -82,6 +83,7 @@ int main(int argc, char* argv[])
                 // DRAM:
                 {"dram_wm_low", "DRAM Low Watermark", "0.3"},
                 {"dram_wm_high", "DRAM High Watermark", "1.0"},
+                {"dram_row_hit_limit", "Number of row buffer hits before a demand precharge can be issued", "4"},
 
                 // Cache:
                 {"cpart_update_freq", "Number of cycles between cache partitioning updates", "5000000"},
@@ -97,6 +99,7 @@ int main(int argc, char* argv[])
 
     ARGS("dram_wm_low", OPT_DRAM_LOW_WATERMARK);
     ARGS("dram_wm_high", OPT_DRAM_HIGH_WATERMARK);
+    ARGS("dram_row_hit_limit", OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS);
 
     ARGS("cpart_update_freq", OPT_CACHE_PARTITION_UPDATE_CYCLES);
     ARGS("ssrh_column_count", OPT_SSRH_COLUMN_COUNT);

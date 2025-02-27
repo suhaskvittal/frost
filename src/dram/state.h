@@ -31,6 +31,8 @@ struct DRAMBankState
 
     size_t num_cas_to_open_row =0;
     bool next_cas_is_row_buffer_hit =false;
+
+    uint64_t last_access_cycle =0;
 };
 
 struct DRAMBankgroupState : public std::array<DRAMBankState, DRAM_BANKS>

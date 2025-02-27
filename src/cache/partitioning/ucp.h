@@ -27,7 +27,7 @@ struct UMON
 {
     using ctr_type  = size_t;
     using ctr_array = std::vector<ctr_type>;
-    using atd_type = AuxTagDirectory<IMPL, 64>;
+    using atd_type = AuxTagDirectory<IMPL, 2048>;
 
     ctr_array hit_counters;
     ctr_type  total_misses =0;

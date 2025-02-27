@@ -76,6 +76,9 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans, const CALLBACK_TYPE& callback
 
     cset_type& s = *s_it;
 
+    if (cset_find(trans.address, s.begin(), s.end()) != s.end())
+        return out;
+
     // Check for invalid entries:
     auto it = std::find_if_not(s.begin(), s.end(),
                         [] (const auto& e) { return e.valid; });
@@ -90,6 +93,7 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans, const CALLBACK_TYPE& callback
     it->valid = true;
     it->address = trans.address;
     it->timestamp = GL_CYCLE;
+    it->dirty = trans.is_write();
 
     callback(s, out);
 

@@ -85,7 +85,9 @@ DRAM::tick()
         leap_ += clock_scale_;
     }
     else
+    {
         leap_ -= 1.0;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -96,11 +98,21 @@ DRAM::tick()
     for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
         stat[i] = channels_[i]->s_##stat##_;\
     }\
+
+#define CREATE_VEC_SCH_STAT(stat)\
+    VecStat<uint64_t, DRAM_CHANNELS> stat;\
+    for (size_t i = 0; i < DRAM_CHANNELS; i++) {\
+        stat[i] = channels_[i]->scheduler_->s_##stat##_;\
+    }\
     
 
 void
 DRAM::print_stats(std::ostream& out)
 {
+    CREATE_VEC_STAT(read_requests)
+    CREATE_VEC_STAT(write_requests)
+    CREATE_VEC_SCH_STAT(write_forwards)
+
     CREATE_VEC_STAT(reads)
     CREATE_VEC_STAT(writes)
     CREATE_VEC_STAT(precharges)
@@ -140,6 +152,12 @@ DRAM::print_stats(std::ostream& out)
     out << BAR << "\n";
 
     print_stat(out, "DRAM", "CYCLES", GL_DRAM_CYCLE);
+
+    print_vecstat(out, "DRAM", "NUM_READ_REQUESTS", read_requests);
+    print_vecstat(out, "DRAM", "NUM_WRITE_REQUESTS", write_requests);
+    print_vecstat(out, "DRAM", "NUM_WRITE_FORWARDS", write_forwards);
+
+    out << "\n";
 
     print_vecstat(out, "DRAM", "NUM_READS", reads);
     print_vecstat(out, "DRAM", "NUM_WRITES", writes);

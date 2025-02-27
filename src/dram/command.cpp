@@ -6,6 +6,7 @@
 #include "dram/address.h"
 #include "dram/command.h"
 
+#include <iomanip>
 #include <iostream>
 
 ////////////////////////////////////////////////////////////////////////////
@@ -42,7 +43,7 @@ cmd_string(const DRAMCommand& cmd)
 std::ostream&
 operator<<(std::ostream& out, const DRAMCommand& cmd)
 {
-    out << cmd_string(cmd);
+    out << std::setw(32) << cmd_string(cmd);
     return out;
 }
 

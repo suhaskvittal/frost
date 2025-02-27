@@ -73,9 +73,6 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
                 q_p->erase(it, q_p->end());
                 p.erase(ready_cmd.address);
             }
-
-            if (ready_cmd.is_write())
-                --min_writes_per_bank_[bank_idx];
         }
         else if (ready_cmd.is_act())
         {
@@ -137,10 +134,14 @@ DRAMScheduler::allow_demand_precharge(
     // Check for row buffer hits:
     if constexpr (dram_sched_prioritize_row_buffer_hits(DRAM_SCHED_POLICY))
     {
+        bool not_enough_hits = OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS < 0 
+                                || b.num_cas_to_open_row < OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS;
+
         bool any_pending_row_hits = std::any_of(cmds.begin(), cmds.end(),
                                         [row=b.open_row.value()] 
                                         (const auto& e) { return dram_row(e.trans.address) == row; });
-        if (any_pending_row_hits && b.num_cas_to_open_row < 4)
+
+        if (any_pending_row_hits && not_enough_hits)
             return false;
     }
 

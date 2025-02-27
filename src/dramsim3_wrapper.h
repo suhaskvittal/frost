@@ -23,19 +23,8 @@ extern std::string OPT_DRAMSIM3_CONFIG_FILE;
 
 struct DRAM
 {
-    struct IO
-    {
-        DRAM* dram;
-
-        IO(DRAM*);
-        bool can_accept(uint64_t, TransactionType);
-        bool add_incoming(Transaction);
-    };
-
-    using io_ptr = std::unique_ptr<IO>;
     using memsys_ptr = std::unique_ptr<dramsim3::MemorySystem>;
 
-    io_ptr     io_;
     memsys_ptr mem_;
 
     const double freq_ghz_;
@@ -49,10 +38,15 @@ private:
 public:
     DRAM(double cpu_freq_ghz, double freq_ghz);
 
-    void warmup_access(uint64_t, bool) {}
+    void warmup_access(const Transaction&) {}
+
+    bool can_accept(const Transaction&);
+    bool add_incoming(Transaction);
 
     void tick(void);
-    void print_stats(std::ostream&) {}
+    void print_stats(std::ostream&) { mem_->PrintStats(true); }
+
+    inline bool deadlock_find_inst(const inst_ptr) const {}
 };
 
 ////////////////////////////////////////////////////////////////////////////

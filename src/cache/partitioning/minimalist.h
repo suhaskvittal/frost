@@ -26,7 +26,11 @@ private:
      * This is whatever is left over from the workloads:
      * */
     size_t victim_part_ =0;
+
+    std::ofstream mcp_logger_;
 public:
+    MinimalistPartitionManager(void);
+
     void update_partition(part_iterator begin, part_iterator end) override;
     /*
      * We want the sets tracked by `umon_` to exactly match what is in the cache.

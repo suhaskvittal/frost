@@ -14,6 +14,18 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+#define MCP_ENABLE_LOGGER
+
+__TEMPLATE_HEADER__
+__TEMPLATE_CLASS__::MinimalistPartitionManager()
+#if defined(MCP_ENABLE_LOGGER)
+    :mcp_logger_("mcp.log")
+#endif
+{}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::update_partition(part_iterator begin, part_iterator end)
 {
@@ -23,6 +35,25 @@ __TEMPLATE_CLASS__::update_partition(part_iterator begin, part_iterator end)
     // The algorithm is just like UCP for two threads:
     //  Key difference: we can give all ways to workloads
     //      -- this is a subtle difference in the for loop: `i <= IMPL::NUM_WAYS` instead of `i < IMPL::NUM_WAYS`
+
+#if defined(MCP_ENABLE_LOGGER)
+    mcp_logger_ << "\n===============================================\n"
+                << "MCP @ CYCLE = " << GL_CYCLE << "\n"
+                << std::setw(12) << std::left << "MONITOR" << std::setw(8) << "MISSES";
+
+    for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
+        mcp_logger_ << std::setw(8) << ("HIT_" + std::to_string(i));
+
+    mcp_logger_ << "\n" << std::setw(12) << "UMON" << std::setw(8) << umon_.total_misses;
+
+    for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
+        mcp_logger_ << std::setw(8) << umon_.hit_counters[i];
+
+    mcp_logger_ << "\n" << std::setw(12) << "WMON" << std::setw(8) << wmon_.total_misses;
+
+    for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
+        mcp_logger_ << std::setw(8) << wmon_.hit_counters[i];
+#endif
 
     size_t best_way = 0;
     size_t best_way_util = std::numeric_limits<size_t>::max();
@@ -34,10 +65,31 @@ __TEMPLATE_CLASS__::update_partition(part_iterator begin, part_iterator end)
             best_way = i;
             best_way_util = u;
         }
+
+#if defined(UCP_ENABLE_LOGGER)
+        mcp_logger_ << "\n\tALLOC W = " << i << "\tUTILITY = " << u;
+#endif
     }
 
     std::fill(begin, end, best_way);
     victim_part_ = IMPL::NUM_WAYS - best_way;
+
+#if defined(MCP_ENABLE_LOGGER)
+    mcp_logger_ << "\nallocated " << victim_part_ << " ways to virtual buffer\n";
+#endif
+
+    // Update counters:
+    for (auto u : {std::ref(umon_), std::ref(wmon_)})
+    {
+        auto& mon = u.get();
+        for (auto& c : mon.hit_counters)
+            c >>= 1;
+        mon.total_misses >>= 1;
+    }
+
+#if defined(UCP_ENABLE_LOGGER)
+    mcp_logger_.flush();
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -81,9 +133,14 @@ __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::update_on_mark_dirty(const Transaction& trans)
 {
     // Check if the entry is in `umon_`:
-    auto r = umon_.atd.mark_dirty(trans);
+    auto r = umon_.atd.mark_dirty(trans, [] (const cset_type&, cset_type::const_iterator) {});
     if (r == ATDLookupResult::MISS)
-        umon_fill(trans);
+    {
+        // Try the write monitor -- if we still fail, do a fill
+        r = wmon_.atd.mark_dirty(trans, [] (const cset_type&, cset_type::const_iterator) {});
+        if (r == ATDLookupResult::MISS)
+            umon_fill(trans);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -108,16 +165,35 @@ __TEMPLATE_CLASS__::umon_fill(const Transaction& trans)
 
                     size_t bank_idx = dram_bank_idx(v.address),
                            row = dram_row(v.address);
+
+                    // Unlike UMON, we care about the LRU positions (how deep into the LRU stack do we need
+                    // to go to get row buffer hits?)
+                    std::vector<size_t> lru_positions;
                     
-                    for (auto& e : s)
+                    std::transform(s.begin(), s.end(), std::back_inserter(lru_positions),
+                            [&s] (const auto& e)
+                            {
+                                return std::count_if(s.begin(), s.end(),
+                                            [t=e.timestamp] (const auto& x) { return t > x.timestamp; });
+                            });
+                    
+                    for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
                     {
+                        auto& e = s[i];
+                        if (!e.valid)
+                            continue;
+
+                        if (e.address == v.address)
+                        {
+                            ++this->wmon_.hit_counters[0];
+                            continue;
+                        }
+
                         // Check if `e` has the same row as `s`:
                         bool is_row_hit = (bank_idx == dram_bank_idx(e.address)) && (row == dram_row(e.address));
                         if (is_row_hit)
                         {
-                            size_t p = std::count_if(s.begin(), s.end(),
-                                                [t=e.timestamp] (const auto& x) { return x.timestamp > t; });
-                            ++this->wmon_.hit_counters[p];
+                            ++this->wmon_.hit_counters[lru_positions[i]];
 
                             // Invalidate the entry -- simulate a writeback
                             e.valid = false;

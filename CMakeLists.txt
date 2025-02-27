@@ -1,6 +1,5 @@
 ########################################################################
 ########################################################################
-
 cmake_minimum_required(VERSION 3.20.3)
 project(Frost VERSION 1.0)
 
@@ -94,6 +93,7 @@ else()
                 src/dram.cpp
                 src/dram/channel.cpp
                 src/dram/command.cpp
+                src/dram/alt_scheduler.cpp
                 src/dram/scheduler.cpp
                 src/dram/scheduler/impl.cpp
                 src/dram/state.cpp)

@@ -165,7 +165,6 @@ __TEMPLATE_CLASS__::update_partition(part_iterator begin, part_iterator end)
     }
 
     // Update last update cycle and counters:
-    last_update_cycle_ = GL_CYCLE;
     for (auto& u : umon_)
     {
         // Divide counters by 2:

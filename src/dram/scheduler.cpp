@@ -35,6 +35,8 @@ DRAMScheduler::add_incoming(Transaction trans)
     {
         if (trans.is_read())
             owning_channel_->outgoing_queue_.emplace(trans, GL_DRAM_CYCLE+1);
+
+        ++s_write_forwards_;
         return true;
     }
 
@@ -215,18 +217,29 @@ DRAMScheduler::deadlock_find_inst(const inst_ptr inst) const
 ////////////////////////////////////////////////////////////////////////////
 
 void
+DRAMScheduler::update_state()
+{
+    if (in_write_mode_)
+        try_switch_to_reads();
+    else
+        try_switch_to_writes();
+
+    if (in_transition_)
+        try_to_transition();
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+void
 DRAMScheduler::try_switch_to_reads()
 {
     if (!in_write_mode_ || in_transition_)
         return;
 
-    bool banks_have_met_write_quota = std::all_of(min_writes_per_bank_.begin(), min_writes_per_bank_.end(),
-                                                [] (ssize_t w) { return w <= 0; });
-
     in_transition_ = read_occu() > 0
                         && (write_occu() <= low_watermark_) 
-                        && !any_write_queues_full()
-                        && banks_have_met_write_quota;
+                        && !any_write_queues_full();
 }
 
 void
@@ -248,25 +261,12 @@ DRAMScheduler::try_switch_to_writes()
             ++write_cnts[bank_idx];
         }
 
-        // If we are synchronizing writes, then we require that each bank perform at least
-        // the minimum number of writes across all banks.
-        if constexpr (DRAM_WRITE_POLICY == DRAMWritePolicy::SYNC)
-        {
-            size_t min = *std::min_element(write_cnts.begin(), write_cnts.end());
-            min_writes_per_bank_.fill(min);
-        }
-        else
-        {
-            min_writes_per_bank_.fill(0);
-        }
-
 #if defined(DRAM_TRACK_ADVANCED_STATS)
         dram_update_write_distribution_stats(
                     write_cnts, 
                     owning_channel_->s_tot_write_queue_std_,
                     owning_channel_->s_tot_write_queue_minmax_diff_);
 #endif
-
     }
 }
 
