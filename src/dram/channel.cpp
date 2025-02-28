@@ -67,16 +67,6 @@ DRAMChannel::tick()
 
         logger_in_write_mode_ = scheduler_->is_in_write_mode();
     }
-
-    if (scheduler_->is_in_transition() != logger_in_transition_)
-    {
-        if (!logger_in_transition_)
-            dram_logger_ << "---------- TRANSITION START -----------";
-
-        dram_logger_ << "\tCYCLE = " << GL_DRAM_CYCLE << "\n";
-
-        logger_in_transition_ = scheduler_->is_in_transition();
-    }
 #endif
 
     issue_next_command();
@@ -161,7 +151,7 @@ DRAMChannel::issue_next_command()
 
         if (is_read)
         {
-            outgoing_queue_.emplace(std::move(trans), GL_DRAM_CYCLE+CL);
+            outgoing_queue_.emplace(std::move(trans), GL_DRAM_CYCLE + CL + DRAM_BURST_LENGTH/2);
             ++s_bank_usage_.reads[bank_idx];
         }
         else

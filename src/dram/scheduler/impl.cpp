@@ -52,9 +52,6 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
             q_entry.emplace(std::move(*q_it));
             q_p->erase(q_it);
 
-            // Also, remove entry in active buffer:
-            active_buffer_.erase(bank_idx);
-
             // Update `pending` structures:
             auto& p = ready_cmd.is_read() ? pending_reads_ : pending_writes_;
 
@@ -73,11 +70,14 @@ DRAMScheduler::select_from_bank_commands(bank_cmd_array&& bank_cmds)
                 q_p->erase(it, q_p->end());
                 p.erase(ready_cmd.address);
             }
+
+            // Also, remove entry in active buffer:
+            active_buffer_[bank_idx].reset();
         }
         else if (ready_cmd.is_act())
         {
             // Insert into bank idx to ensure this is used:
-            active_buffer_.insert(bank_idx);
+            active_buffer_[bank_idx] = {q_p, ready_cmd.address};
         }
         next_bank_idx_ = fast_mod(bank_idx+1, DRAM_TOT_BANKS_PER_CHANNEL);
     }
@@ -170,23 +170,22 @@ DRAMScheduler::enable_autopre(
     {
         size_t bank_idx = dram_bank_idx(q_it->trans.address);
 
-        // If we are in transition, then we know that there will be no more activations, nor
-        // row buffer hits.
         bool do_autopre = false;
 
-        do_autopre |= in_transition_;
+        do_autopre |= q_it->trans.is_read() == in_write_mode_;
 
         // Predict if we will start transitioning:
         constexpr int X_TOL = 4;
 
         do_autopre |= (in_write_mode_ && read_occu() != 0 && write_occu() <= low_watermark_+X_TOL);
-        do_autopre |= (!in_write_mode_ && (read_occu() < 4 || write_occu() >= high_watermark_-4));
+        do_autopre |= (!in_write_mode_ && (read_occu() < X_TOL || write_occu() >= high_watermark_-X_TOL));
 
         if (do_autopre)
             return true;
 
         // For ease of checking, get all commands in the queue that belong to the given bank:
         std::vector<RWQueueEntry> cmds;
+        cmds.reserve(128);
         std::copy_if(std::next(q_it), q_end, std::back_inserter(cmds),
                         [bank_idx] (const auto& e) { return dram_bank_idx(e.trans.address) == bank_idx; });
 

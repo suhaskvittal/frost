@@ -204,6 +204,12 @@ update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
 {
     if (cmd.is_cas())
     {
+        if (!ba.open_row.has_value() || ba.open_row.value() != dram_row(cmd.address))
+        {
+            std::cerr << "[ update_dram_bank_state ] received CAS command but no row is open\n";
+            exit(1);
+        }
+            
         uint64_t cas_to_pre = cmd.is_read() ? tRTP : (CWL + BL/2 + tWR);
         if (cmd.autopre) 
         {
@@ -221,6 +227,12 @@ update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
     } 
     else if (cmd.is_act())
     {
+        if (ba.open_row.has_value())
+        {
+            std::cerr << "[ update_dram_bank_state ] received ACT but row is already open\n";
+            exit(1);
+        }
+
         update(ba.cas_ok, tRCD);
         update(ba.pre_ok, tRAS);
         ba.open_row = dram_row(cmd.address);
@@ -228,6 +240,12 @@ update_dram_bank_state(DRAMBankState& ba, const DRAMCommand& cmd)
     }
     else // Precharge
     {
+        if (!ba.open_row.has_value())
+        {
+            std::cerr << "[ update_dram_bank_state ] received PRE but row is already closed\n";
+            exit(1);
+        }
+
         ba.open_row.reset();
         ba.num_cas_to_open_row = 0;
         update(ba.act_ok, tRP);

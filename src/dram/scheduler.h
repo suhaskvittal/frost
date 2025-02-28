@@ -66,7 +66,12 @@ public:
 private:
     using queue_array = std::array<dram_rw_queue_type, DRAM_QUEUE_COUNT>;
     using pending_type = std::unordered_multiset<uint64_t>;
-    using active_buffer_type = std::unordered_set<size_t>;
+    /*
+     * For `active_buffer_entry`, we need to store the address to match and search for the iterator (queue might
+     * be modified before entry is used).
+     * */
+    using active_buffer_entry = std::tuple<dram_rw_queue_type*, uint64_t>;
+    using active_buffer_type = std::array<std::optional<active_buffer_entry>, DRAM_TOT_BANKS_PER_CHANNEL>;
     /*
      * `owning_channel_` is just for stats:
      * */
@@ -76,7 +81,6 @@ private:
      * Managing read <--> write transitions:
      * */
     bool in_write_mode_ =false;
-    bool in_transition_ =false;
     /*
      * `pending_reads_` and `pending_writes_` help with dependency enforcement and forwarding:
      * */
@@ -87,9 +91,9 @@ private:
 
     size_t next_bank_idx_ =0;
     /*
-     * `active_buffer_` stores indices with unused activates:
+     * `active_buffer_` stores commands that have performed an ACT to open a row but have not completed:
      * */
-    active_buffer_type active_buffer_;
+    active_buffer_type active_buffer_{};
     /*
      * This is for specifically ensuring a uniform random distribution in `DRAM_RANDOMIZE_WRITE_ADDRESSES`:
      * */
@@ -126,7 +130,6 @@ public:
     }
 
     inline bool is_in_write_mode(void) const { return in_write_mode_; }
-    inline bool is_in_transition(void) const { return in_transition_; }
 
     inline bool any_write_queues_full() const
     {
@@ -166,7 +169,6 @@ private:
      * */
     void try_switch_to_reads(void);
     void try_switch_to_writes(void);
-    void try_to_transition(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////

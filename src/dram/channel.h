@@ -92,7 +92,9 @@ private:
 #else
     using scheduler_impl = DRAMScheduler;
 #endif
+
     using scheduler_ptr = std::unique_ptr<scheduler_impl>;
+    using core_cycle_array = std::array<uint64_t, NUM_THREADS>;
 
     scheduler_ptr scheduler_;
     DRAMChannelState  state_{};
@@ -102,6 +104,7 @@ private:
     uint64_t drain_start_cycle_;
     write_counts_array writes_issued_per_bank_;
 
+    core_cycle_array last_read_issued_for_core_cycle_{};
     /*
      * All variables below are used if `DRAM_ENABLE_LOGGER` is defined.
      * 
@@ -113,7 +116,6 @@ private:
     std::ofstream     dram_logger_{};
     std::stringstream tmp_logger_;
 
-    bool     logger_in_transition_ =false;
     bool     logger_in_write_mode_ =false;
     uint64_t logger_last_cas_cycle_ =0;
 public:

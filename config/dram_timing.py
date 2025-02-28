@@ -73,13 +73,20 @@ constexpr uint64_t tWR = {tWR};
 
 constexpr uint64_t tCCD_S = {tCCD_S};
 constexpr uint64_t tCCD_S_WR = {tCCD_S_WR};
-constexpr uint64_t tCCD_S_WTR = {tCCD_S_WTR};
-constexpr uint64_t tCCD_S_RTW = {tCCD_S_RTW};
-
 constexpr uint64_t tCCD_L = {tCCD_L};
 constexpr uint64_t tCCD_L_WR = {tCCD_L_WR};
+
+#if defined(DRAM_DISABLE_TURNAROUND)
+constexpr uint64_t tCCD_S_WTR = 0;
+constexpr uint64_t tCCD_S_RTW = 0;
+constexpr uint64_t tCCD_L_WTR = 0;
+constexpr uint64_t tCCD_L_RTW = 0;
+#else
+constexpr uint64_t tCCD_S_WTR = {tCCD_S_WTR};
+constexpr uint64_t tCCD_S_RTW = {tCCD_S_RTW};
 constexpr uint64_t tCCD_L_WTR = {tCCD_L_WTR};
 constexpr uint64_t tCCD_L_RTW = {tCCD_L_RTW};
+#endif
 
 constexpr uint64_t tRRD_S = {tRRD_S};
 constexpr uint64_t tRRD_L = {tRRD_L};

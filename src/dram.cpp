@@ -168,7 +168,7 @@ DRAM::print_stats(std::ostream& out)
     print_vecstat(out, "DRAM", "READ_ROW_BUFFER_HIT_RATE", rd_rbhr, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "WRITE_ROW_BUFFER_HIT_RATE", wr_rbhr, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "READ_LATENCY", read_latency, VecAccMode::GMEAN);
-    print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
+//  print_vecstat(out, "DRAM", "WRITE_LATENCY", write_latency, VecAccMode::GMEAN);
     
     out << "\n";
 
@@ -179,13 +179,21 @@ DRAM::print_stats(std::ostream& out)
 
     print_vecstat(out, "DRAM", "NUM_WRITE_DRAINS", num_drains);
     print_vecstat(out, "DRAM", "NUM_FORCED_WRITE_DRAINS", num_forced_drains);
-    print_vecstat(out, "DRAM", "FRACTION_OF_DRAINS_FORCED", forced_drain_fraction, VecAccMode::GMEAN);
+//  print_vecstat(out, "DRAM", "FRACTION_OF_DRAINS_FORCED", forced_drain_fraction, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITES_PER_DRAIN", writes_per_drain, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "MEAN_WRITE_OCCUPANCY_AT_DRAIN", mean_write_occu_at_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "DRAIN_LATENCY", drain_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITE_MODE_CYCLES", tot_drain_latency);
     print_vecstat(out, "DRAM", "FRACTION_OF_TIME_IN_WRITE_MODE", drain_fraction, VecAccMode::GMEAN);
+
+    out << "\n";
+
+    VecStat<double, DRAM_CHANNELS> bandwidth;
+    for (size_t i = 0; i < DRAM_CHANNELS; i++)
+        bandwidth[i] = static_cast<double>(reads[i] * LINESIZE) / (GL_DRAM_CYCLE / freq_ghz_);
+
+    print_vecstat(out, "DRAM", "AVERAGE_READ_BANDWIDTH", bandwidth, VecAccMode::HMEAN);
 
 #if defined(DRAM_TRACK_ADVANCED_STATS)
     out << "\n";

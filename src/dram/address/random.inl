@@ -37,30 +37,39 @@ constexpr size_t ROW_OFF = RA_OFF + ilog2(DRAM_RANKS);
 
 inline size_t dram_channel(uint64_t x)
 {
-    return (RANDOM >> CH_OFF) & mask(DRAM_CHANNELS);
+    return (RANDOM >> CH_OFF) & (DRAM_CHANNELS-1);
 }
 
 inline size_t dram_bankgroup(uint64_t x)
 {
-    return (RANDOM >> BG_OFF) & mask(DRAM_BANKGROUPS); 
+    return (RANDOM >> BG_OFF) & (DRAM_BANKGROUPS-1); 
 }
 
 inline size_t dram_bank(uint64_t x)
 {
-    return (RANDOM >> BA_OFF) & mask(DRAM_BANKS);
+    return (RANDOM >> BA_OFF) & (DRAM_BANKS-1);
 }
 
 inline size_t dram_rank(uint64_t x)
 {
-    return (RANDOM >> RA_OFF) & mask(DRAM_RANKS);
+    return (RANDOM >> RA_OFF) & (DRAM_RANKS-1);
 }
 
 inline size_t dram_row(uint64_t x)
 {
-    return (RANDOM >> ROW_OFF) & mask(DRAM_ROWS);
+    return (RANDOM >> ROW_OFF) & (DRAM_ROWS-1);
 }
 
 #undef RANDOM
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+constexpr inline size_t
+dram_col_bit_index(size_t idx)
+{
+    return idx;
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

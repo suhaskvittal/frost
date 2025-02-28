@@ -31,6 +31,7 @@ DRAMScheduler::DRAMScheduler(DRAMChannel* c, const DRAMChannelState& s)
 bool
 DRAMScheduler::add_incoming(Transaction trans)
 {
+#if !defined(DRAM_RANDOMIZE_WRITE_ADDRESSES)
     if (pending_writes_.find(trans.address) != pending_writes_.end())
     {
         if (trans.is_read())
@@ -39,6 +40,7 @@ DRAMScheduler::add_incoming(Transaction trans)
         ++s_write_forwards_;
         return true;
     }
+#endif
 
 #if defined(DRAM_RANDOMIZE_WRITE_ADDRESSES)
     if (trans.is_write())
@@ -76,10 +78,35 @@ DRAMScheduler::select_ready_command()
 {
     constexpr size_t BANKS_PER_QUEUE = DRAM_TOT_BANKS_PER_CHANNEL/DRAM_QUEUE_COUNT;
 
-    auto& q_array = in_write_mode_ ? write_queues_ : read_queues_;
-
     bank_cmd_array bank_cmds{};
     SchedulerState s{};
+
+    // First fill bank cmds using `active_buffer_` -- these are given priority over other commands.
+    for (size_t ii = 0; ii < DRAM_TOT_BANKS_PER_CHANNEL; ii++)
+    {
+        auto& opt_e = active_buffer_[ii];
+        if (!opt_e.has_value())
+            continue;
+        
+        const auto& [q_p, address] = opt_e.value();
+
+        auto q_it = std::find_if(q_p->begin(), q_p->end(),
+                            [address] (const auto& e) { return e.trans.address == address; });
+        
+        DRAMCommand ready_cmd;
+        const auto& b = channel_get_const_bank_ref_from_idx(this->channel_state_, ii);
+
+        ready_cmd.type = q_it->trans.is_read() ? DRAMCommand::Type::READ : DRAMCommand::Type::WRITE;
+        ready_cmd.autopre = enable_autopre(q_it, q_p->end(), s, b);
+        ready_cmd.address = q_it->trans.address;
+
+        if (cmd_is_issuable(this->channel_state_, ready_cmd))
+            bank_cmds[ii].emplace(ready_cmd, q_p, q_it);
+
+        s.update_priority(ii, q_it->trans.dram_issue_prio);
+    }
+
+    auto& q_array = in_write_mode_ ? write_queues_ : read_queues_;
     
     // Determine initial queue index from `next_bank_idx_`
     size_t q_idx = next_bank_idx_ >> ilog2(BANKS_PER_QUEUE);
@@ -97,7 +124,10 @@ DRAMScheduler::select_ready_command()
 
             // Check if the bank already has a ready command:
             if (bank_cmds[bank_idx].has_value())
+            {
+                any_writes_are_possible = true;
                 continue;
+            }
             
             size_t row = dram_row(q_it->trans.address);
             const auto& b = channel_get_const_bank_ref_from_idx(channel_state_, bank_idx);
@@ -105,9 +135,10 @@ DRAMScheduler::select_ready_command()
             // If this is a write, check if it violates R->W dependency.
             if (in_write_mode_)
             {
+                /*
                 if (pending_reads_.find(q_it->trans.address) != pending_reads_.end())
                     continue;
-
+                */
                 any_writes_are_possible = true;
             }
 
@@ -120,7 +151,7 @@ DRAMScheduler::select_ready_command()
                     ready_cmd.type = q_it->trans.is_read() ? DRAMCommand::Type::READ : DRAMCommand::Type::WRITE;
                     ready_cmd.autopre = enable_autopre(q_it, q.end(), s, b);
                 }
-                else if (!active_buffer_.count(bank_idx) && allow_demand_precharge(q_it, q.end(), s, b))
+                else if (!active_buffer_[bank_idx].has_value() && allow_demand_precharge(q_it, q.end(), s, b))
                 {
                     ready_cmd.type = DRAMCommand::Type::PRECHARGE;
                     ready_cmd.counter_update = owning_channel_->precharge_do_counter_update();
@@ -131,10 +162,7 @@ DRAMScheduler::select_ready_command()
                 ready_cmd.type = DRAMCommand::Type::ACTIVATE;
             }
 
-            // In transition condition: do not allow ACTs
-            bool cmd_ok = !ready_cmd.is_invalid()
-                            && (!in_transition_ || !ready_cmd.is_act())
-                            && cmd_is_issuable(channel_state_, ready_cmd);
+            bool cmd_ok = !ready_cmd.is_invalid() && cmd_is_issuable(channel_state_, ready_cmd);
             if (cmd_ok)
             {
                 bank_cmds[bank_idx].emplace(ready_cmd, &q, q_it);
@@ -154,7 +182,10 @@ DRAMScheduler::select_ready_command()
     }
 
     if (in_write_mode_ && !any_writes_are_possible)
-        in_transition_ = true;
+    {
+        in_write_mode_ = !in_write_mode_;
+        owning_channel_->update_modal_stats_post_transition();
+    }
 
     return select_from_bank_commands(std::move(bank_cmds));
 }
@@ -165,11 +196,10 @@ DRAMScheduler::select_ready_command()
 void
 DRAMScheduler::handle_preab_forced_transition()
 {
-    active_buffer_.clear();
+    for (auto& e : active_buffer_)
+        e.reset();
 
     bool was_in_write_mode = in_write_mode_;
-
-    in_transition_ = false;
     in_write_mode_ = false;
 
     if (was_in_write_mode)
@@ -187,7 +217,6 @@ DRAMScheduler::deadlock_find_inst(const inst_ptr inst) const
                 << "\twrite occupancy = " << write_occu() 
                 << " (low = " << low_watermark_ << ", high = " << high_watermark_ << ")\n"
                 << "\tin write mode = " << in_write_mode_ << "\n"
-                << "\tin transition = " << in_transition_ << "\n"
                 << "\tactive buffer size = " << active_buffer_.size() << "\n";
     for (size_t i = 0; i < DRAM_QUEUE_COUNT; i++)
     {
@@ -223,9 +252,6 @@ DRAMScheduler::update_state()
         try_switch_to_reads();
     else
         try_switch_to_writes();
-
-    if (in_transition_)
-        try_to_transition();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -234,25 +260,29 @@ DRAMScheduler::update_state()
 void
 DRAMScheduler::try_switch_to_reads()
 {
-    if (!in_write_mode_ || in_transition_)
+    if (!in_write_mode_)
         return;
 
-    in_transition_ = read_occu() > 0
-                        && (write_occu() <= low_watermark_) 
-                        && !any_write_queues_full();
+    bool move_to_reads = read_occu() > 0
+                            && (write_occu() <= low_watermark_) 
+                            && !any_write_queues_full();
+    in_write_mode_ = !move_to_reads;
+
+    if (!in_write_mode_)
+        owning_channel_->update_modal_stats_post_transition();
 }
 
 void
 DRAMScheduler::try_switch_to_writes()
 {
-    if (in_write_mode_ || in_transition_)
+    if (in_write_mode_)
         return;
 
-    in_transition_ = (read_occu() == 0 && write_occu() > 0)
+    in_write_mode_ = (read_occu() == 0 && write_occu() > 0)
                      || (write_occu() >= high_watermark_ || any_write_queues_full());
 
     // Compute write counts (using `pending_writes_`)
-    if (in_transition_)
+    if (in_write_mode_)
     {
         write_counts_array write_cnts{};
         for (uint64_t x : pending_writes_)
@@ -267,16 +297,6 @@ DRAMScheduler::try_switch_to_writes()
                     owning_channel_->s_tot_write_queue_std_,
                     owning_channel_->s_tot_write_queue_minmax_diff_);
 #endif
-    }
-}
-
-void
-DRAMScheduler::try_to_transition()
-{
-    if (in_transition_ && active_buffer_.empty())
-    {
-        in_transition_ = false;
-        in_write_mode_ = !in_write_mode_;
 
         owning_channel_->update_modal_stats_post_transition();
     }
