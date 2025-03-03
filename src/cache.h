@@ -5,6 +5,8 @@
 #ifndef CACHE_h
 #define CACHE_h
 
+#include "constants.h"
+
 #include "cache/dead_block/base.h"
 #include "cache/partitioning/base.h"
 #include "cache/entry.h"

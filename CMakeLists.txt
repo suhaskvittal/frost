@@ -9,6 +9,7 @@ project(Frost VERSION 1.0)
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     set(COMPILE_OPTIONS
         -Ofast
+        -flto=auto
         -fstrict-aliasing
         -march=native
         -Wno-deprecated
@@ -91,6 +92,7 @@ if (USE_DRAMSIM3)
 else()
     set(MAIN_SIM_FILES ${MAIN_SIM_FILES}
                 src/dram.cpp
+                src/dram/address.cpp
                 src/dram/channel.cpp
                 src/dram/command.cpp
                 src/dram/alt_scheduler.cpp

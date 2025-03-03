@@ -40,18 +40,29 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans)
         size_t channel = dram_channel(out[0].entry.address);
         if (write_mode_[channel])
         {
-            // Flush entire virtual buffer:
-            cset_type& s = csets_[cache_set_index<IMPL>(out[0].entry.address)];
-            for (auto& e : s)
-            {
-                if (e.valid && e.dirty && e.in_virtual_buffer)
-                {
-                    out.emplace_back(std::move(e), 0);  // Don't care about LRU position
+            size_t mshr_avail = IMPL::NUM_MSHR 
+                                    - __TEMPLATE_PARENT__::mshr_.size()
+                                    - __TEMPLATE_PARENT__::writeback_queue_.size() - 1;
 
-                    // Invalidate entry:
-                    e.valid = false;
-                    e.dirty = false;
-                    e.in_virtual_buffer = false;
+            if (mshr_avail > 0)
+            {
+                // Flush entire virtual buffer:
+                cset_type& s = csets_[cache_set_index<IMPL>(out[0].entry.address)];
+                for (auto& e : s)
+                {
+                    if (e.valid && e.dirty && e.in_virtual_buffer)
+                    {
+                        out.emplace_back(std::move(e), 0);  // Don't care about LRU position
+
+                        // Invalidate entry:
+                        e.valid = false;
+                        e.dirty = false;
+                        e.in_virtual_buffer = false;
+
+                        --mshr_avail;
+                        if (mshr_avail == 0)
+                            break;
+                    }
                 }
             }
         }
