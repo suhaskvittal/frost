@@ -43,6 +43,7 @@ int OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS;
  * */
 uint64_t OPT_CACHE_PARTITION_UPDATE_CYCLES;
 size_t OPT_SSRH_COLUMN_COUNT;
+size_t OPT_VWQ_WAYS;
 
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
@@ -88,6 +89,7 @@ int main(int argc, char* argv[])
                 // Cache:
                 {"cpart_update_freq", "Number of cycles between cache partitioning updates", "5000000"},
                 {"ssrh_column_count", "Number of column bits to include in tag", "2"},
+                {"vwq_ways", "number of virtual write queue ways", "4"},
 
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
@@ -103,6 +105,7 @@ int main(int argc, char* argv[])
 
     ARGS("cpart_update_freq", OPT_CACHE_PARTITION_UPDATE_CYCLES);
     ARGS("ssrh_column_count", OPT_SSRH_COLUMN_COUNT);
+    ARGS("vwq_ways", OPT_VWQ_WAYS);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 

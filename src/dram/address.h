@@ -50,6 +50,10 @@ constexpr size_t dram_col_bit_index(size_t);
 
 #include "address/random.inl"
 
+#elif defined(DRAM_AM_TEST)
+
+#include "address/testmap.inl"
+
 #endif
 
 ////////////////////////////////////////////////////////////////////////////

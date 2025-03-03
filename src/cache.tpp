@@ -224,6 +224,9 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
     size_t idx = cache_set_index<IMPL>(trans.address);
     cset_type& s = csets_[idx];
 
+    // Update dead block predictor:
+    dead_block_pred_->update_on_probe_or_fill(trans);
+
     // Update partitioning policies:
     partition_manager_->update_on_probe(trans);
 
@@ -235,7 +238,6 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
         it->dirty |= trans.is_write();
         
         // Invoke dead block predictor:
-        dead_block_pred_->update_on_probe_or_fill(trans);
         it->likely_dead = dead_block_pred_->predict_if_dead(trans);
 
         // If `in_virtual_buffer` bit is set, then unset it (invalidation from virtual buffer)

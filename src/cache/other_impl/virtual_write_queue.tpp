@@ -20,12 +20,12 @@ __TEMPLATE_CLASS__::tick()
     __TEMPLATE_PARENT__::tick();
 
     // handle when virtual write queue is too large:
-    if (!in_write_mode_ && queue_size_ >= VWQ_HIGH_WATERMARK)
+    if (!in_write_mode_ && queue_size_ >= high_watermark_)
     {
         in_write_mode_ = true;
         next_it_ = critical_map_.begin();
     }
-    else if (in_write_mode_ && queue_size_ < VWQ_LOW_WATERMARK)
+    else if (in_write_mode_ && queue_size_ < low_watermark_)
         in_write_mode_ = false;
 
     // Issue writebacks to memory controller (need to reach below low watermark)
@@ -59,6 +59,7 @@ __TEMPLATE_CLASS__::tick()
         else
             ++next_it_;
 
+        ++s_eager_writebacks_;
         ++s_writebacks_;
     }
 }
@@ -99,6 +100,7 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
     if (cnt == 0)
         critical_map_.erase(it);
 
+    ++s_eager_writebacks_;
     ++s_writebacks_;
 }
 
@@ -166,7 +168,7 @@ __TEMPLATE_CLASS__::find_dirty_way(cset_type& s)
 __TEMPLATE_HEADER__ inline size_t
 __TEMPLATE_CLASS__::count_dirty_lines_in_vwq_ways(const cset_type& s) const
 {
-    std::array<CacheEntry, VWQ_WAYS> vwq_ways;
+    std::vector<CacheEntry> vwq_ways(OPT_VWQ_WAYS);
     std::partial_sort_copy(s.begin(), s.end(), vwq_ways.begin(), vwq_ways.end(),
             [] (const auto& x, const auto& y) 
             { 

@@ -22,12 +22,12 @@
 /*
  * UCP implementation:
  * */
-template <class IMPL>
+template <class IMPL, size_t UMON_SETS=128>
 struct UMON
 {
     using ctr_type  = size_t;
     using ctr_array = std::vector<ctr_type>;
-    using atd_type = AuxTagDirectory<IMPL, 2048>;
+    using atd_type = AuxTagDirectory<IMPL, UMON_SETS>;
 
     ctr_array hit_counters;
     ctr_type  total_misses =0;
@@ -38,12 +38,12 @@ struct UMON
         :hit_counters(IMPL::NUM_WAYS, 0)
     {}
 
-    inline ctr_type utility(size_t w) const
+    inline ssize_t utility(size_t w) const
     {
         return std::reduce(hit_counters.begin()+w, hit_counters.end(), total_misses);
     }
 
-    inline ctr_type utility_difference(size_t a, size_t b) const
+    inline ssize_t utility_difference(size_t a, size_t b) const
     {
         return std::reduce(hit_counters.begin()+a, hit_counters.begin()+b, 0);
     }

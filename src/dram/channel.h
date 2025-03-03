@@ -158,17 +158,14 @@ private:
      * not defined in `Cache` but in a different class can be used.
      * */
     template <class CACHE_TYPE>
-    void start_write_mode(std::unique_ptr<CACHE_TYPE>& c)
+    void cache_toggle_write_mode(std::unique_ptr<CACHE_TYPE>& c, bool w)
     {
+        if constexpr (cache_type_traits::is_mcp_cache<typename CACHE_TYPE::parent_type>::value)
+            c->toggle_write_mode(channel_id_, w);
     }
 
     template <class CACHE_TYPE>
-    void end_write_mode(std::unique_ptr<CACHE_TYPE>& c)
-    {
-    }
-
-    template <class CACHE_TYPE>
-    void send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>& c)
+    void cache_send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>& c)
     {
         if constexpr (cache_type_traits::is_virtual_write_queue<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);

@@ -191,7 +191,7 @@ DRAM::print_stats(std::ostream& out)
 
     VecStat<double, DRAM_CHANNELS> bandwidth;
     for (size_t i = 0; i < DRAM_CHANNELS; i++)
-        bandwidth[i] = static_cast<double>(reads[i] * LINESIZE) / (GL_DRAM_CYCLE / freq_ghz_);
+        bandwidth[i] = static_cast<double>(reads[i] * LINESIZE) / ((GL_DRAM_CYCLE - tRFC*refreshes[i]) / freq_ghz_);
 
     print_vecstat(out, "DRAM", "AVERAGE_READ_BANDWIDTH", bandwidth, VecAccMode::HMEAN);
 

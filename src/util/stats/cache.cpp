@@ -33,7 +33,7 @@ print_llc_stats(std::ostream& out)
         print_stat(out, "LLC", "POL_TWO_FILLS", GL_LLC->s_dueling_pol2_installs_);
     }
     
-    if (LLCache::WRITEBACK_POLICY != CacheWritebackPolicy::NORMAL)
+    if (GL_LLC->s_eager_writebacks_ > 0)
     {
         out << "\n";
         print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);

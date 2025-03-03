@@ -74,7 +74,7 @@ DRAMChannel::tick()
     // If the write queue is looking empty, then request the LLC to get some writebacks so
     // writes are available when the read queue becomes empty.
     if (scheduler_->write_occu() < virtual_write_queue_watermark_)
-        send_demand_writeback_request(GL_LLC);
+        cache_send_demand_writeback_request(GL_LLC);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -191,7 +191,6 @@ DRAMChannel::update_modal_stats_post_transition()
         if (scheduler_->write_occu() >= scheduler_->high_watermark_ || scheduler_->any_write_queues_full())
             ++s_num_forced_drains_;
 
-        start_write_mode(GL_LLC);
         writes_issued_per_bank_.fill(0);
     }
     else
@@ -204,9 +203,11 @@ DRAMChannel::update_modal_stats_post_transition()
                                                 s_tot_write_issue_std_,
                                                 s_tot_write_issue_minmax_diff_);
 #endif
-        end_write_mode(GL_LLC);
+
         writes_issued_per_bank_.fill(0);
     }
+
+    cache_toggle_write_mode(GL_LLC, scheduler_->is_in_write_mode());
 }
 
 ////////////////////////////////////////////////////////////////////////////

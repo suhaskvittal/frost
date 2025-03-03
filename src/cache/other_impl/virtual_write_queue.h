@@ -16,16 +16,20 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+extern size_t OPT_VWQ_WAYS;
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 template <class IMPL, class NEXT_TYPE>
 class VirtualWriteQueue : public __TEMPLATE_PARENT__
 {
 public:
-    constexpr static size_t VWQ_WAYS = IMPL::NUM_WAYS / 4;
-    constexpr static size_t VWQ_HIGH_WATERMARK = (IMPL::NUM_SETS*VWQ_WAYS) / 2;
-    constexpr static size_t VWQ_LOW_WATERMARK = VWQ_HIGH_WATERMARK - DRAM_WQ_SIZE;
-
     using __TEMPLATE_PARENT__::s_writebacks_;
     using __TEMPLATE_PARENT__::s_eager_writebacks_;
+
+    const size_t high_watermark_;
+    const size_t low_watermark_;
 private:
     using critical_map_type = std::unordered_map<size_t, size_t>;
     /*
@@ -44,6 +48,12 @@ public:
     using typename __TEMPLATE_PARENT__::way_iterator;
     using typename __TEMPLATE_PARENT__::fill_result_type;
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
+
+    VirtualWriteQueue(std::string cache_name, typename __TEMPLATE_PARENT__::next_ptr& n)
+        :__TEMPLATE_PARENT__(cache_name, n),
+        high_watermark_((IMPL::NUM_SETS * OPT_VWQ_WAYS)/2),
+        low_watermark_(high_watermark_ - DRAM_WQ_SIZE)
+    {}
 
     void tick(void) override;
     void channel_request_demand_writeback(size_t channel_id);

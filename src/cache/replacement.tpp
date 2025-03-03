@@ -69,43 +69,6 @@ __TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
     {
         return cset_get_way_in_lru_position(s.begin(), s.end(), 0);
     }
-    else if constexpr (std::is_same<typename IMPL::PARTITION_MANAGER_TYPE, MinimalistPartitionManager<IMPL>>::value)
-    {
-        size_t max_v_ways =
-            static_cast<MinimalistPartitionManager<IMPL>*>(partition_manager_.get())->get_victim_part();
-        size_t v_count = std::count_if(s.begin(), s.end(),
-                                [] (const auto& e) { return e.valid && e.dirty && e.in_virtual_buffer; });
-
-        auto v_it = s.end();
-
-        while (true)
-        {
-            // Select LRU victim accordingly:
-            v_it = std::min_element(s.begin(), s.end(),
-                            [evict_virtual = (v_count >= max_v_ways)] 
-                            (const auto& x, const auto& y)
-                            {
-                                if (x.in_virtual_buffer == y.in_virtual_buffer)
-                                    return x.timestamp < y.timestamp;
-                                else
-                                    return evict_virtual == x.in_virtual_buffer;
-                            });
-            
-            // If `*v_it` is dirty, then move it to the virtual buffer and choose a new victim:
-            if (v_it->dirty && !v_it->in_virtual_buffer)
-            {
-                v_it->in_virtual_buffer = true;
-                ++v_count;
-            }
-            else
-            {
-                // We have found an appropriate victim
-                break;
-            }
-        }
-
-        return v_it;
-    }
     else
     {
         // So, we need to select carefully, first compute the number of ways currently 
