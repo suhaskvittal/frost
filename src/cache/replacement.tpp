@@ -13,7 +13,6 @@ __TEMPLATE_CLASS__::update_entry(CacheEntry& e)
 {
     e.timestamp = GL_CYCLE;
     e.rrpv = RRIP_MAX;
-    e.in_virtual_buffer = false;
 }
 
 __TEMPLATE_HEADER__ void

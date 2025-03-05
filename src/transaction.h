@@ -40,6 +40,7 @@ struct Transaction
      * Other optional variables:
      * */
     int8_t dram_issue_prio =0;
+    bool   dram_is_demand_writeback =false;
 
     inline bool is_read(void) const
     {

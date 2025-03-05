@@ -19,14 +19,21 @@ __TEMPLATE_CLASS__::tick()
 {
     __TEMPLATE_PARENT__::tick();
 
+    if (GL_CYCLE % 10'000'000 == 0)
+        std::cout << "virtual occu = " << queue_size_ << "\n";
+
     // handle when virtual write queue is too large:
     if (!in_write_mode_ && queue_size_ >= high_watermark_)
     {
+        std::cout << "WRITE MODE START\n";
         in_write_mode_ = true;
         next_it_ = critical_map_.begin();
     }
     else if (in_write_mode_ && queue_size_ < low_watermark_)
+    {
+        std::cout << "WRITE MODE END\n";
         in_write_mode_ = false;
+    }
 
     // Issue writebacks to memory controller (need to reach below low watermark)
     if (in_write_mode_ && mshr_has_space())
@@ -40,18 +47,17 @@ __TEMPLATE_CLASS__::tick()
 
         // Search for dirty LRU way:
         auto dirty_it = find_dirty_way(s);
-        if (dirty_it != s.end())
-        {
-            // Enqueue into writeback queue: note that since there is not an evictor, we don't really know
-            // which core is causing this, so we set `coreid` to `NUM_THREADS`
-            Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
-            enqueue_writeback(wb_trans);
+    
+        // Enqueue into writeback queue: note that since there is not an evictor, we don't really know
+        // which core is causing this, so we set `coreid` to `NUM_THREADS`
+        Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
+        wb_trans.dram_is_demand_writeback = true;
+        enqueue_writeback(wb_trans);
 
-            // Clean the selected dirty way and update `next_it_` and `critical_map_`
-            dirty_it->dirty = false;
-            --cnt;
-            --queue_size_;
-        }
+        // Clean the selected dirty way and update `next_it_` and `critical_map_`
+        dirty_it->dirty = false;
+        --cnt;
+        --queue_size_;
 
         // update criticality:
         if (cnt == 0)
@@ -89,6 +95,7 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
 
     // Enqueue into writeback queue:
     Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
+    wb_trans.dram_is_demand_writeback = true;
     enqueue_writeback(wb_trans);
 
     dirty_it->dirty = false;

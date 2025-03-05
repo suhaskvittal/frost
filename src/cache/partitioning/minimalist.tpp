@@ -84,6 +84,9 @@ __TEMPLATE_CLASS__::update_partition(part_iterator begin, part_iterator end)
         c >>= 1;
     umon_.total_misses >>= 1;
 
+    for (auto& c : wb_buckets_)
+        c >>= 1;
+
 #if defined(UCP_ENABLE_LOGGER)
     mcp_logger_.flush();
 #endif

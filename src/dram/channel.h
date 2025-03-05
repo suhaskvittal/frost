@@ -85,7 +85,7 @@ public:
     const double freq_ghz_;
     const size_t channel_id_;
 
-    const size_t virtual_write_queue_watermark_ =(0.9 * DRAM_WQ_SIZE);
+    const size_t virtual_write_queue_watermark_;
 private:
 #if defined(DRAM_USE_ALT_SCHEDULER)
     using scheduler_impl = AlternateDRAMScheduler;
@@ -168,6 +168,9 @@ private:
     void cache_send_demand_writeback_request(std::unique_ptr<CACHE_TYPE>& c)
     {
         if constexpr (cache_type_traits::is_virtual_write_queue<typename CACHE_TYPE::parent_type>::value)
+            c->channel_request_demand_writeback(channel_id_);
+
+        if constexpr (cache_type_traits::is_mcp_cache<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);
     }
 

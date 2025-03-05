@@ -264,7 +264,7 @@ DRAMScheduler::try_switch_to_reads()
         return;
 
     bool move_to_reads = read_occu() > 0
-                            && (write_occu() <= low_watermark_) 
+                            && (write_occu() < low_watermark_) 
                             && !any_write_queues_full();
     in_write_mode_ = !move_to_reads;
 
@@ -278,7 +278,7 @@ DRAMScheduler::try_switch_to_writes()
     if (in_write_mode_)
         return;
 
-    in_write_mode_ = (read_occu() == 0 && write_occu() > 0)
+    in_write_mode_ = (read_occu() == 0 && write_occu() >= low_watermark_)
                      || (write_occu() >= high_watermark_ || any_write_queues_full());
 
     // Compute write counts (using `pending_writes_`)

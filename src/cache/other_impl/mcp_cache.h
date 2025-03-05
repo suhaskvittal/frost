@@ -27,40 +27,87 @@ protected:
     using __TEMPLATE_PARENT__::csets_;
     using __TEMPLATE_PARENT__::partition_manager_;
 private:
-    using channel_bitvec_type = std::array<bool, DRAM_CHANNELS>;
+    using vbuf_count_map_type = std::unordered_map<size_t, size_t>;
+    using bankgroup_cycle_array = std::array<std::array<uint64_t, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
+    
+    vbuf_count_map_type           critical_map_;
+    vbuf_count_map_type::iterator next_it_;
 
-    channel_bitvec_type write_mode_{};
+    bankgroup_cycle_array cooldown_cycle_{};
+    
+    size_t total_v_count_ =0;
+    bool in_write_mode_ =false;
 public:
     using __TEMPLATE_PARENT__::Cache;
     using typename __TEMPLATE_PARENT__::way_iterator;
     using typename __TEMPLATE_PARENT__::fill_result_type;
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
 
+    void tick(void) override;
+    void channel_request_demand_writeback(size_t channel_id);
+
     inline void toggle_write_mode(size_t channel_id, bool w)
     {
-        write_mode_[channel_id] = w;
         mcp_manager()->toggle_write_mode(channel_id, w);
     }
 
-    void channel_enter_write_mode(size_t channel_id);
-    void channel_exit_write_mode(size_t channel_id);
+    inline size_t high_watermark(void) const
+    {
+        size_t v = const_mcp_manager()->get_victim_part();
+        return 0.75 * v * IMPL::NUM_SETS;
+    }
+
+    inline size_t low_watermark(void) const
+    {
+        size_t v = const_mcp_manager()->get_victim_part();
+        return 0.25 * v * IMPL::NUM_SETS;
+    }
 protected:
+    bool probe(const Transaction&) override;
+    bool mark_dirty(const Transaction&) override;
     multi_fill_result_type fill(const Transaction&) override;
 
     way_iterator find_victim(size_t set_index, cset_type&, const Transaction&) override;
     way_iterator repl_lru_mcp(size_t set_index, cset_type&, const Transaction&);
 
+    void update_criticality_via_count(size_t idx);
+
     inline MinimalistPartitionManager<IMPL>* mcp_manager(void)
+    {
+        return const_cast<MinimalistPartitionManager<IMPL>*>(const_mcp_manager());
+    }
+
+    inline const MinimalistPartitionManager<IMPL>* const_mcp_manager(void) const
     {
         if constexpr (!std::is_same<typename IMPL::PARTITION_MANAGER_TYPE, MinimalistPartitionManager<IMPL>>::value)
         {
             std::cerr << "[ MCPCache::mcp_manager ] partition manager type is not `MinimalistPartitionManager`\n";
             exit(1);
         }
-        return static_cast<MinimalistPartitionManager<IMPL>*>(partition_manager_.get());
+        return static_cast<const MinimalistPartitionManager<IMPL>*>(partition_manager_.get());
+    }
+
+    inline void verify_virtual_buffer_contents(size_t idx, std::string where) const
+    {
+        const cset_type& s = csets_.at(idx);
+
+        size_t v_count = critical_map_.count(idx) ? critical_map_.at(idx) : 0;
+        auto test_count = std::count_if(s.begin(), s.end(),
+                                [] (const auto& e) { return e.dirty && e.in_virtual_buffer; });
+
+        if (test_count != v_count)
+        {
+            std::cerr << "[ " << where << " ] virtual buffer count mismatch: (expected) " 
+                << v_count << ", (actual) " << test_count << "\n";
+            std::cerr << "set contents:\n";
+            for (auto& e : s)
+                std::cerr << "\tvalid = " << e.valid << ", dirty = " <<  e.dirty << ", virtual = " << e.in_virtual_buffer << "\n";
+            exit(1);
+        }
     }
 
     using __TEMPLATE_PARENT__::enqueue_writeback;
+    using __TEMPLATE_PARENT__::mshr_has_space;
 };
 
 ////////////////////////////////////////////////////////////////////////////

@@ -23,6 +23,7 @@ DRAMChannel::DRAMChannel(size_t channel_id, double freq_ghz)
     :freq_ghz_(freq_ghz),
     channel_id_(channel_id),
     scheduler_(new scheduler_impl(this, state_)),
+    virtual_write_queue_watermark_(DRAM_WQ_SIZE * OPT_DRAM_HIGH_WATERMARK * 0.8),
 #if defined(DRAM_ENABLE_LOGGER)
     dram_logger_("dram_channel." + std::to_string(channel_id) + ".log")
 #else
@@ -54,20 +55,6 @@ DRAMChannel::tick()
     }
 
     scheduler_->update_state();
-
-#if defined(DRAM_ENABLE_LOGGER)
-    if (scheduler_->is_in_write_mode() != logger_in_write_mode_)
-    {
-        if (logger_in_write_mode_)
-            dram_logger_ << "----------- WRITE MODE END ------------";
-        else
-            dram_logger_ << "---------- WRITE MODE BEGIN -----------";
-
-        dram_logger_ << "\tCYCLE = " << GL_DRAM_CYCLE << "\n";
-
-        logger_in_write_mode_ = scheduler_->is_in_write_mode();
-    }
-#endif
 
     issue_next_command();
 
@@ -129,18 +116,21 @@ DRAMChannel::issue_next_command()
         {
             ++row_hits;
 #if defined(DRAM_ENABLE_LOGGER)
-            tmp_logger_ << "\tis row buffer hit";
+            tmp_logger_ << std::setw(16) << std::left << "\tis row buffer hit";
 #endif
         }
         else
         {
 #if defined(DRAM_ENABLE_LOGGER)
-            tmp_logger_ << "\tis NOT row buffer hit";
+            tmp_logger_ << std::setw(16) << std::left << "\tis NOT row buffer hit";
 #endif
         }
 #if defined(DRAM_ENABLE_LOGGER)
-        tmp_logger_ << "\tcycles since last bank access = " << (GL_DRAM_CYCLE - b.last_access_cycle)
-                    << "\t+" << (GL_DRAM_CYCLE - logger_last_cas_cycle_);
+        tmp_logger_ << "\t+" << std::setw(5) << std::left << (GL_DRAM_CYCLE - logger_last_cas_cycle_);
+    
+        if (q_entry.trans.is_write())
+            tmp_logger_ << "\tis demand writeback = " << q_entry.trans.dram_is_demand_writeback;
+
         logger_last_cas_cycle_ = GL_DRAM_CYCLE;
 #endif
         b.last_access_cycle = GL_DRAM_CYCLE;
@@ -192,6 +182,10 @@ DRAMChannel::update_modal_stats_post_transition()
             ++s_num_forced_drains_;
 
         writes_issued_per_bank_.fill(0);
+
+#if defined(DRAM_ENABLE_LOGGER)
+        dram_logger_ << "----------- WRITE MODE START ------------ CYCLE = " << GL_DRAM_CYCLE << "\n";
+#endif
     }
     else
     {
@@ -204,7 +198,15 @@ DRAMChannel::update_modal_stats_post_transition()
                                                 s_tot_write_issue_minmax_diff_);
 #endif
 
+        size_t tot_writes = std::reduce(writes_issued_per_bank_.begin(), writes_issued_per_bank_.end(), 0);
+
         writes_issued_per_bank_.fill(0);
+        
+#if defined(DRAM_ENABLE_LOGGER)
+        dram_logger_ << "----------- WRITE MODE END ------------ CYCLE = " << GL_DRAM_CYCLE
+            << "\tCOUNT = " << tot_writes
+            << "\tTIME IN DRAIN = " << (GL_DRAM_CYCLE - drain_start_cycle_) << "\n";
+#endif
     }
 
     cache_toggle_write_mode(GL_LLC, scheduler_->is_in_write_mode());

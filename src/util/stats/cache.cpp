@@ -37,6 +37,10 @@ print_llc_stats(std::ostream& out)
     {
         out << "\n";
         print_stat(out, "LLC", "EAGER_WRITEBACKS", GL_LLC->s_eager_writebacks_);
+        if (GL_LLC->s_demand_writebacks_ > 0)
+        {
+            print_stat(out, "LLC", "DEMAND_WRITEBACKS", GL_LLC->s_eager_writebacks_);
+        }
     }
 
     out << "\n";

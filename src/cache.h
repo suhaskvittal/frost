@@ -82,6 +82,7 @@ public:
     uint32_t s_evictions_ =0;
     uint32_t s_writebacks_ =0;
     uint32_t s_eager_writebacks_ =0;
+    uint32_t s_demand_writebacks_ =0;
     uint32_t s_bypasses_ =0;
     uint32_t s_dead_block_evictions_ =0;
     /*

@@ -93,6 +93,9 @@ __TEMPLATE_CLASS__::tick()
         const auto& trans = writeback_queue_.front();
         if (next_->can_accept(trans) && next_->add_incoming(trans))
         {
+            if (trans.dram_is_demand_writeback)
+                ++s_demand_writebacks_;
+
             pending_writebacks_.erase(pending_writebacks_.find(trans.address));
             writeback_queue_.pop_front();
         }
