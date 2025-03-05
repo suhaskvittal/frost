@@ -54,7 +54,7 @@ public:
     inline size_t high_watermark(void) const
     {
         size_t v = const_mcp_manager()->get_victim_part();
-        return 0.75 * v * IMPL::NUM_SETS;
+        return 0.9 * v * IMPL::NUM_SETS;
     }
 
     inline size_t low_watermark(void) const

@@ -148,7 +148,7 @@ Core::operate_rob()
         inst_ptr inst = rob_.front();
         if (GL_CYCLE < inst->cycle_done)
         {
-            if (GL_CYCLE - rob_stall_start_cycle_ > 1'000'000)
+            if (GL_CYCLE - rob_stall_start_cycle_ > 10'000'000)
             {
                 // Simulator is deadlocked:
                 std::cerr << "\nCore " << (coreid_+0) << " deadlock in cycle " << GL_CYCLE << " detected:\n";

@@ -52,7 +52,7 @@ public:
     VirtualWriteQueue(std::string cache_name, typename __TEMPLATE_PARENT__::next_ptr& n)
         :__TEMPLATE_PARENT__(cache_name, n),
         high_watermark_((IMPL::NUM_SETS * OPT_VWQ_WAYS)/2),
-        low_watermark_(high_watermark_ - DRAM_WQ_SIZE)
+        low_watermark_(high_watermark_ - DRAM_CHANNELS*DRAM_WQ_SIZE)
     {}
 
     void tick(void) override;

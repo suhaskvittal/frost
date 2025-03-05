@@ -19,19 +19,14 @@ __TEMPLATE_CLASS__::tick()
 {
     __TEMPLATE_PARENT__::tick();
 
-    if (GL_CYCLE % 10'000'000 == 0)
-        std::cout << "virtual occu = " << queue_size_ << "\n";
-
     // handle when virtual write queue is too large:
     if (!in_write_mode_ && queue_size_ >= high_watermark_)
     {
-        std::cout << "WRITE MODE START\n";
         in_write_mode_ = true;
         next_it_ = critical_map_.begin();
     }
     else if (in_write_mode_ && queue_size_ < low_watermark_)
     {
-        std::cout << "WRITE MODE END\n";
         in_write_mode_ = false;
     }
 

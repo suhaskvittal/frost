@@ -17,14 +17,15 @@ __TEMPLATE_CLASS__::tick()
 {
     __TEMPLATE_PARENT__::tick();
 
-    if (GL_CYCLE % 10'000'000 == 0)
-        std::cout << "virtual occu = " << total_v_count_ << "\n";
-    /*
-
-    // check if we need to switch into write mode:
-
     const size_t high_wm = high_watermark();
     const size_t low_wm = low_watermark();
+
+    if (GL_CYCLE % 10'000'000 == 0)
+        std::cout << "virtual occu = " << total_v_count_ << ", HIGH = " << high_wm << ", LOW = " << low_wm << "\n";
+
+    // if the high watermark == 0, then we have no victim buffer (full set usage by workloads)
+    if (high_wm == 0)
+        return;
 
     // if the high watermark == 0, then we have no victim buffer (full set usage by workloads)
     if (high_wm == 0)
@@ -38,12 +39,13 @@ __TEMPLATE_CLASS__::tick()
     }
     else if (in_write_mode_ && total_v_count_ < low_wm)
     {
-        std::cout << "WRITE MODE END\n";
         in_write_mode_ = false;
+        std::cout << "WRITE MODE END\n";
     }
 
     if (in_write_mode_ && mshr_has_space())
     {
+        /*
         if (next_it_ == critical_map_.end())
             next_it_ = critical_map_.begin();
 
@@ -70,8 +72,36 @@ __TEMPLATE_CLASS__::tick()
 
         ++s_eager_writebacks_;
         ++s_writebacks_;
+        */
+        size_t idx = fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_SETS);
+        ssize_t tries = 2048;
+        while (!critical_map_.count(idx) && tries--)
+            idx = fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_SETS);
+
+        if (tries < 0)
+            exit(1);
+
+        // Generate a victim -- if it is in the virtual buffer then queue it for writeback:
+        Transaction fake_trans{};
+        cset_type& s = csets_[idx];
+
+        auto v_it = repl_lru_mcp(idx, s, fake_trans, true);
+
+        if (v_it->dirty)
+        {
+            Transaction wb_trans{NUM_THREADS, 0, v_it->address, nullptr, Transaction::Type::WRITE};
+            wb_trans.dram_is_demand_writeback = true;
+            enqueue_writeback(wb_trans);
+            
+            // Invalidate line:
+            v_it->dirty = false;
+
+            ++s_eager_writebacks_;
+            ++s_writebacks_;
+        }
+
+        update_criticality_via_count(idx);
     }
-    */
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -83,37 +113,34 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
     if (in_write_mode_ || !mshr_has_space() || critical_map_.empty())
         return;
 
-    auto it = std::find_if(critical_map_.begin(), critical_map_.end(),
-                    [channel_id, this] (const auto& p) 
-                    { 
-                        return dram_channel(p.first) == channel_id;
-                    });
+    size_t idx = fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_SETS);
+    ssize_t tries = 2048;
+    while (dram_channel(idx) != channel_id && tries--)
+        idx = fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_SETS);
 
-    if (it == critical_map_.end())
+    if (tries < 0)
         return;
 
-    // Get line from set to writeback:
-    auto& [idx, cnt] = *it;
+    // Generate a victim -- if it is in the virtual buffer then queue it for writeback:
+    Transaction fake_trans{};
     cset_type& s = csets_[idx];
 
-    auto dirty_it = std::find_if(s.begin(), s.end(),
-                            [] (const auto& e) { return e.valid && e.dirty && e.in_virtual_buffer; });
+    auto v_it = repl_lru_mcp(idx, s, fake_trans, false);
 
-    Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
-    wb_trans.dram_is_demand_writeback = true;
-    enqueue_writeback(wb_trans);
-    
-    // Invalidate line:
-    dirty_it->dirty = false;
+    if (v_it->dirty && v_it->in_virtual_buffer)
+    {
+        Transaction wb_trans{NUM_THREADS, 0, v_it->address, nullptr, Transaction::Type::WRITE};
+        wb_trans.dram_is_demand_writeback = true;
+        enqueue_writeback(wb_trans);
+        
+        // Invalidate line:
+        v_it->dirty = false;
 
-    --cnt;
-    --total_v_count_;
+        ++s_eager_writebacks_;
+        ++s_writebacks_;
+    }
 
-    if (cnt == 0)
-        critical_map_.erase(it);
-
-    ++s_eager_writebacks_;
-    ++s_writebacks_;
+    update_criticality_via_count(idx);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -167,7 +194,7 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
     if (v_it == s.end())
     {
         if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
-            v_it = repl_lru_mcp(idx, s, trans);
+            v_it = repl_lru_mcp(idx, s, trans, false);
         else
             v_it = __TEMPLATE_PARENT__::find_victim(idx, s, trans);
     }
@@ -179,7 +206,7 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::way_iterator
-__TEMPLATE_CLASS__::repl_lru_mcp(size_t idx, cset_type& s, const Transaction& trans)
+__TEMPLATE_CLASS__::repl_lru_mcp(size_t idx, cset_type& s, const Transaction& trans, bool stop_early)
 {
     auto v_it = s.end();
 
@@ -192,17 +219,20 @@ __TEMPLATE_CLASS__::repl_lru_mcp(size_t idx, cset_type& s, const Transaction& tr
     // Move dirty non-virtual victim lines to the virtual buffer
     while (true)
     {
+        bool evict_virtual = (v_count > max_v_ways) || stop_early;
         v_it = std::min_element(s.begin(), s.end(),
-                        [evict_virtual=(v_count > max_v_ways)]
-                        (const auto& x, const auto& y)
+                        [evict_virtual] (const auto& x, const auto& y)
                         {
-                            if (x.in_virtual_buffer == y.in_virtual_buffer)
+                            bool vx = x.in_virtual_buffer && x.dirty,
+                                 vy = y.in_virtual_buffer && y.dirty;
+
+                            if (vx == vy)
                                 return x.timestamp < y.timestamp;
                             else
-                                return evict_virtual == x.in_virtual_buffer;
+                                return evict_virtual == vx;
                         });
 
-        if (v_it->dirty && !v_it->in_virtual_buffer && v_count < max_v_ways)
+        if (v_it->dirty && !v_it->in_virtual_buffer)
         { 
             v_it->in_virtual_buffer = true;
             ++v_count;
