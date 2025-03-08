@@ -31,6 +31,13 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
     mshr_.reserve(IMPL::NUM_MSHR);
 
     partition_manager_->initialize_partition(partition_.begin(), partition_.end());
+
+#if defined(CACHE_ENABLE_UTILITY_TRACKER)
+    std::string output_file = cache_name_ + ".u.log";
+    
+    utr_ = utility_tracker_ptr(new utility_tracker_type{});
+    utr_out_ = std::ofstream(output_file);
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -39,6 +46,11 @@ __TEMPLATE_CLASS__::Cache(std::string cache_name, next_ptr& n)
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::warmup_access(const Transaction& trans)
 {
+    if (trans.is_write())
+        ++s_writes_[trans.coreid];
+    else
+        ++s_reads_[trans.coreid];
+
     if constexpr (!IMPL::WRITE_ALLOCATE)
     {
         if (trans.is_write())
@@ -122,6 +134,23 @@ __TEMPLATE_CLASS__::tick()
 
         partition_manager_->last_update_cycle_ = GL_CYCLE;
     }
+
+#if defined(CACHE_ENABLE_UTILITY_TRACKER)
+    // Write to output file:
+    if (GL_CYCLE % 5'000'000 == 0)
+    {
+        utr_out_ << "========================== CYCLE " << GL_CYCLE << " ===================================\n";
+
+        // Create header:
+        utr_out_ << std::setw(16) << std::left << "";  // Blank space for name
+        for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
+            utr_out_ << std::setw(8) << ("way_" + std::to_string(i));
+        utr_out_ << std::setw(8) << "***" << "\n";
+
+        dump_utility_info(utr_out_, utr_->hits.begin(), utr_->hits.end(), "hits");
+        dump_utility_info(utr_out_, utr_->writebacks.begin(), utr_->writebacks.end(), "writebacks");
+    }
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -236,20 +265,31 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
     auto it = cset_find(trans.address, s.begin(), s.end());
     if (it != s.end())
     {
-        // Update entry data:
-        update_entry(*it);
-        it->dirty |= trans.is_write();
-        
+        child_handle_probe_hit(s, it, trans);
+
         // Invoke dead block predictor:
         it->likely_dead = dead_block_pred_->predict_if_dead(trans);
 
         // If `in_virtual_buffer` bit is set, then unset it (invalidation from virtual buffer)
         it->in_virtual_buffer = false;
 
+#if defined(CACHE_ENABLE_UTILITY_TRACKER)
+        size_t w = IMPL::NUM_WAYS - cset_get_lru_position_of_entry(*it, s.begin(), s.end()) - 1;
+        ++utr_->hits[w];
+#endif
+
+        // Update entry data:
+        update_entry(*it);
+        it->dirty |= trans.is_write();
+
         return true;
     }
     else
     {
+#if defined(CACHE_ENABLE_UTILITY_TRACKER)
+        ++utr_->hits[IMPL::NUM_WAYS];
+#endif
+
         return false;
     }
 }
@@ -269,14 +309,25 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
     auto it = cset_find(trans.address, s.begin(), s.end());
     if (it != s.end())
     {
+        child_handle_mark_dirty_hit(s, it, trans);
+
         if (it->dirty)
             ++s_rewrites_[trans.coreid];
+
+#if defined(CACHE_ENABLE_UTILITY_TRACKER)
+        size_t w = IMPL::NUM_WAYS - cset_get_lru_position_of_entry(*it, s.begin(), s.end()) - 1;
+        ++utr_->writebacks[w];
+#endif
 
         it->dirty = true;
         return true;
     }
     else
     {
+#if defined(CACHE_ENABLE_UTILITY_TRACKER)
+        ++utr_->writebacks[IMPL::NUM_WAYS];
+#endif
+
         return false;
     }
 }
@@ -697,6 +748,20 @@ __TEMPLATE_CLASS__::add_mshr_entry(Transaction trans)
 
 #undef __TEMPLATE_HEADER__
 #undef __TEMPLATE_CLASS__
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+template <class ITER> void
+dump_utility_info(std::ostream& out, ITER begin, ITER end, std::string_view name)
+{
+    out << std::setw(16) << name;
+    for (auto it = begin; it != end; it++)
+        out << std::setw(8) << *it;
+    out << "\n";
+
+    std::fill(begin, end, 0);
+}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

@@ -35,12 +35,13 @@ struct CacheEntry
      * */
     uint64_t timestamp;
     int8_t  rrpv;
-    int8_t coreid =-1;
+    int8_t  coreid =-1;
 
     bool likely_dead =false;
     bool in_virtual_buffer =false;
 
-    CacheEntry(void) =default;
+    ssize_t test_evict_pos =-1;
+    bool    test_eager_writeback =false;
 };
 
 ////////////////////////////////////////////////////////////////////////////

@@ -25,6 +25,11 @@ inline constexpr bool repl_uses_set_dueling(CacheReplPolicy p)
     return p == CacheReplPolicy::DRRIP;
 }
 
+inline constexpr bool repl_is_rrip_based(CacheReplPolicy p)
+{
+    return p == CacheReplPolicy::SRRIP || p == CacheReplPolicy::DRRIP;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 

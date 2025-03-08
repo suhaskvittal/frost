@@ -9,6 +9,8 @@
 #include "cache/partitioning/ucp.h"
 #include "dram/address.h"
 
+extern size_t OPT_VWQ_WAYS;
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -65,7 +67,8 @@ public:
 
     inline size_t get_victim_part(void) const
     {
-        return victim_part_;
+//      return victim_part_;
+        return OPT_VWQ_WAYS;
     }
 private:
     void umon_fill(const Transaction&);

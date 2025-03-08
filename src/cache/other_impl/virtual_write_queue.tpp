@@ -46,7 +46,6 @@ __TEMPLATE_CLASS__::tick()
         // Enqueue into writeback queue: note that since there is not an evictor, we don't really know
         // which core is causing this, so we set `coreid` to `NUM_THREADS`
         Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
-        wb_trans.dram_is_demand_writeback = true;
         enqueue_writeback(wb_trans);
 
         // Clean the selected dirty way and update `next_it_` and `critical_map_`

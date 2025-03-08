@@ -266,7 +266,6 @@ print_config(std::ostream& out)
     list(out, "DRAM_tCK", "{tCK:.5f}");
     list(out, "DRAM_PAGE_POLICY", "{dram_page_policy}");
     list(out, "DRAM_SCHED_POLICY", "{dram_sched_policy}");
-    list(out, "DRAM_WRITE_POLICY", "{dram_write_policy}");
     list(out, "DRAM_QUEUE_SIZE", "{dram_rq_size}:{dram_wq_size} * {dram_queue_count}");
     list(out, "DRAM_ADDRESS_MAPPING", "{dram_am}");
 
@@ -288,9 +287,10 @@ print_config(std::ostream& out)
 void
 print_progress(std::ostream& out)
 {{
-    if (GL_CYCLE % {dot_size} == 0) {{
-        if (GL_CYCLE % {epoch_size} == 0) {{
-            out << "\nCYCLE = " << std::setw(4) << std::left << fmt_bignum(GL_CYCLE)
+    uint64_t cyc = GL_CYCLE - GL_CYCLE_WARMUP;
+    if (cyc % {dot_size} == 0) {{
+        if (cyc % {epoch_size} == 0) {{
+            out << "\nCYCLE = " << std::setw(4) << std::left << fmt_bignum(cyc)
                 << "[ INST:";
             for (size_t i = 0; i < NUM_THREADS; i++)
                 out << std::setw(7) << std::right << fmt_bignum(GL_CORES[i]->finished_inst_num_);

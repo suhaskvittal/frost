@@ -35,6 +35,7 @@ ArgParseResult::ArgParseResult(
             << std::setw(16) << std::left << defs << "\n";
     }
     help = ss.str();
+
     // Get required arguments
     if (argc < required.size())
         print_help_and_die();        
@@ -45,9 +46,11 @@ ArgParseResult::ArgParseResult(
         parse_data[arg] = std::string(argv[ii]);
         ++ii;
     }
+
     // Setup defaults
     for (const auto& [flag, desc, default_value] : optional)
         parse_data[flag] = default_value;
+
     // Parse optional arguments
     while (ii <= argc)
     {
@@ -61,8 +64,10 @@ ArgParseResult::ArgParseResult(
         ++ii;
         // Get value
         if (parse_data[opt].empty())
+        {
             // This is a flag
             parse_data[opt] = "y";
+        }
         else
         {
             if (ii > argc)

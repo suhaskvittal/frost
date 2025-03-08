@@ -89,9 +89,13 @@ ArgParseResult::operator()(std::string_view argname, T& argout)
     } 
     catch (...)
     {
-        std::cerr << "Could not parse data for " << argname << " as type \"" << typenamestr << "\"\n" << help;
+        std::cerr << "Could not parse data for \"" << argname << "\" as type \"" << typenamestr
+            << "\" -- got \"" << value << "\"\n" 
+            << help;
         exit(1);
     }
+
+    std::cout << "[ info ] set \"" << argname << "\" to \"" << value << "\"\n";
 }
 
 ////////////////////////////////////////////////////////////////

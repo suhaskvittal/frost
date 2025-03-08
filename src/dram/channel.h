@@ -69,6 +69,7 @@ public:
     uint32_t s_num_drains_ =0;
     uint32_t s_num_forced_drains_ =0;
     uint32_t s_tot_read_occu_at_drain_ =0;
+    uint32_t s_tot_read_occu_post_drain_ =0;
     uint32_t s_tot_write_occu_at_drain_ =0;
     uint64_t s_tot_drain_latency_ =0;
 
@@ -171,6 +172,9 @@ private:
             c->channel_request_demand_writeback(channel_id_);
 
         if constexpr (cache_type_traits::is_mcp_cache<typename CACHE_TYPE::parent_type>::value)
+            c->channel_request_demand_writeback(channel_id_);
+
+        if constexpr (cache_type_traits::is_w_cache<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);
     }
 

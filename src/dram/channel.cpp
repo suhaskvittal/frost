@@ -14,8 +14,6 @@
 
 #include <iomanip>
 
-#define DRAM_ENABLE_LOGGER
-
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -197,8 +195,10 @@ DRAMChannel::update_modal_stats_post_transition()
                                                 s_tot_write_issue_std_,
                                                 s_tot_write_issue_minmax_diff_);
 #endif
+        s_tot_read_occu_post_drain_ += scheduler_->read_occu();
 
-        size_t tot_writes = std::reduce(writes_issued_per_bank_.begin(), writes_issued_per_bank_.end(), 0);
+        [[maybe_unused]] size_t tot_writes = 
+            std::reduce(writes_issued_per_bank_.begin(), writes_issued_per_bank_.end(), 0);
 
         writes_issued_per_bank_.fill(0);
         

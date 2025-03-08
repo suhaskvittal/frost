@@ -48,8 +48,12 @@ Core::tick_warmup()
 {
     inst_ptr inst = next_inst();
     ++inst_warmup_;
-    GL_LLC->warmup_access(init_trans_from_inst(inst, coreid_));
-    delete inst;
+
+    if (inst != nullptr)
+    {
+        GL_LLC->warmup_access(init_trans_from_inst(inst, coreid_));
+        delete inst;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -82,14 +86,14 @@ Core::tick()
 void
 Core::checkpoint_stats()
 {
-    double ipc = mean(static_cast<uint64_t>(finished_inst_num_), GL_CYCLE);
+    double ipc = mean(static_cast<uint64_t>(finished_inst_num_), GL_CYCLE - GL_CYCLE_WARMUP);
     std::string header = "CORE_" + std::to_string(static_cast<int>(coreid_));
 
     stats_stream_ << BAR << "\n";
 
     print_stat(stats_stream_, header, "TRACE", trace_file_);
     print_stat(stats_stream_, header, "INST", finished_inst_num_);
-    print_stat(stats_stream_, header, "CYCLES", GL_CYCLE);
+    print_stat(stats_stream_, header, "CYCLES", GL_CYCLE - GL_CYCLE_WARMUP);
     print_stat(stats_stream_, header, "IPC", ipc);
 
     stats_stream_ << BAR << "\n";
@@ -125,9 +129,15 @@ Core::ifetch()
             }
             rob_.push_back(inst);
             ++rob_size_;
+
+            // If this is the first ROB entry, then set `rob_stall_start_cycle_` to `GL_CYCLE`.
+            if (rob_.size() == 1)
+                rob_stall_start_cycle_ = GL_CYCLE;
         }
         else if (rob_.empty())
+        {
             ++finished_inst_num_;
+        }
         else
         {
             ++rob_.back()->rob_refs;

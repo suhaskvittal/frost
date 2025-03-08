@@ -28,12 +28,9 @@ protected:
     using __TEMPLATE_PARENT__::partition_manager_;
 private:
     using vbuf_count_map_type = std::unordered_map<size_t, size_t>;
-    using bankgroup_cycle_array = std::array<std::array<uint64_t, DRAM_TOT_BANKS_PER_CHANNEL>, DRAM_CHANNELS>;
     
     vbuf_count_map_type           critical_map_;
     vbuf_count_map_type::iterator next_it_;
-
-    bankgroup_cycle_array cooldown_cycle_{};
     
     size_t total_v_count_ =0;
     bool in_write_mode_ =false;

@@ -20,9 +20,6 @@ __TEMPLATE_CLASS__::tick()
     const size_t high_wm = high_watermark();
     const size_t low_wm = low_watermark();
 
-    if (GL_CYCLE % 10'000'000 == 0)
-        std::cout << "virtual occu = " << total_v_count_ << ", HIGH = " << high_wm << ", LOW = " << low_wm << "\n";
-
     // if the high watermark == 0, then we have no victim buffer (full set usage by workloads)
     if (high_wm == 0)
         return;
@@ -33,53 +30,23 @@ __TEMPLATE_CLASS__::tick()
 
     if (!in_write_mode_ && total_v_count_ >= high_wm)
     {
-        std::cout << "WRITE MODE START\n";
         in_write_mode_ = true;
         next_it_ = critical_map_.begin();
     }
     else if (in_write_mode_ && total_v_count_ < low_wm)
     {
         in_write_mode_ = false;
-        std::cout << "WRITE MODE END\n";
     }
 
     if (in_write_mode_ && mshr_has_space())
     {
-        /*
-        if (next_it_ == critical_map_.end())
-            next_it_ = critical_map_.begin();
-
-        auto& [idx, cnt] = *next_it_;
-        cset_type& s = csets_[idx];
-
-        // Find virtual buffer entry:
-        auto dirty_it = std::find_if(s.begin(), s.end(),
-                                [] (const auto& e) { return e.valid && e.dirty && e.in_virtual_buffer; });
-
-        Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
-        enqueue_writeback(wb_trans);
-
-        // Invalid `*dirty_it`:
-        dirty_it->dirty = false;
-
-        --cnt;
-        --total_v_count_;
-
-        if (cnt == 0)
-            next_it_ = critical_map_.erase(next_it_);
-        else
-            ++next_it_;
-
-        ++s_eager_writebacks_;
-        ++s_writebacks_;
-        */
         size_t idx = fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_SETS);
         ssize_t tries = 2048;
         while (!critical_map_.count(idx) && tries--)
             idx = fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_SETS);
 
         if (tries < 0)
-            exit(1);
+            return;
 
         // Generate a victim -- if it is in the virtual buffer then queue it for writeback:
         Transaction fake_trans{};
@@ -87,10 +54,9 @@ __TEMPLATE_CLASS__::tick()
 
         auto v_it = repl_lru_mcp(idx, s, fake_trans, true);
 
-        if (v_it->dirty)
+        if (v_it->dirty && v_it->in_virtual_buffer)
         {
             Transaction wb_trans{NUM_THREADS, 0, v_it->address, nullptr, Transaction::Type::WRITE};
-            wb_trans.dram_is_demand_writeback = true;
             enqueue_writeback(wb_trans);
             
             // Invalidate line:

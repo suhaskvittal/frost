@@ -127,6 +127,7 @@ DRAM::print_stats(std::ostream& out)
     CREATE_VEC_STAT(num_drains)
     CREATE_VEC_STAT(num_forced_drains)
     CREATE_VEC_STAT(tot_read_occu_at_drain)
+    CREATE_VEC_STAT(tot_read_occu_post_drain)
     CREATE_VEC_STAT(tot_write_occu_at_drain)
     CREATE_VEC_STAT(tot_drain_latency)
 
@@ -135,6 +136,7 @@ DRAM::print_stats(std::ostream& out)
                                    read_latency = vec_elwise_mean(tot_read_latency, reads),
                                    write_latency = vec_elwise_mean(tot_write_latency, writes),
                                    mean_read_occu_at_drain = vec_elwise_mean(tot_read_occu_at_drain, num_drains),
+                                   mean_read_occu_post_drain = vec_elwise_mean(tot_read_occu_post_drain, num_drains),
                                    mean_write_occu_at_drain = vec_elwise_mean(tot_write_occu_at_drain, num_drains),
                                    writes_per_drain = vec_elwise_mean(writes, num_drains),
                                    drain_latency = vec_elwise_mean(tot_drain_latency, num_drains),
@@ -182,6 +184,7 @@ DRAM::print_stats(std::ostream& out)
 //  print_vecstat(out, "DRAM", "FRACTION_OF_DRAINS_FORCED", forced_drain_fraction, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITES_PER_DRAIN", writes_per_drain, VecAccMode::HMEAN);
     print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_AT_DRAIN", mean_read_occu_at_drain, VecAccMode::GMEAN);
+    print_vecstat(out, "DRAM", "MEAN_READ_OCCUPANCY_POST_DRAIN", mean_read_occu_post_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "MEAN_WRITE_OCCUPANCY_AT_DRAIN", mean_write_occu_at_drain, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "DRAIN_LATENCY", drain_latency, VecAccMode::GMEAN);
     print_vecstat(out, "DRAM", "WRITE_MODE_CYCLES", tot_drain_latency);

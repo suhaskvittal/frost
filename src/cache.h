@@ -8,6 +8,7 @@
 #include "constants.h"
 
 #include "cache/dead_block/base.h"
+#include "cache/ext/atd.h"
 #include "cache/partitioning/base.h"
 #include "cache/entry.h"
 #include "cache/enums.h"
@@ -22,9 +23,13 @@
 #include <array>
 #include <deque>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include <fstream>
+#include <iostream>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -154,6 +159,33 @@ protected:
 
     cache_partition_array partition_;
     cpart_ptr             partition_manager_;
+
+    /*
+     * Optional "utility tracker" -- only used if `CACHE_ENABLE_UTILITY_TRACKER` is defined. Will write
+     * to <cache_name>.u.log
+     * */
+    struct utility_tracker_type
+    {
+        /*
+         * Each vector will have `IMPL::NUM_WAYS+1` entries. The last entry is, for example, the number of misses
+         * */
+        std::vector<size_t> hits;
+        std::vector<size_t> writebacks;
+        std::vector<size_t> dead_blocks;
+
+        AuxTagDirectory<IMPL, 256> atd;
+
+        utility_tracker_type(void)
+            :hits(IMPL::NUM_WAYS+1, 0),
+            writebacks(IMPL::NUM_WAYS+1, 0),
+            dead_blocks(IMPL::NUM_WAYS+1, 0)
+        {}
+    };
+
+    using utility_tracker_ptr = std::unique_ptr<utility_tracker_type>;
+
+    utility_tracker_ptr utr_;
+    std::ofstream       utr_out_;
 public:
     Cache(std::string cache_name, next_ptr&);
 
@@ -209,6 +241,11 @@ protected:
     virtual bool probe(const Transaction&);
     virtual bool mark_dirty(const Transaction&);
     virtual void invalidate(uint64_t);
+    /*
+     * Child functions for handling hits in `probe` and `mark_dirty`
+     * */
+    virtual void child_handle_probe_hit(cset_type&, cset_type::iterator, const Transaction&) {}
+    virtual void child_handle_mark_dirty_hit(cset_type&, cset_type::iterator, const Transaction&) {}
     /*
      * Cache fill implementations:
      * */
@@ -289,6 +326,9 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+template <class ITER>
+void dump_utility_info(std::ostream& out, ITER begin, ITER end, std::string_view name);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

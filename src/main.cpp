@@ -23,6 +23,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 uint64_t GL_CYCLE = 0;
+uint64_t GL_CYCLE_WARMUP = 0;
 
 core_array_t GL_CORES;
 os_ptr       GL_OS;
@@ -42,6 +43,8 @@ int OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS;
  * Cache parameters:
  * */
 uint64_t OPT_CACHE_PARTITION_UPDATE_CYCLES;
+size_t OPT_WCACHE_BALANCE_BUFFER_SIZE;
+size_t OPT_WCACHE_HATS_COUNT;
 size_t OPT_SSRH_COLUMN_COUNT;
 size_t OPT_VWQ_WAYS;
 
@@ -88,6 +91,8 @@ int main(int argc, char* argv[])
 
                 // Cache:
                 {"cpart_update_freq", "Number of cycles between cache partitioning updates", "5000000"},
+                {"wcache_hats_count", "Enable hard-target-search for WCache", "0"},
+                {"wcache_bb_size", "Number of wcache balance buffer entries", "0"},
                 {"ssrh_column_count", "Number of column bits to include in tag", "2"},
                 {"vwq_ways", "number of virtual write queue ways", "4"},
 
@@ -104,6 +109,8 @@ int main(int argc, char* argv[])
     ARGS("dram_row_hit_limit", OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS);
 
     ARGS("cpart_update_freq", OPT_CACHE_PARTITION_UPDATE_CYCLES);
+    ARGS("wcache_hats_count", OPT_WCACHE_HATS_COUNT);
+    ARGS("wcache_bb_size", OPT_WCACHE_BALANCE_BUFFER_SIZE);
     ARGS("ssrh_column_count", OPT_SSRH_COLUMN_COUNT);
     ARGS("vwq_ways", OPT_VWQ_WAYS);
 
@@ -131,8 +138,13 @@ int main(int argc, char* argv[])
             fast_increment_and_mod_inplace(ii, NUM_THREADS);
         }
         fast_increment_and_mod_inplace(curr_core_idx, NUM_THREADS);
+
+        ++GL_CYCLE;
     }
     std::cout << "DONE\n";
+
+    // Copy number of cycles spent (1 per warmup instruction) to warmup cycles -- necessary for IPC calculations
+    GL_CYCLE_WARMUP = GL_CYCLE;
 
     uint64_t time_in_core =0,
              time_in_llc =0,
