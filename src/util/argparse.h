@@ -94,8 +94,6 @@ ArgParseResult::operator()(std::string_view argname, T& argout)
             << help;
         exit(1);
     }
-
-    std::cout << "[ info ] set \"" << argname << "\" to \"" << value << "\"\n";
 }
 
 ////////////////////////////////////////////////////////////////

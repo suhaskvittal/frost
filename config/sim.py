@@ -156,7 +156,6 @@ sim_init(bool is_mix)
 
     if (is_mix)
     {{
-        std::cout << "parsing mix...\n";
         // Need to parse `OPT_TRACE_FILE`:
         int curr_pos = 0; 
         size_t i = 0;
@@ -171,8 +170,6 @@ sim_init(bool is_mix)
 
             std::string trace = OPT_TRACE_FILE.substr(curr_pos, next_pos-curr_pos);
             GL_CORES[i] = core_ptr(new Core(i, trace));
-
-            std::cout << "\tcore " << i << " : " << trace << "\n";
             
             curr_pos = next_pos+1;
             ++i;
