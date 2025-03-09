@@ -26,6 +26,15 @@ extern size_t OPT_WCACHE_HATS_COUNT;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+constexpr inline void update_sel(int16_t& s, bool pos, int16_t min, int16_t max)
+{
+    s = pos ? (s+1) : (s-1);
+    s = std::clamp(s, min, max);
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 template <class IMPL, class NEXT_TYPE>
 class WCache : public __TEMPLATE_PARENT__
 {
@@ -45,18 +54,18 @@ private:
     };
 
     using channel_data_array = std::array<channel_data_type, DRAM_CHANNELS>;
-    using way_counter_array = std::vector<ssize_t>;
+    using way_counter_array = std::vector<int16_t>;
     using target_type = std::pair<size_t, size_t>;
     using target_array = std::vector<target_type>;
 
-    constexpr static size_t SAMPLED_SETS = 64;
+    constexpr static size_t SAMPLED_SETS = 128;
     constexpr static size_t SET_MODULUS = IMPL::NUM_SETS / SAMPLED_SETS;
 
-    constexpr static size_t DLUP_WIDTH = 10;
-    constexpr static int16_t DLUP_MIN = 0;
-    constexpr static int16_t DLUP_MAX = (1 << DLUP_WIDTH)-1;
-    constexpr static int16_t DLUP_INIT = 1 << (DLUP_WIDTH-1);
-    constexpr static int16_t DLUP_MASK = 1 << (DLUP_WIDTH-1);
+    constexpr static size_t SEL_WIDTH = 8;
+    constexpr static int16_t SEL_MIN = 0;
+    constexpr static int16_t SEL_MAX = (1 << SEL_WIDTH)-1;
+    constexpr static int16_t SEL_INIT = 1 << (SEL_WIDTH-1);
+    constexpr static int16_t SEL_THRESHOLD = 1 << (SEL_WIDTH-1);
     /*
      * Structures for tracking channel state:
      * */
@@ -64,8 +73,6 @@ private:
 
     way_counter_array false_evict_counters_;
     size_t            max_fill_lookup_pos_;
-
-    int16_t demand_lookup_util_pred_ =DLUP_INIT;
 
     using __TEMPLATE_PARENT__::csets_;
 public:
@@ -86,12 +93,18 @@ private:
     way_iterator repl_rrip_w(size_t, cset_type&, const Transaction&);
 
     void enqueue_writeback(Transaction) override;
+
+    inline void handle_victim_from_sampled_set(cset_type::iterator v_it)
+    {
+        if (v_it->test_evict_pos >= 0)
+            update_sel(false_evict_counters_[v_it->test_evict_pos], true, SEL_MIN, SEL_MAX);
+    }
     /*
      * Useful inlines:
      * */
     inline size_t max_position_to_use_for_writeback_priority(size_t idx) const
     {
-        return fast_mod(idx, SET_MODULUS) == 0 ? num_false_evict_counters() : max_fill_lookup_pos_;
+        return is_sampled_set(idx) ? num_false_evict_counters() : max_fill_lookup_pos_;
     }
 
     inline bool any_banks_without_writebacks(void) const
