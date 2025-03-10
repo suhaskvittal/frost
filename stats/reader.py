@@ -106,7 +106,8 @@ def read_results(rd) -> dict:
     while not is_bar(line):
         parse_stat_line(out, line)
         line = rd.readline()
-    line = rd.readline()  # Skips `GL_DRAM_CYCLE` line
+    # Read DRAM cycles line:
+    line = rd.readline()
     # Next data is all dram data. Stop when we hit a line
     while not is_bar(line):
         parse_dram_line(out, line)

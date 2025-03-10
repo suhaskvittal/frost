@@ -31,16 +31,20 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017']
+SUITES = ['mtf/spec2017', 'mtf/gap']
 
-def create_csv_file_for_build(build: str):
+def create_csv_file_for_build(build: str, suites=None):
+    if suites is None:
+        suites = SUITES
+
     wr = open(f'data/{build.lower()}.csv', 'w')
 
-    stat_list = ['ipc', 'mpki', 'write_issue_diff', 'write_mode_time', 'miss_penalty', 'aat']
+    stat_list = ['ipc', 'llc_mpki', 'miss_penalty', 'aat', 'num_reads', 'num_writes',
+                 'read_rbhr', 'write_rbhr', 'dram_cycles', 'write_cycles']
     header = ','.join(stat_list)
     wr.write(f',{header}\n')
 
-    for suite in SUITES:
+    for suite in suites:
         wr.write('\n')
         workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
 
@@ -49,18 +53,32 @@ def create_csv_file_for_build(build: str):
 
             ipc =               get_per_core_stat(results, lambda d: float(d['IPC']))
             mpki =              get_per_core_stat(results, lambda d: float(d['LLC']['MPKI']))
-            write_issue_diff =  float(results['DRAM']['MEAN_WRITE_ISSUE_MINMAX_DIFFERENCE']['all'])
-            write_mode_time =   float(results['DRAM']['FRACTION_OF_TIME_IN_WRITE_MODE']['all'])
+
+            num_reads =         int(results['DRAM']['NUM_READS']['all'])
+            num_writes =        int(results['DRAM']['NUM_WRITES']['all'])
+            read_rbhr =         float(results['DRAM']['READ_ROW_BUFFER_HIT_RATE']['all'])
+            write_rbhr =        float(results['DRAM']['WRITE_ROW_BUFFER_HIT_RATE']['all'])
+
+            dram_cycles =       int(results['DRAM']['CYCLES']['all'])
+            write_cycles =      int(results['DRAM']['WRITE_MODE_CYCLES']['all'])
+
             miss_penalty =      get_per_core_stat(results, lambda d: float(d['LLC']['MISS_PENALTY']), mean_type=amean)
             aat =               get_per_core_stat(results, lambda d: float(d['LLC']['AAT']), mean_type=amean)
 
-            wr.write(f'{w},{ipc},{mpki},{write_issue_diff},{write_mode_time},{miss_penalty},{aat}\n')
+            wr.write(f'{w},{ipc},{mpki},{miss_penalty},{aat},{num_reads},{num_writes},'
+                    f'{read_rbhr},{write_rbhr},{dram_cycles},{write_cycles}\n')
 
 ####################################################################
 ####################################################################
-# RESULTS
-for b in os.listdir('builds'):
-    create_csv_file_for_build(b)
+
+BUILDS = os.listdir('out/mtf/spec2017')
+
+for b in BUILDS:
+    if 'DDR' in b:
+        suites = ['mtf/spec2017']
+    else:
+        suites = None
+    create_csv_file_for_build(b, suites=suites)
 
 ####################################################################
 ####################################################################

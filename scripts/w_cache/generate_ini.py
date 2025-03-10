@@ -29,7 +29,7 @@ def write_ini(filename: str,
               dram_address_mapping='ZEN',
               dram_am_enable_permutation=True,
               # LLC PARAMETERS
-              llc_repl='lru',
+              llc_repl='LRU',
               llc_type='Cache',
               # OTHER:
               dram_disable_turnaround=False,

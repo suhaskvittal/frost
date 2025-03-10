@@ -359,6 +359,7 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans)
 
     if (cset_find(trans.address, s.begin(), s.end()) != s.end())
     {
+        /*
         if (trans.is_write())
         {
             std::cerr << "cache: address to be filled (" << std::hex << trans.address << ") already in set.\n";
@@ -378,6 +379,8 @@ __TEMPLATE_CLASS__::fill(const Transaction& trans)
         {
             return multi_fill_result_type{out};
         }
+        */
+        return multi_fill_result_type{out};
     }
 
     // Invoke dead block predictor:
