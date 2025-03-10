@@ -17,7 +17,7 @@ ssrh_cache_set_index(uint64_t x, size_t s)
     size_t bitcount = 0;
 
     size_t ii = 0;
-    for (size_t i = 0; i < OPT_SSRH_COLUMN_COUNT; i++)
+    for (size_t i = 0; i < OPT_CACHE_SSRH_COLUMN_COUNT; i++)
     {
         size_t col = dram_col_bit_index(i);
         size_t d = col - ii;

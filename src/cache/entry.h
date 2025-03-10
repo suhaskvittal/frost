@@ -41,7 +41,7 @@ struct CacheEntry
     bool in_virtual_buffer =false;
 
     ssize_t test_evict_pos =-1;
-    bool    test_eager_writeback =false;
+    ssize_t test_eager_pos =-1;
 };
 
 ////////////////////////////////////////////////////////////////////////////

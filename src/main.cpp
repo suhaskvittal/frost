@@ -42,11 +42,11 @@ int OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS;
 /*
  * Cache parameters:
  * */
-uint64_t OPT_CACHE_PARTITION_UPDATE_CYCLES;
-size_t OPT_WCACHE_BALANCE_BUFFER_SIZE;
-size_t OPT_WCACHE_HATS_COUNT;
-size_t OPT_SSRH_COLUMN_COUNT;
+size_t OPT_CACHE_SSRH_COLUMN_COUNT;
 size_t OPT_VWQ_WAYS;
+
+int    OPT_WCACHE_FIXED_LOOKUP_POS;
+size_t OPT_WCACHE_SAMPLED_SETS;
 
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
@@ -90,11 +90,15 @@ int main(int argc, char* argv[])
                 {"dram_row_hit_limit", "Number of row buffer hits before a demand precharge can be issued", "4"},
 
                 // Cache:
-                {"cpart_update_freq", "Number of cycles between cache partitioning updates", "5000000"},
-                {"wcache_hats_count", "Enable hard-target-search for WCache", "0"},
-                {"wcache_bb_size", "Number of wcache balance buffer entries", "0"},
-                {"ssrh_column_count", "Number of column bits to include in tag", "2"},
-                {"vwq_ways", "number of virtual write queue ways", "4"},
+                {"cache_ssrh_column_count", "Number of column bits to include in tag", "2"},
+                {"vwq_ways", "Number of virtual write queue ways", "4"},
+
+                // WCache:
+                {"wcache_fixed_lookup_pos", "Max way lookup position for WCache."
+                                            " If less than 0, then the lookup will"
+                                            " be determined dynamically via set"
+                                            " sampling (see `wcache_sampled_sets`).", "-1"},
+                {"wcache_sampled_sets", "Number of sets used to compute max lookup position", "32"},
 
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
@@ -108,11 +112,11 @@ int main(int argc, char* argv[])
     ARGS("dram_wm_high", OPT_DRAM_HIGH_WATERMARK);
     ARGS("dram_row_hit_limit", OPT_DRAM_CLOSE_ROW_AFTER_NUM_HITS);
 
-    ARGS("cpart_update_freq", OPT_CACHE_PARTITION_UPDATE_CYCLES);
-    ARGS("wcache_hats_count", OPT_WCACHE_HATS_COUNT);
-    ARGS("wcache_bb_size", OPT_WCACHE_BALANCE_BUFFER_SIZE);
-    ARGS("ssrh_column_count", OPT_SSRH_COLUMN_COUNT);
+    ARGS("cache_ssrh_column_count", OPT_CACHE_SSRH_COLUMN_COUNT);
     ARGS("vwq_ways", OPT_VWQ_WAYS);
+
+    ARGS("wcache_fixed_lookup_pos", OPT_WCACHE_FIXED_LOOKUP_POS);
+    ARGS("wcache_sampled_sets", OPT_WCACHE_SAMPLED_SETS);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 

@@ -28,7 +28,7 @@ inline constexpr size_t default_cache_tag(uint64_t x, size_t s)
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-extern size_t OPT_SSRH_COLUMN_COUNT;
+extern size_t OPT_CACHE_SSRH_COLUMN_COUNT;
 
 size_t ssrh_cache_set_index(uint64_t, size_t);
 
@@ -41,13 +41,9 @@ template <class IMPL>
 size_t cache_set_index(uint64_t x)
 {
     if constexpr (IMPL::WRITEBACK_POLICY == CacheWritebackPolicy::SSRH)
-    {
         return ssrh_cache_set_index(x, IMPL::NUM_SETS);
-    }
     else
-    {
         return default_cache_set_index(x, IMPL::NUM_SETS);
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////

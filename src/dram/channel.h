@@ -163,6 +163,9 @@ private:
     {
         if constexpr (cache_type_traits::is_mcp_cache<typename CACHE_TYPE::parent_type>::value)
             c->toggle_write_mode(channel_id_, w);
+
+        if constexpr (cache_type_traits::is_w_cache<typename CACHE_TYPE::parent_type>::value)
+            c->channel_write_mode_update(channel_id_, w);
     }
 
     template <class CACHE_TYPE>
@@ -174,8 +177,6 @@ private:
         if constexpr (cache_type_traits::is_mcp_cache<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);
 
-        if constexpr (cache_type_traits::is_w_cache<typename CACHE_TYPE::parent_type>::value)
-            c->channel_request_demand_writeback(channel_id_);
     }
 
     friend class DRAM;

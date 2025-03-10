@@ -20,8 +20,11 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-extern size_t OPT_WCACHE_BALANCE_BUFFER_SIZE;
-extern size_t OPT_WCACHE_HATS_COUNT;
+/*
+ * Set this to -1 to avoid fixing the lookup position:
+ * */
+extern int    OPT_WCACHE_FIXED_LOOKUP_POS;
+extern size_t OPT_WCACHE_SAMPLED_SETS;
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -45,21 +48,18 @@ private:
     struct channel_data_type
     {
         using bank_bitvec_type = std::bitset<DRAM_TOT_BANKS_PER_CHANNEL>;
-        using balance_buffer_array = std::array<std::deque<Transaction>, DRAM_TOT_BANKS_PER_CHANNEL>;
-
-        bool                 in_write_mode =false;
-        size_t               next_demand_idx =0;
-        bank_bitvec_type     writeback_done{};
-        balance_buffer_array balance_buffer;
+        /*
+         * Some of the data in here may be unused.
+         * */
+        bool in_write_mode =false;
+        size_t next_demand_idx =0;
+        bank_bitvec_type writeback_done{};
     };
 
     using channel_data_array = std::array<channel_data_type, DRAM_CHANNELS>;
     using way_counter_array = std::vector<int16_t>;
     using target_type = std::pair<size_t, size_t>;
     using target_array = std::vector<target_type>;
-
-    constexpr static size_t SAMPLED_SETS = 128;
-    constexpr static size_t SET_MODULUS = IMPL::NUM_SETS / SAMPLED_SETS;
 
     constexpr static size_t SEL_WIDTH = 8;
     constexpr static int16_t SEL_MIN = 0;
@@ -72,14 +72,22 @@ private:
     channel_data_array channels_{};
 
     way_counter_array false_evict_counters_;
-    size_t            max_fill_lookup_pos_;
+    size_t            max_fill_lookup_pos_=4;
+
+    const size_t sampled_sets_;
+    const size_t set_modulus_;
+    const size_t set_modulus_ilog2_;
 
     using __TEMPLATE_PARENT__::csets_;
 public:
     WCache(std::string, typename __TEMPLATE_PARENT__::next_ptr&);
 
     void tick(void) override;
-    void channel_request_demand_writeback(size_t channel_id);
+
+    inline void channel_write_mode_update(size_t channel_id, bool enter)
+    {
+        channels_[channel_id].in_write_mode = enter;
+    }
 private:
     using typename __TEMPLATE_PARENT__::way_iterator;
 
@@ -104,7 +112,10 @@ private:
      * */
     inline size_t max_position_to_use_for_writeback_priority(size_t idx) const
     {
-        return is_sampled_set(idx) ? num_false_evict_counters() : max_fill_lookup_pos_;
+        if (OPT_WCACHE_FIXED_LOOKUP_POS < 0)
+            return is_sampled_set(idx) ? num_false_evict_counters() : max_fill_lookup_pos_;
+        else
+            return OPT_WCACHE_FIXED_LOOKUP_POS;
     }
 
     inline bool any_banks_without_writebacks(void) const
@@ -123,7 +134,7 @@ private:
 
     inline bool is_sampled_set(size_t idx) const
     {
-        return fast_mod(idx, SET_MODULUS) == (idx >> ilog2(SET_MODULUS));
+        return OPT_WCACHE_FIXED_LOOKUP_POS < 0 && fast_mod(idx, set_modulus_) == (idx >> set_modulus_ilog2_);
     }
     /*
      * Constexpr static inlines:

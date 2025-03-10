@@ -16,31 +16,43 @@ __TEMPLATE_HEADER__
 __TEMPLATE_CLASS__::WCache(std::string name, typename __TEMPLATE_PARENT__::next_ptr& n)
     :__TEMPLATE_PARENT__(name, n),
     false_evict_counters_(__TEMPLATE_CLASS__::num_false_evict_counters(), SEL_INIT),
-    max_fill_lookup_pos_(__TEMPLATE_CLASS__::initial_max_pos())
+    max_fill_lookup_pos_(__TEMPLATE_CLASS__::initial_max_pos()),
+    sampled_sets_(OPT_WCACHE_SAMPLED_SETS),
+    set_modulus_(IMPL::NUM_SETS / OPT_WCACHE_SAMPLED_SETS),
+    set_modulus_ilog2_(ilog2(set_modulus_))
 {}
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
+
+inline void
+update_max_pos(const std::vector<int16_t>& ctrs, size_t& mp)
+{
+    auto it = std::find_if(ctrs.begin(), ctrs.end(),
+                    [] (auto x) { return x < 128; });
+    mp = std::distance(ctrs.begin(), it);
+}
 
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::tick()
 {
     __TEMPLATE_PARENT__::tick();
 
-    if (GL_CYCLE > 0 && GL_CYCLE % 5'000'000 == 0)
+    if (GL_CYCLE > 10'000'000 && GL_CYCLE % 1'000'000 == 0)
     {
-        auto max_pos_it = std::find_if(false_evict_counters_.begin(), false_evict_counters_.end(),
-                            [] (auto x) { return x < SEL_THRESHOLD; });
-        max_fill_lookup_pos_ = std::distance(false_evict_counters_.begin(), max_pos_it);
+        update_max_pos(false_evict_counters_, max_fill_lookup_pos_);
+
+        /*
+        std::cout << "fill pos = " << max_fill_lookup_pos_ << "\tctrs:";
+        for (auto c : false_evict_counters_)
+            std::cout << " " << c;
+
+        std::cout << "\teager pos = " << max_eager_lookup_pos_ << "\tctrs:";
+        for (auto c : false_eager_counters_)
+            std::cout << " " << c;
+        std::cout << "\n";
+        */
     }
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
-{
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -173,40 +185,16 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::enqueue_writeback(Transaction trans)
 {
+    __TEMPLATE_PARENT__::enqueue_writeback(trans);
+
+    // Update bit vector:
     size_t c = dram_channel(trans.address),
            b = dram_bank_idx(trans.address);
 
-    bool update = false;
-    if (OPT_WCACHE_BALANCE_BUFFER_SIZE == 0)
-    {
-        __TEMPLATE_PARENT__::enqueue_writeback(trans);
-        update = true;
-    }
-    else
-    {
-        size_t c = dram_channel(trans.address),
-               b = dram_bank_idx(trans.address);
-
-        auto& bb = channels_[c].balance_buffer[b];
-
-        bb.push_back(trans);
-        if (bb.size() >= OPT_WCACHE_BALANCE_BUFFER_SIZE)
-        {
-            Transaction trans = std::move(bb.front());
-            bb.pop_front();
-
-            __TEMPLATE_PARENT__::enqueue_writeback(trans);
-            update = true;
-        }
-    }
-    
-    if (update)
-    {
-        auto& bits = channels_[c].writeback_done;
-        bits.set(b);
-        if (bits.all())
-            bits.reset();
-    }
+    auto& bits = channels_[c].writeback_done;
+    bits.set(b);
+    if (bits.all())
+        bits.reset();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -225,13 +213,13 @@ repl_cmp_w(bool x_is_older, bool x_d, bool y_d, bool x_p, bool y_p)
      *       y      y     age
      *  ------------------------- x dirty && y clean ---------------------------------
      *      x_p    y_p       out
-     *       n      n         x
+     *       n      n         y
      *       y      n         x
      *       n      y        age
      *       y      y         x
      *  ------------------------- x clean && y dirty ---------------------------------
      *      x_p    y_p       out
-     *       n      n         y
+     *       n      n         x
      *       y      n        age
      *       n      y         y
      *       y      y         y
@@ -239,9 +227,9 @@ repl_cmp_w(bool x_is_older, bool x_d, bool y_d, bool x_p, bool y_p)
     if (x_d && y_d)
         return ((x_p == y_p) && x_is_older) || ((x_p != y_p) && x_p);
     else if (x_d)
-        return x_p || x_is_older;
+        return x_p || (x_is_older && y_p);
     else if (y_d)
-        return !y_p && x_is_older;
+        return !y_p && (x_is_older || !x_p);
     else
         return x_is_older;
 }

@@ -135,10 +135,9 @@ DRAMScheduler::select_ready_command()
             // If this is a write, check if it violates R->W dependency.
             if (in_write_mode_)
             {
-                /*
                 if (pending_reads_.find(q_it->trans.address) != pending_reads_.end())
                     continue;
-                */
+
                 any_writes_are_possible = true;
             }
 
@@ -147,15 +146,9 @@ DRAMScheduler::select_ready_command()
             if (b.open_row.has_value())
             {
                 if (b.open_row == row)
-                {
                     ready_cmd.type = q_it->trans.is_read() ? DRAMCommand::Type::READ : DRAMCommand::Type::WRITE;
-                    ready_cmd.autopre = enable_autopre(q_it, q.end(), s, b);
-                }
                 else if (!active_buffer_[bank_idx].has_value() && allow_demand_precharge(q_it, q.end(), s, b))
-                {
                     ready_cmd.type = DRAMCommand::Type::PRECHARGE;
-                    ready_cmd.counter_update = owning_channel_->precharge_do_counter_update();
-                }
             }
             else
             {
@@ -165,6 +158,13 @@ DRAMScheduler::select_ready_command()
             bool cmd_ok = !ready_cmd.is_invalid() && cmd_is_issuable(channel_state_, ready_cmd);
             if (cmd_ok)
             {
+                // Set auto-precharge bit now (expensive to set if using HYBRID)
+                if (ready_cmd.is_cas())
+                    ready_cmd.autopre = enable_autopre(q_it, q.end(), s, b);
+
+                if (ready_cmd.is_pre())
+                    ready_cmd.counter_update = owning_channel_->precharge_do_counter_update();
+
                 bank_cmds[bank_idx].emplace(ready_cmd, &q, q_it);
                 ++bank_cmds_found;
             }

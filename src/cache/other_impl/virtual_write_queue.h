@@ -62,12 +62,13 @@ protected:
     bool mark_dirty(const Transaction&) override;
     multi_fill_result_type fill(const Transaction&) override;
 
+    void enqueue_writeback(Transaction) override;
+
     way_iterator find_dirty_way(cset_type&);
     size_t count_dirty_lines_in_vwq_ways(const cset_type&) const;
 
     void update_criticality_via_count(size_t idx);
 
-    using __TEMPLATE_PARENT__::enqueue_writeback;
     using __TEMPLATE_PARENT__::mshr_has_space;
 };
 

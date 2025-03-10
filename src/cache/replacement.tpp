@@ -26,7 +26,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
     e.likely_dead = dead_block_pred_->predict_if_dead(trans);
     e.in_virtual_buffer = false;
     e.test_evict_pos = -1;
-    e.test_eager_writeback = false;
+    e.test_eager_pos = -1;
 
     if constexpr (IMPL::REPL == CacheReplPolicy::DRRIP)
     {

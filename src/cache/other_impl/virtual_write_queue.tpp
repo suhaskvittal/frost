@@ -132,18 +132,75 @@ __TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
     return hit;
 }
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 __TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
 __TEMPLATE_CLASS__::fill(const Transaction& trans)
 {
     auto out = __TEMPLATE_PARENT__::fill(trans);
 
-    // Update set criticality:
     update_criticality_via_count(cache_set_index<IMPL>(trans.address));
 
     return out;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::enqueue_writeback(Transaction trans)
+{
+    // Collect cache set and bank info before enqueuing writeback
+    size_t idx = cache_set_index<IMPL>(trans.address);
+    size_t c = dram_channel(trans.address),
+           b = dram_bank_idx(trans.address),
+           row = dram_row(trans.address);
+
+    __TEMPLATE_PARENT__::enqueue_writeback(std::move(trans));
+    
+    if constexpr (DRAM_PAGE_POLICY != DRAMPagePolicy::CLOSE)
+    {
+        // Now, search for row buffer hits in critical sets (up-to 3 lookups).
+        for (size_t ii = 0; ii < 3 && mshr_has_space(); ii++)
+        {
+            auto it = std::find_if(critical_map_.begin(), critical_map_.end(),
+                            [idx,c,b] (const auto& p)
+                            {
+                                return p.first != idx && dram_channel(p.first) == c && dram_bank_idx(p.first) == b;
+                            });
+            
+            // Exit early if found nothing:
+            if (it == critical_map_.end())
+                break;
+
+            auto& [lookup_idx, cnt] = *it;
+            auto& s = csets_[lookup_idx];
+            auto dirty_it = std::find_if(s.begin(), s.end(),
+                                [&s, c, b, row] (const auto& e)
+                                {
+                                    return e.dirty
+                                            && dram_channel(e.address) == c
+                                            && dram_bank_idx(e.address) == b
+                                            && dram_row(e.address) == row
+                                            && cset_get_lru_position_of_entry(e, s.begin(), s.end()) < OPT_VWQ_WAYS;
+                                });
+            if (dirty_it != s.end())
+            {
+                // Enqueue writeback:
+                Transaction wb_trans{NUM_THREADS, 0, dirty_it->address, nullptr, Transaction::Type::WRITE};
+                __TEMPLATE_PARENT__::enqueue_writeback(wb_trans);
+
+                --cnt;
+                --queue_size_;
+                if (cnt == 0)
+                    critical_map_.erase(it);
+
+                ++s_writebacks_;
+                ++s_eager_writebacks_;
+
+                // Clean line:
+                dirty_it->dirty = false;
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -179,7 +236,7 @@ __TEMPLATE_CLASS__::count_dirty_lines_in_vwq_ways(const cset_type& s) const
                     return !x.valid;
             });
     return std::count_if(vwq_ways.begin(), vwq_ways.end(),
-                    [] (const auto& e) { return e.dirty; });
+                    [] (const auto& e) { return e.valid && e.dirty; });
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -123,7 +123,7 @@ __TEMPLATE_CLASS__::tick()
         do_next_access(false);
 
     // Update partitioning policy:
-    if (GL_CYCLE - partition_manager_->last_update_cycle_ >= OPT_CACHE_PARTITION_UPDATE_CYCLES)
+    if (GL_CYCLE - partition_manager_->last_update_cycle_ >= 5'000'000)
     {
         partition_manager_->update_partition(partition_.begin(), partition_.end());
 
@@ -651,14 +651,7 @@ __TEMPLATE_CLASS__::do_next_fill()
                 ++s_bypasses_;
 
             if (!e.dirty)
-            {
-                if (eviction_list.size() > 1)
-                {
-                    std::cerr << "cache: received eager writebacks with clean victim line\n";
-                    exit(1);
-                }
                 break;
-            }
         }
 
         if (!e.dirty)

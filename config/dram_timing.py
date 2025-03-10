@@ -24,10 +24,10 @@ def write(cfg, build):
     READ_DQS_OFFSET = 0
 
     if dram_type == '4800':
-        CL = ckcast(16.0)
+        CL = 40
         CWL = CL-2
-        tRCD = ckcast(16.0)
-        tRP = ckcast(16.0)
+        tRCD = 39
+        tRP = 39
         tRAS = ckcast(32.0)
         tRTP = max(12, ckcast(7.5))
         tWR = ckcast(30.0)
@@ -45,6 +45,31 @@ def write(cfg, build):
         tRRD_S = 8
         tRRD_L = max(8, ckcast(5.0))
         tFAW = max(32, ckcast(13.333))
+        tRFC = ckcast(410.0)
+        tREFI = ckcast(32e6/8192.0)
+    elif dram_type == 'ddr3_1600':
+        CL = 11
+        CWL = 8
+        tRCD = 11
+        tRP = 11
+        tRAS = ckcast(35)
+        tRTP = max(4, ckcast(7.5))
+        tWR = ckcast(15)
+
+        tCCD_S = 4
+        tCCD_S_WR = 4
+        tCCD_S_WTR = CWL + BL//2 + max(4, ckcast(7.5))
+        # tRTW is not listed in the DDR3 datasheet from Micron -- will just use what DRAMsim3 does:
+        tCCD_S_RTW = (CL-CWL) + BL//2 + tRTRS 
+
+        tCCD_L = tCCD_S
+        tCCD_L_WR = tCCD_S_WR
+        tCCD_L_WTR = tCCD_S_WTR
+        tCCD_L_RTW = tCCD_S_RTW
+
+        tRRD_S = max(4, ckcast(7.5))
+        tRRD_L = tRRD_S
+        tFAW = ckcast(20)
         tRFC = ckcast(410.0)
         tREFI = ckcast(32e6/8192.0)
     else:
