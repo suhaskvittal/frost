@@ -1,3 +1,4 @@
 #include "cache/other_impl/virtual_write_queue.h"
 #include "cache/other_impl/mcp_cache.h"
 #include "cache/other_impl/w_cache.h"
+#include "cache/other_impl/w_cache2.h"

@@ -23,6 +23,7 @@ namespace cache_type_traits
     DECL_TYPE_CHECK(mcp_cache, MCPCache)
     DECL_TYPE_CHECK(virtual_write_queue, VirtualWriteQueue)
     DECL_TYPE_CHECK(w_cache, WCache)
+    DECL_TYPE_CHECK(w_cache2, WCache2)
 }   // cache_type_traits
 
 ////////////////////////////////////////////////////////////////////////////

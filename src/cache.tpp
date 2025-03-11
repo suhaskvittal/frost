@@ -270,9 +270,6 @@ __TEMPLATE_CLASS__::probe(const Transaction& trans)
         // Invoke dead block predictor:
         it->likely_dead = dead_block_pred_->predict_if_dead(trans);
 
-        // If `in_virtual_buffer` bit is set, then unset it (invalidation from virtual buffer)
-        it->in_virtual_buffer = false;
-
 #if defined(CACHE_ENABLE_UTILITY_TRACKER)
         size_t w = IMPL::NUM_WAYS - cset_get_lru_position_of_entry(*it, s.begin(), s.end()) - 1;
         ++utr_->hits[w];
