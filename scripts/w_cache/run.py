@@ -39,7 +39,7 @@ import os
 exec_what = argv[1]
 
 if exec_what == 'all':
-    for w in ['ddr', 'baseline', 'wcache', 'wcache_sens', 'vwq']:
+    for w in ['baseline', 'wcache', 'vwq']:
         os.system(f'python scripts/w_cache/run.py {w}')
     exit(0)
 
@@ -80,6 +80,9 @@ for suite in SUITES:
 
     traces = [f for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
     for (build, args, output_folder) in setups:
+        if 'DDR' in build and suite == 'mtf/gap':
+            continue
+
         os.system(f'mkdir -p out/{suite}/{output_folder}')
         for trace_file in traces:
             trace_name = get_name(suite, trace_file)

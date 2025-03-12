@@ -31,7 +31,7 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017', 'mtf/gap']
+SUITES = ['mtf/spec2017']
 
 def create_csv_file_for_build(build: str, suites=None):
     if suites is None:
@@ -78,6 +78,14 @@ for b in BUILDS:
         suites = ['mtf/spec2017']
     else:
         suites = None
+
+    if 'DDR' in b:
+        continue
+    if 'SRRIP' in b:
+        continue
+    if 'SENS' in b:
+        continue
+
     create_csv_file_for_build(b, suites=suites)
 
 ####################################################################

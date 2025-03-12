@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
                                             " If less than 0, then the lookup will"
                                             " be determined dynamically via set"
                                             " sampling (see `wcache_sampled_sets`).", "-1"},
-                {"wcache_sampled_sets", "Number of sets used to compute max lookup position", "32"},
+                {"wcache_sampled_sets", "Number of sets used to compute max lookup position", "64"},
 
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}

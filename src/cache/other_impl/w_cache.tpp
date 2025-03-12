@@ -199,7 +199,7 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
     auto v_it = std::min_element(s.begin(), s.end(),
                     [this, m] (const auto& x, const auto& y)
                     {
-                        return this->repl_impl(x, y, m, x->rrpv, y->rrpv);
+                        return this->repl_impl(x, y, m, x.rrpv, y.rrpv);
                     });
 
     if (is_sampled_set(idx))
