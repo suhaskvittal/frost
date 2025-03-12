@@ -48,9 +48,6 @@ def create_csv_file_for_build(build: str, suites=None):
         wr.write('\n')
         workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
 
-        if 'cc' in workloads:
-            workloads.remove('cc')
-
         for w in workloads:
             config, results = read_output_file(f'out/{suite}/{build}/{w}.out')
 
