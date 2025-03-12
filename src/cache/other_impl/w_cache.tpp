@@ -16,6 +16,7 @@ __TEMPLATE_HEADER__
 __TEMPLATE_CLASS__::WCache(std::string name, typename __TEMPLATE_PARENT__::next_ptr& n)
     :__TEMPLATE_PARENT__(name, n),
     false_evict_counters_(__TEMPLATE_CLASS__::num_false_evict_counters(), SEL_INIT),
+    false_eager_counters_(__TEMPLATE_CLASS__::num_false_evict_counters(), SEL_INIT),
     max_fill_lookup_pos_(__TEMPLATE_CLASS__::initial_max_pos()),
     sampled_sets_(OPT_WCACHE_SAMPLED_SETS),
     set_modulus_(IMPL::NUM_SETS / OPT_WCACHE_SAMPLED_SETS),
@@ -38,9 +39,10 @@ __TEMPLATE_CLASS__::tick()
 {
     __TEMPLATE_PARENT__::tick();
 
-    if (GL_CYCLE > 10'000'000 && GL_CYCLE % 1'000'000 == 0)
+    if (GL_CYCLE > 10'000'000 && GL_CYCLE % 5'000'000 == 0)
     {
         update_max_pos(false_evict_counters_, max_fill_lookup_pos_);
+        update_max_pos(false_eager_counters_, max_eager_lookup_pos_);
 
         /*
         std::cout << "fill pos = " << max_fill_lookup_pos_ << "\tctrs:";
@@ -50,8 +52,51 @@ __TEMPLATE_CLASS__::tick()
         std::cout << "\teager pos = " << max_eager_lookup_pos_ << "\tctrs:";
         for (auto c : false_eager_counters_)
             std::cout << " " << c;
+
         std::cout << "\n";
         */
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ void
+__TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
+{
+    if (!mshr_has_space())
+        return;
+
+    size_t rand_idx = fast_mod( static_cast<size_t>(std::rand()), IMPL::NUM_SETS );
+    while (dram_channel(rand_idx) != channel_id)
+        rand_idx = fast_mod( static_cast<size_t>(std::rand()), IMPL::NUM_SETS );
+
+    cset_type& s = csets_[rand_idx];
+    size_t m = is_sampled_set(rand_idx) ? IMPL::NUM_WAYS : max_eager_lookup_pos_;
+
+    auto it = std::find_if(s.begin(), s.end(),
+                    [this, begin=s.begin(), end=s.end(), m] (const auto& e)
+                    {
+                        size_t p = cset_get_lru_position_of_entry(e, begin, end);
+                        return e.valid && e.dirty && p < m && this->has_writeback_priority(e.address);
+                    });
+
+    if (it != s.end())
+    {
+        if (is_sampled_set(rand_idx))
+        {
+            it->test_eager_pos = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
+        }
+        else
+        {
+            Transaction wb_trans{NUM_THREADS, 0, it->address, nullptr, Transaction::Type::WRITE};
+            enqueue_writeback(wb_trans);
+
+            it->dirty = false;
+
+            ++s_writebacks_;
+            ++s_eager_writebacks_;
+        }
     }
 }
 
@@ -70,6 +115,11 @@ __TEMPLATE_CLASS__::child_handle_mark_dirty_hit(cset_type& s, cset_type::iterato
 {
     // Same exact logic used:
     child_handle_probe_hit(s, it, trans);
+
+    size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
+
+    if (it->test_eager_pos >= 0 && it->test_eager_pos != p)
+        false_eager_counters_[it->test_eager_pos] >>= 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -123,12 +173,7 @@ __TEMPLATE_CLASS__::repl_lru_w(size_t idx, cset_type& s, const Transaction& tran
     auto v_it = std::min_element(s.begin(), s.end(),
                     [this, m, &lru_pos] (const auto& x, const auto& y)
                     {
-                        bool x_prio = lru_pos.at(x.address) < m 
-                                            && this->has_writeback_priority(x.address),
-                             y_prio = lru_pos.at(y.address) < m
-                                            && this->has_writeback_priority(y.address);
-
-                        return repl_cmp_w(x.timestamp < y.timestamp, x.dirty, y.dirty, x_prio, y_prio);
+                        return this->repl_impl(x, y, m, lru_pos[x.address], lru_pos[y.address]);
                     });
 
     if (is_sampled_set(idx))
@@ -154,10 +199,7 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
     auto v_it = std::min_element(s.begin(), s.end(),
                     [this, m] (const auto& x, const auto& y)
                     {
-                        bool x_prio = x.rrpv < m && this->has_writeback_priority(x.address),
-                             y_prio = y.rrpv < m && this->has_writeback_priority(y.address);
-
-                        return repl_cmp_w(x.rrpv < y.rrpv, x.dirty, y.dirty, x_prio, y_prio);
+                        return this->repl_impl(x, y, m, x->rrpv, y->rrpv);
                     });
 
     if (is_sampled_set(idx))
@@ -177,6 +219,37 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
     }
 
     return v_it;
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+__TEMPLATE_HEADER__ bool
+__TEMPLATE_CLASS__::repl_impl(const CacheEntry& x, const CacheEntry& y, size_t max_pos, size_t x_pos, size_t y_pos)
+{
+    bool x_free = x_pos < max_pos,
+         y_free = y_pos < max_pos;
+
+    bool cmp;
+    if constexpr (repl_is_rrip_based(IMPL::REPL))
+        cmp = (x.rrpv < y.rrpv);
+    else
+        cmp = (x.timestamp < y.timestamp);
+
+    if (x_free && y_free)
+    {
+        bool x_prio = this->has_writeback_priority(x.address),
+             y_prio = this->has_writeback_priority(y.address);
+
+        if (x.dirty == y.dirty)  // I really don't know why `==` works instead of `&&`
+                                 // My theory is that it has something to do with the set sampling
+                                 // procedure.
+            return (x_prio == y_prio) ? cmp : x_prio;
+        else
+            return !x.dirty;
+    }
+
+    return cmp;
 }
 
 ////////////////////////////////////////////////////////////////////////////

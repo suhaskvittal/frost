@@ -72,7 +72,10 @@ private:
     channel_data_array channels_{};
 
     way_counter_array false_evict_counters_;
-    size_t            max_fill_lookup_pos_=4;
+    size_t            max_fill_lookup_pos_ =4;
+
+    way_counter_array false_eager_counters_;
+    size_t            max_eager_lookup_pos_ =4;
 
     const size_t sampled_sets_;
     const size_t set_modulus_;
@@ -83,6 +86,7 @@ public:
     WCache(std::string, typename __TEMPLATE_PARENT__::next_ptr&);
 
     void tick(void) override;
+    void channel_request_demand_writeback(size_t channel_id);
 
     inline void channel_write_mode_update(size_t channel_id, bool enter)
     {
@@ -100,12 +104,16 @@ private:
     way_iterator repl_lru_w(size_t, cset_type&, const Transaction&);
     way_iterator repl_rrip_w(size_t, cset_type&, const Transaction&);
 
+    bool repl_impl(const CacheEntry& x, const CacheEntry& y, size_t max_pos, size_t x_pos, size_t y_pos);
+
     void enqueue_writeback(Transaction) override;
 
     inline void handle_victim_from_sampled_set(cset_type::iterator v_it)
     {
         if (v_it->test_evict_pos >= 0)
             update_sel(false_evict_counters_[v_it->test_evict_pos], true, SEL_MIN, SEL_MAX);
+        if (v_it->test_eager_pos >= 0)
+            update_sel(false_eager_counters_[v_it->test_eager_pos], true, SEL_MIN, SEL_MAX);
     }
     /*
      * Useful inlines:
@@ -157,14 +165,6 @@ private:
 
     using __TEMPLATE_PARENT__::mshr_has_space;
 };
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-/*
- * Comparison logic between two lines `x` and `y` given a few flags:
- * */
-bool repl_cmp_w(bool x_is_older, bool x_is_dirty, bool y_is_dirty, bool x_has_prio, bool y_has_prio);
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

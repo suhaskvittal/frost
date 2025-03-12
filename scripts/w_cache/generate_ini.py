@@ -149,8 +149,6 @@ for llc_repl in REPL_ARRAY:
     r = llc_repl.lower()
     for n in CORE_ARRAY:
         write_ini(f'main/wcache_core{n}_{r}.ini', num_cores=n, llc_repl=llc_repl, llc_type='WCache')
-        if llc_repl == 'LRU'
-            write_ini(f'main/wcache2_core{n}_{r}.ini', num_cores=n, llc_repl=llc_repl, llc_type='WCache2')
 
 ############################################################
 ############################################################

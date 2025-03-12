@@ -177,6 +177,9 @@ private:
         if constexpr (cache_type_traits::is_mcp_cache<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);
 
+        if constexpr (cache_type_traits::is_w_cache<typename CACHE_TYPE::parent_type>::value)
+            c->channel_request_demand_writeback(channel_id_);
+
         if constexpr (cache_type_traits::is_w_cache2<typename CACHE_TYPE::parent_type>::value)
             c->channel_request_demand_writeback(channel_id_);
     }
