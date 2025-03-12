@@ -15,7 +15,6 @@
 __TEMPLATE_HEADER__
 __TEMPLATE_CLASS__::WCache2(std::string name, typename __TEMPLATE_PARENT__::next_ptr& n)
     :__TEMPLATE_PARENT__(name, n),
-    read_hits_(IMPL::NUM_WAYS+1, 0),
     write_hits_(__TEMPLATE_CLASS__::num_hit_counters(), 0),
     sampled_sets_(OPT_WCACHE_SAMPLED_SETS),
     set_modulus_(IMPL::NUM_SETS / sampled_sets_),
@@ -32,6 +31,8 @@ __TEMPLATE_CLASS__::tick()
 
     if (GL_CYCLE > 5'000'000 && GL_CYCLE % 5'000'000 == 0)
     {
+
+        // Update buffer size:
         if (OPT_WCACHE_FIXED_LOOKUP_POS < 0)
         {
             auto it = std::find_if_not(write_hits_.rbegin(), write_hits_.rend(), 
@@ -39,20 +40,6 @@ __TEMPLATE_CLASS__::tick()
             max_virtual_buffer_size_ = std::distance(write_hits_.rbegin(), it);
         }
 
-        /*
-        std::cout << "read hit counters =";
-        for (auto c : read_hits_)
-            std::cout << " " << c;
-
-        std::cout << "\twrite hit counters =";
-        for (auto c : write_hits_)
-            std::cout << " " << c;
-
-        std::cout << "\tv-size = " << max_virtual_buffer_size_ << "\n";
-        */
-
-        for (auto& c : read_hits_)
-            c >>= 1;
         for (auto& c : write_hits_)
             c >>= 1;
     }
@@ -71,7 +58,8 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
 
     cset_type& s = csets_[rand_idx];
 
-    identify_virtual_ways(s);
+    Transaction dummy{};
+    repl_lru_w(rand_idx, s, dummy);
 
     // Search entries in the virtual buffer that also match a bank that needs a writeback:
     auto it = std::find_if(s.begin(), s.end(),
@@ -88,39 +76,14 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
 
         ++s_writebacks_;
         ++s_eager_writebacks_;
-    }
-}
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::probe(const Transaction& trans)
-{
-    bool hit = __TEMPLATE_PARENT__::probe(trans);
-
-    size_t idx = cache_set_index<IMPL>(trans.address);
-    if (!hit && is_sampled_set(idx))
-        ++read_hits_[IMPL::NUM_WAYS];
-
-    return hit;
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ void
-__TEMPLATE_CLASS__::child_handle_probe_hit(cset_type& s, cset_type::iterator it, const Transaction&)
-{
-    it->in_virtual_buffer = false;
-
-    size_t idx = cache_set_index<IMPL>(it->address);
-    if (is_sampled_set(idx))
-    {
         size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
-        ++read_hits_[IMPL::NUM_WAYS - p - 1];
+        s_tot_eager_pos_ += p;
     }
 }
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::child_handle_mark_dirty_hit(cset_type& s, cset_type::iterator it, const Transaction&)
@@ -153,14 +116,29 @@ __TEMPLATE_CLASS__::find_victim(size_t idx, cset_type& s, const Transaction& tra
     auto v_it = std::find_if(s.begin(), s.end(),
                         [] (const auto& e) { return e.valid && !e.dirty && e.in_virtual_buffer; });
     if (v_it != s.end())
+    {
+        ++s_dead_block_evictions_;
         return v_it;
+    }
 
     if constexpr (IMPL::REPL == CacheReplPolicy::LRU)
-        return repl_lru_w(idx, s, trans);
+        v_it = repl_lru_w(idx, s, trans);
     else if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP)
-        return repl_rrip_w(idx, s, trans);
+        v_it = repl_rrip_w(idx, s, trans);
     else
-        return __TEMPLATE_PARENT__::find_victim(idx, s, trans);
+        v_it = __TEMPLATE_PARENT__::find_victim(idx, s, trans);
+
+    // Update stats:
+    if (v_it->dirty)
+    {
+        if (v_it->in_virtual_buffer)
+            ++s_virtual_buffer_evictions_;
+
+        if (has_writeback_priority(v_it->address))
+            ++s_priority_evictions_;
+    }
+
+    return v_it;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -180,16 +158,29 @@ __TEMPLATE_CLASS__::repl_lru_w(size_t idx, cset_type& s, const Transaction& tran
     way_iterator v_it;
     while (true)
     {
-        bool evict_virtual = (v_count >= max_v_size);
-        v_it = std::min_element(s.begin(), s.end(),
-                        [evict_virtual] 
-                        (const auto& x, const auto& y)
-                        {
-                            if (x.in_virtual_buffer == y.in_virtual_buffer)
-                                return x.timestamp < y.timestamp;
-                            else
-                                return evict_virtual == x.in_virtual_buffer;
-                        });
+        bool evict_virtual = (v_count >= max_v_size) && max_v_size > 0;
+        if (evict_virtual)
+        {
+            v_it = std::min_element(s.begin(), s.end(),
+                            [this] (const auto& x, const auto& y)
+                            {
+                                bool x_prio = x.in_virtual_buffer && this->has_writeback_priority(x.address),
+                                     y_prio = y.in_virtual_buffer && this->has_writeback_priority(y.address);
+
+                                return repl_cmp_w(x.timestamp < y.timestamp, x.dirty, y.dirty, x_prio, y_prio);
+                            });
+        }
+        else
+        {
+            v_it = std::min_element(s.begin(), s.end(),
+                            [] (const auto& x, const auto& y)
+                            {
+                                if (x.in_virtual_buffer == y.in_virtual_buffer)
+                                    return x.timestamp < y.timestamp;
+                                else
+                                    return y.in_virtual_buffer;
+                            });
+        }
                         
         if (v_it->dirty && !v_it->in_virtual_buffer && v_count < max_v_size)
         {
@@ -201,6 +192,11 @@ __TEMPLATE_CLASS__::repl_lru_w(size_t idx, cset_type& s, const Transaction& tran
             break;
         }
     }
+
+    // Collect stats about virtual buffer:
+    s_tot_virtual_occu_ += v_count;
+    s_tot_virtual_capacity_ += max_virtual_buffer_size_; 
+    ++s_tot_virtual_stat_samples_;
 
     return v_it;
 }

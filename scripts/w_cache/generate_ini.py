@@ -96,9 +96,9 @@ address_mapping = {dram_address_mapping}
 size_kb_per_core = {LLC_SIZE_KB_PER_CORE}
 ways = {LLC_WAYS}
 replacement_policy = {llc_repl}
-read_queue_size = 64
-write_queue_size = 64
-prefetch_queue_size = 32
+read_queue_size = 16
+write_queue_size = 16
+prefetch_queue_size = 8
 latency = 20
 num_mshr_per_core = 32
 fill_queue_size = 32
@@ -149,14 +149,15 @@ for llc_repl in REPL_ARRAY:
     r = llc_repl.lower()
     for n in CORE_ARRAY:
         write_ini(f'main/wcache_core{n}_{r}.ini', num_cores=n, llc_repl=llc_repl, llc_type='WCache')
+        if llc_repl == 'LRU'
+            write_ini(f'main/wcache2_core{n}_{r}.ini', num_cores=n, llc_repl=llc_repl, llc_type='WCache2')
 
 ############################################################
 ############################################################
 
-# Configs for VWQ evaluations (need to disable permutation-based address mapping and fixed to LRU)
+# Configs for VWQ evaluations (fixed to LRU)
 for n in CORE_ARRAY:
-    write_ini(f'vwq_eval/vwq_core{n}_lru.ini', num_cores=n, llc_repl='LRU',
-              dram_am_enable_permutation=False, llc_type='VirtualWriteQueue')
+    write_ini(f'vwq_eval/vwq_core{n}_lru.ini', num_cores=n, llc_repl='LRU', llc_type='VirtualWriteQueue')
 
 ############################################################
 ############################################################

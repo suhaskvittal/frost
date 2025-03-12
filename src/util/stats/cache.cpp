@@ -11,6 +11,26 @@
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
+template <class CACHE_TYPE> void
+print_extra_stats(std::ostream& out, std::unique_ptr<CACHE_TYPE>& c)
+{
+    if constexpr (cache_type_traits::is_w_cache2<typename CACHE_TYPE::parent_type>::value)
+    {
+        double mean_occu = mean(c->s_tot_virtual_occu_, c->s_tot_virtual_stat_samples_);
+        double mean_capacity = mean(c->s_tot_virtual_capacity_, c->s_tot_virtual_stat_samples_);
+        double mean_eager_pos = mean(c->s_tot_eager_pos_, static_cast<uint64_t>(c->s_eager_writebacks_));
+
+        print_stat(out, "LLC", "VIRTUAL_OCCUPANCY", mean_occu);
+        print_stat(out, "LLC", "VIRTUAL_CAPACITY", mean_capacity);
+        print_stat(out, "LLC", "VIRTUAL_EVICTIONS", c->s_virtual_buffer_evictions_);
+        print_stat(out, "LLC", "PRIORITY_EVICTIONS", c->s_priority_evictions_);
+        print_stat(out, "LLC", "EAGER_POSITION", mean_eager_pos);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
 void
 print_llc_stats(std::ostream& out)
 {
@@ -57,6 +77,8 @@ print_llc_stats(std::ostream& out)
             print_stat(out, "LLC", "CORE_" + std::to_string(i) + "_MEAN_WAY_ALLOCATIONS", way_alloc);
         }
     }
+
+    print_extra_stats(out, GL_LLC);
 }
 
 ////////////////////////////////////////////////////////////////////////////

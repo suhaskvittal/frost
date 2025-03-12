@@ -44,6 +44,16 @@ template <class IMPL, class NEXT_TYPE>
 class WCache2 : public __TEMPLATE_PARENT__
 {
 public:
+    uint64_t s_tot_virtual_occu_ =0;
+    uint64_t s_tot_virtual_capacity_ =0;
+    uint64_t s_tot_virtual_stat_samples_ =0;
+
+    uint64_t s_tot_eager_pos_ =0;
+    uint32_t s_virtual_buffer_evictions_ =0;
+    uint32_t s_priority_evictions_ =0;
+
+    using __TEMPLATE_PARENT__::s_dead_block_evictions_;
+
     using __TEMPLATE_PARENT__::s_writebacks_;
     using __TEMPLATE_PARENT__::s_eager_writebacks_;
 private:
@@ -63,7 +73,6 @@ private:
 
     channel_data_array channels_{};
 
-    way_counter_array read_hits_;
     way_counter_array write_hits_;
 
     size_t max_virtual_buffer_size_ =0;
@@ -81,9 +90,6 @@ public:
 private:
     using typename __TEMPLATE_PARENT__::way_iterator;
 
-    bool probe(const Transaction&) override;
-
-    void child_handle_probe_hit(cset_type&, cset_type::iterator, const Transaction&) override;
     void child_handle_mark_dirty_hit(cset_type&, cset_type::iterator, const Transaction&) override;
 
     way_iterator find_victim(size_t set_index, cset_type&, const Transaction&) override;
