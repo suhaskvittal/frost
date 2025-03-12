@@ -31,7 +31,7 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017']
+SUITES = ['mtf/spec2017', 'mtf/gap']
 
 def create_csv_file_for_build(build: str, suites=None):
     if suites is None:
@@ -47,6 +47,9 @@ def create_csv_file_for_build(build: str, suites=None):
     for suite in suites:
         wr.write('\n')
         workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
+
+        if 'cc' in workloads:
+            workloads.remove('cc')
 
         for w in workloads:
             config, results = read_output_file(f'out/{suite}/{build}/{w}.out')
