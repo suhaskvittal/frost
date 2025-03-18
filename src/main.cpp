@@ -47,6 +47,7 @@ int    OPT_VWQ_WAYS;
 
 int    OPT_WCACHE_FIXED_LOOKUP_POS;
 size_t OPT_WCACHE_SAMPLED_SETS;
+bool   OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
 
 std::string OPT_DRAMSIM3_CONFIG_FILE;
 
@@ -99,6 +100,7 @@ int main(int argc, char* argv[])
                                             " be determined dynamically via set"
                                             " sampling (see `wcache_sampled_sets`).", "-1"},
                 {"wcache_sampled_sets", "Number of sets used to compute max lookup position", "64"},
+                {"wcache_repl_only", "Disable writeback harvesting from memory controller", ""},
 
                 // Only if using DRAMsim3
                 {"dramsim3cfg", "DRAMsim3 config file", "example.ini"}
@@ -117,6 +119,7 @@ int main(int argc, char* argv[])
 
     ARGS("wcache_fixed_lookup_pos", OPT_WCACHE_FIXED_LOOKUP_POS);
     ARGS("wcache_sampled_sets", OPT_WCACHE_SAMPLED_SETS);
+    ARGS("wcache_repl_only", OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER);
 
     ARGS("dramsim3cfg", OPT_DRAMSIM3_CONFIG_FILE);
 

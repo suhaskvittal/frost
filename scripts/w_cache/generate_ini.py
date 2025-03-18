@@ -132,7 +132,7 @@ for dram_address_mapping in ['MOP4', 'ZEN']:
 ############################################################
 ############################################################
 
-CORE_ARRAY = [1,8]
+CORE_ARRAY = [8,16]
 REPL_ARRAY = ['LRU', 'SRRIP']
 
 # Baseline (hybrid page policy)

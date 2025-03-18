@@ -26,6 +26,8 @@
 extern int    OPT_WCACHE_FIXED_LOOKUP_POS;
 extern size_t OPT_WCACHE_SAMPLED_SETS;
 
+extern bool   OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
@@ -95,10 +97,6 @@ public:
 private:
     using typename __TEMPLATE_PARENT__::way_iterator;
     using typename __TEMPLATE_PARENT__::multi_fill_result_type;
-
-    bool probe(const Transaction&) override;
-    bool mark_dirty(const Transaction&) override;
-    multi_fill_result_type fill(const Transaction&) override;
 
     void child_handle_probe_hit(cset_type&, cset_type::iterator, const Transaction&) override;
     void child_handle_mark_dirty_hit(cset_type&, cset_type::iterator, const Transaction&) override;

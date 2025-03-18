@@ -65,8 +65,10 @@ __TEMPLATE_CLASS__::tick()
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
 {
-    size_t rand_idx;
+    if (OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER)
+        return;
 
+    size_t rand_idx;
     do
     {
         rand_idx = fast_mod( static_cast<size_t>(std::rand()), IMPL::NUM_SETS );
@@ -74,35 +76,6 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
     while (dram_channel(rand_idx) != channel_id);
 
     initiate_eager_writeback(rand_idx);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::probe(const Transaction& trans)
-{
-    bool hit = __TEMPLATE_PARENT__::probe(trans);
-//  if (hit)
-//      initiate_eager_writeback(trans);
-    return hit;
-}
-
-__TEMPLATE_HEADER__ bool
-__TEMPLATE_CLASS__::mark_dirty(const Transaction& trans)
-{
-    bool hit = __TEMPLATE_PARENT__::mark_dirty(trans);
-//  if (hit)
-//      initiate_eager_writeback(trans);
-    return hit;
-}
-
-__TEMPLATE_HEADER__ typename __TEMPLATE_CLASS__::multi_fill_result_type
-__TEMPLATE_CLASS__::fill(const Transaction& trans)
-{
-    auto out = __TEMPLATE_PARENT__::fill(trans);
-//  initiate_eager_writeback(trans);
-    return out;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -170,8 +143,8 @@ __TEMPLATE_CLASS__::repl_lru_w(size_t idx, cset_type& s, const Transaction& tran
     way_iterator v_it = s.end();
 
     const size_t m = max_fill_lookup_position(idx);
-    bool avoid_writeback = !is_sampled_set(idx);
-
+    bool avoid_writeback = !is_sampled_set(idx) && !OPT_WCACHE_LLC_AS_VIRTUAL_BUFFER;
+ 
     for (auto it = s.begin(); it != s.end(); it++)
     {
         size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
@@ -201,7 +174,7 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
     way_iterator v_it = s.end();
 
     const size_t m = max_fill_lookup_position(idx);
-    bool avoid_writeback = !is_sampled_set(idx);
+    bool avoid_writeback = !is_sampled_set(idx) && !OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
 
     // We want to be able to recall the `rrpv` of the evict entry if this is a sampled
     // set.
