@@ -3,8 +3,8 @@
  *  date:   7 March 2024
  * */
 
-#ifndef CACHE_OTHER_IMPL_W_CACHE_h
-#define CACHE_OTHER_IMPL_W_CACHE_h
+#ifndef CACHE_OTHER_IMPL_W_CACHE2_h
+#define CACHE_OTHER_IMPL_W_CACHE2_h
 
 #include "cache.h"
 
@@ -29,17 +29,8 @@ extern size_t OPT_WCACHE_SAMPLED_SETS;
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-constexpr inline void update_sel(int16_t& s, bool pos, int16_t min, int16_t max)
-{
-    s = pos ? (s+1) : (s-1);
-    s = std::clamp(s, min, max);
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
 template <class IMPL, class NEXT_TYPE>
-class WCache : public __TEMPLATE_PARENT__
+class WCache2 : public __TEMPLATE_PARENT__
 {
 public:
     using __TEMPLATE_PARENT__::s_writebacks_;
@@ -83,7 +74,7 @@ private:
 
     using __TEMPLATE_PARENT__::csets_;
 public:
-    WCache(std::string, typename __TEMPLATE_PARENT__::next_ptr&);
+    WCache2(std::string, typename __TEMPLATE_PARENT__::next_ptr&);
 
     void tick(void) override;
     void channel_request_demand_writeback(size_t channel_id);
@@ -169,7 +160,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-#include "w_cache.tpp"
+#include "w_cache2.tpp"
 
 #undef __TEMPLATE_PARENT__
 

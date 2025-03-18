@@ -80,6 +80,8 @@ __TEMPLATE_CLASS__::tick()
         else
             ++drain_next_it_;
 
+        demand_next_it_ = drain_next_it_;
+
         ++s_eager_writebacks_;
         ++s_writebacks_;
     }

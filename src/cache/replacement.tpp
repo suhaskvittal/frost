@@ -123,7 +123,7 @@ __TEMPLATE_CLASS__::repl_lru(cset_type& s, const Transaction& trans)
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator
 __TEMPLATE_CLASS__::repl_rand(cset_type& s, const Transaction&)
 {
-    return std::next(s.begin(), fast_mod(std::rand(), IMPL::NUM_WAYS));
+    return std::next(s.begin(), fast_mod(static_cast<size_t>(std::rand()), IMPL::NUM_WAYS));
 }
 
 __TEMPLATE_HEADER__ inline typename __TEMPLATE_CLASS__::way_iterator

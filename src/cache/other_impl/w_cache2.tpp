@@ -7,13 +7,13 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #define __TEMPLATE_HEADER__ template <class IMPL, class NEXT_TYPE>
-#define __TEMPLATE_CLASS__ WCache<IMPL,NEXT_TYPE>
+#define __TEMPLATE_CLASS__ WCache2<IMPL,NEXT_TYPE>
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
 __TEMPLATE_HEADER__
-__TEMPLATE_CLASS__::WCache(std::string name, typename __TEMPLATE_PARENT__::next_ptr& n)
+__TEMPLATE_CLASS__::WCache2(std::string name, typename __TEMPLATE_PARENT__::next_ptr& n)
     :__TEMPLATE_PARENT__(name, n),
     false_evict_counters_(__TEMPLATE_CLASS__::num_false_evict_counters(), SEL_INIT),
     false_eager_counters_(__TEMPLATE_CLASS__::num_false_evict_counters(), SEL_INIT),
@@ -26,14 +26,6 @@ __TEMPLATE_CLASS__::WCache(std::string name, typename __TEMPLATE_PARENT__::next_
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 
-inline void
-update_max_pos(const std::vector<int16_t>& ctrs, size_t& mp)
-{
-    auto it = std::find_if(ctrs.begin(), ctrs.end(),
-                    [] (auto x) { return x < 128; });
-    mp = std::distance(ctrs.begin(), it);
-}
-
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::tick()
 {
@@ -41,8 +33,8 @@ __TEMPLATE_CLASS__::tick()
 
     if (GL_CYCLE > 10'000'000 && GL_CYCLE % 5'000'000 == 0)
     {
-        update_max_pos(false_evict_counters_, max_fill_lookup_pos_);
-        update_max_pos(false_eager_counters_, max_eager_lookup_pos_);
+        update_max_pos(false_evict_counters_, max_fill_lookup_pos_, SEL_THRESHOLD);
+        update_max_pos(false_eager_counters_, max_eager_lookup_pos_, SEL_THRESHOLD);
 
         /*
         std::cout << "fill pos = " << max_fill_lookup_pos_ << "\tctrs:";
@@ -268,43 +260,6 @@ __TEMPLATE_CLASS__::enqueue_writeback(Transaction trans)
     bits.set(b);
     if (bits.all())
         bits.reset();
-}
-
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-inline bool
-repl_cmp_w(bool x_is_older, bool x_d, bool y_d, bool x_p, bool y_p)
-{
-    /*
-     * Result matrix:
-     *  ------------------------- x dirty && y dirty ---------------------------------
-     *      x_p    y_p    out
-     *       n      n     age
-     *       y      n      x
-     *       n      y      y
-     *       y      y     age
-     *  ------------------------- x dirty && y clean ---------------------------------
-     *      x_p    y_p       out
-     *       n      n         y
-     *       y      n         x
-     *       n      y        age
-     *       y      y         x
-     *  ------------------------- x clean && y dirty ---------------------------------
-     *      x_p    y_p       out
-     *       n      n         x
-     *       y      n        age
-     *       n      y         y
-     *       y      y         y
-     * */
-    if (x_d && y_d)
-        return ((x_p == y_p) && x_is_older) || ((x_p != y_p) && x_p);
-    else if (x_d)
-        return x_p || (x_is_older && y_p);
-    else if (y_d)
-        return !y_p && (x_is_older || !x_p);
-    else
-        return x_is_older;
 }
 
 ////////////////////////////////////////////////////////////////////////////

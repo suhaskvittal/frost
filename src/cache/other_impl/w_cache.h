@@ -64,7 +64,7 @@ private:
     constexpr static size_t SEL_WIDTH = 8;
     constexpr static int16_t SEL_MIN = 0;
     constexpr static int16_t SEL_MAX = (1 << SEL_WIDTH)-1;
-    constexpr static int16_t SEL_INIT = 1 << (SEL_WIDTH-1);
+    constexpr static int16_t SEL_INIT = (1 << (SEL_WIDTH-1)) - 1;
     constexpr static int16_t SEL_THRESHOLD = 1 << (SEL_WIDTH-1);
     /*
      * Structures for tracking channel state:
@@ -72,10 +72,10 @@ private:
     channel_data_array channels_{};
 
     way_counter_array false_evict_counters_;
-    size_t            max_fill_lookup_pos_ =4;
-
     way_counter_array false_eager_counters_;
-    size_t            max_eager_lookup_pos_ =4;
+
+    size_t max_fill_lookup_pos_base_ =initial_max_lookup();
+    size_t max_eager_lookup_pos_base_ =initial_max_lookup();
 
     const size_t sampled_sets_;
     const size_t set_modulus_;
@@ -94,6 +94,11 @@ public:
     }
 private:
     using typename __TEMPLATE_PARENT__::way_iterator;
+    using typename __TEMPLATE_PARENT__::multi_fill_result_type;
+
+    bool probe(const Transaction&) override;
+    bool mark_dirty(const Transaction&) override;
+    multi_fill_result_type fill(const Transaction&) override;
 
     void child_handle_probe_hit(cset_type&, cset_type::iterator, const Transaction&) override;
     void child_handle_mark_dirty_hit(cset_type&, cset_type::iterator, const Transaction&) override;
@@ -104,10 +109,13 @@ private:
     way_iterator repl_lru_w(size_t, cset_type&, const Transaction&);
     way_iterator repl_rrip_w(size_t, cset_type&, const Transaction&);
 
-    bool repl_impl(const CacheEntry& x, const CacheEntry& y, size_t max_pos, size_t x_pos, size_t y_pos);
+    bool repl_impl(const CacheEntry&, const CacheEntry&, bool avoid_writeback);
+    void initiate_eager_writeback(size_t set_index);
 
     void enqueue_writeback(Transaction) override;
-
+    /*
+     * Useful inlines:
+     * */
     inline void handle_victim_from_sampled_set(cset_type::iterator v_it)
     {
         if (v_it->test_evict_pos >= 0)
@@ -115,21 +123,32 @@ private:
         if (v_it->test_eager_pos >= 0)
             update_sel(false_eager_counters_[v_it->test_eager_pos], true, SEL_MIN, SEL_MAX);
     }
-    /*
-     * Useful inlines:
-     * */
-    inline size_t max_position_to_use_for_writeback_priority(size_t idx) const
+
+    inline size_t max_fill_lookup_position(size_t idx) const
     {
         if (OPT_WCACHE_FIXED_LOOKUP_POS < 0)
-            return is_sampled_set(idx) ? num_false_evict_counters() : max_fill_lookup_pos_;
+            return is_sampled_set(idx) ? num_false_counters() : max_fill_lookup_pos_base_;
         else
             return OPT_WCACHE_FIXED_LOOKUP_POS;
     }
 
-    inline bool any_banks_without_writebacks(void) const
+    inline size_t max_eager_lookup_position(size_t idx) const
     {
-        return std::any_of(channels_.begin(), channels_.end(),
-                        [] (const auto& c) { return c.writeback_done.count() < DRAM_TOT_BANKS_PER_CHANNEL; });
+        if (OPT_WCACHE_FIXED_LOOKUP_POS < 0)
+            return is_sampled_set(idx) ? num_false_counters() : max_eager_lookup_pos_base_;
+        else
+            return OPT_WCACHE_FIXED_LOOKUP_POS;
+    }
+
+    inline size_t get_entry_position(
+            const CacheEntry& e,
+            cset_type::const_iterator begin,
+            cset_type::const_iterator end) const
+    {
+        if constexpr (repl_is_rrip_based(IMPL::REPL))
+            return e.rrpv;
+        else
+            return cset_get_lru_position_of_entry(e, begin, end);
     }
 
     inline bool has_writeback_priority(uint64_t addr) const
@@ -147,23 +166,24 @@ private:
     /*
      * Constexpr static inlines:
      * */
-    constexpr static inline size_t num_false_evict_counters(void)
+    constexpr static inline size_t num_false_counters(void)
     {
-        if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP || IMPL::REPL == CacheReplPolicy::DRRIP)
+        if constexpr (repl_is_rrip_based(IMPL::REPL))
             return RRIP_MAX+1;
         else
             return IMPL::NUM_WAYS;
     }
 
-    constexpr static inline size_t initial_max_pos(void)
+    constexpr static inline size_t initial_max_lookup(void)
     {
-        if constexpr (IMPL::REPL == CacheReplPolicy::SRRIP || IMPL::REPL == CacheReplPolicy::DRRIP)
-            return 2;
+        if constexpr (repl_is_rrip_based(IMPL::REPL))
+            return 1;
         else
             return 4;
     }
 
     using __TEMPLATE_PARENT__::mshr_has_space;
+    using __TEMPLATE_PARENT__::repl_rand;
 };
 
 ////////////////////////////////////////////////////////////////////////////
