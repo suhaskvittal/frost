@@ -46,6 +46,7 @@ def write_ini(filename: str,
     BL = 16
     dram_type = '4800'
     dram_freq = 2.4
+    dram_channels = 2 * ((num_cores-1)//8 + 1)
     dram_banks = 4
     dram_bankgroups = 8
 
@@ -79,7 +80,7 @@ rob_size = 384
 [DRAM]
 dram_type = {dram_type}
 frequency_ghz = {dram_freq}
-channels = 2
+channels = {dram_channels}
 ranks = 1
 bankgroups = {dram_bankgroups}
 banks = {dram_banks}
@@ -122,12 +123,12 @@ for dram_address_mapping in ['MOP4', 'ZEN']:
                   dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
                   dram_use_ddr3_setup=True)
 
-        write_ini(f'ddr3_comparison/ddr5_core8_lru_{pp}_noturn.ini', num_cores=8,
-                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
-                  dram_disable_turnaround=True)
-        write_ini(f'ddr3_comparison/ddr3_core8_lru_{pp}_noturn.ini', num_cores=8,
-                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
-                  dram_use_ddr3_setup=True, dram_disable_turnaround=True)
+#        write_ini(f'ddr3_comparison/ddr5_core8_lru_{pp}_noturn.ini', num_cores=8,
+#                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
+#                  dram_disable_turnaround=True)
+#        write_ini(f'ddr3_comparison/ddr3_core8_lru_{pp}_noturn.ini', num_cores=8,
+#                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
+#                  dram_use_ddr3_setup=True, dram_disable_turnaround=True)
 
 ############################################################
 ############################################################

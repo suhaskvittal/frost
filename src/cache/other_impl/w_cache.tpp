@@ -143,7 +143,7 @@ __TEMPLATE_CLASS__::repl_lru_w(size_t idx, cset_type& s, const Transaction& tran
     way_iterator v_it = s.end();
 
     const size_t m = max_fill_lookup_position(idx);
-    bool avoid_writeback = !is_sampled_set(idx) && !OPT_WCACHE_LLC_AS_VIRTUAL_BUFFER;
+    bool avoid_writeback = !is_sampled_set(idx) && !OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
  
     for (auto it = s.begin(); it != s.end(); it++)
     {

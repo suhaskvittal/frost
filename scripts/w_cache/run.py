@@ -36,10 +36,12 @@ def add_setup(build: str, options=None, output_folder=None):
 from sys import argv
 import os
 
+CORE_ARRAY = [8]
+
 exec_what = argv[1]
 
 if exec_what == 'all':
-    for w in ['baseline', 'wcache', 'vwq']:
+    for w in ['ddr', 'baseline', 'wcache', 'vwq']:
         os.system(f'python scripts/w_cache/run.py {w}')
     exit(0)
 
@@ -47,15 +49,18 @@ if exec_what == 'ddr':
     for ddr_type in ['DDR3', 'DDR5']:
         for dram_page_policy in ['OPEN', 'CLOSE', 'HYBRID']:
             add_setup(f'{ddr_type}_CORE8_LRU_{dram_page_policy}')
-            add_setup(f'{ddr_type}_CORE8_LRU_{dram_page_policy}_NOTURN')
+#           add_setup(f'{ddr_type}_CORE8_LRU_{dram_page_policy}_NOTURN')
 
 elif exec_what == 'baseline':
     for llc_repl in ['LRU', 'SRRIP']:
-        add_setup(f'BASELINE_CORE8_{llc_repl}')
+        for n in CORE_ARRAY:
+            add_setup(f'BASELINE_CORE{n}_{llc_repl}')
 
 elif exec_what == 'wcache':
     for llc_repl in ['LRU', 'SRRIP']:
-        add_setup(f'WCACHE_CORE8_{llc_repl}')
+        for n in CORE_ARRAY:
+            add_setup(f'WCACHE_CORE{n}_{llc_repl}')
+            add_setup(f'WCACHE_CORE{n}_{llc_repl}', f'-wcache_repl_only', f'WCACHE_CORE{n}_{llc_repl}_REPL_ONLY')
 
 elif exec_what == 'wcache_sens':
     for fixed_pos in [2, 4, 8, 12, 16]:
@@ -64,7 +69,8 @@ elif exec_what == 'wcache_sens':
         add_setup(f'WCACHE_CORE8_LRU', f'-wcache_sampled_sets {sampled_sets}', f'WCACHE_SENS_SAMPLING_{sampled_sets}')
 
 elif exec_what == 'vwq':
-    add_setup(f'VWQ_CORE8_LRU')
+    for n in CORE_ARRAY:
+        add_setup(f'VWQ_CORE{n}_LRU')
 
 ############################################################
 ############################################################

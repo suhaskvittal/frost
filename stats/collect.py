@@ -31,7 +31,8 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017', 'mtf/gap']
+SUITES = ['mtf/spec2017']
+IGNORE = ['deepsjeng', 'perlbench', 'x264', 'namd', 'imagick', 'wrf', 'nab', 'gcc']
 
 def create_csv_file_for_build(build: str, suites=None):
     if suites is None:
@@ -49,6 +50,8 @@ def create_csv_file_for_build(build: str, suites=None):
         workloads = [get_name(suite, f) for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
 
         for w in workloads:
+            if w in IGNORE:
+                continue
             config, results = read_output_file(f'out/{suite}/{build}/{w}.out')
 
             ipc =               get_per_core_stat(results, lambda d: float(d['IPC']))
@@ -81,9 +84,9 @@ for b in BUILDS:
 
     if 'DDR' in b:
         continue
-    if 'SRRIP' in b:
-        continue
     if 'SENS' in b:
+        continue
+    if 'CORE16' in b:
         continue
 
     create_csv_file_for_build(b, suites=suites)

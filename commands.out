@@ -1,3 +1,135 @@
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/povray.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/mcf.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/namd.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/fotonik3d.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/cam4.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/deepsjeng.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/imagick.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/wrf.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/parest.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/leela.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/lbm.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/nab.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/blender.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/cactuBSSN.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/perlbench.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/x264.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/xz.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/gcc.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/roms.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/xalancbmk.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/omnetpp.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_OPEN/bwaves.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/povray.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/mcf.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/namd.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/fotonik3d.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/cam4.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/deepsjeng.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/imagick.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/wrf.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/parest.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/leela.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/lbm.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/nab.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/blender.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/cactuBSSN.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/perlbench.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/x264.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/xz.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/gcc.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/roms.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/xalancbmk.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/omnetpp.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_CLOSE/bwaves.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/povray.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/mcf.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/namd.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/fotonik3d.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/cam4.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/deepsjeng.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/imagick.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/wrf.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/parest.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/leela.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/lbm.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/nab.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/blender.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/cactuBSSN.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/perlbench.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/x264.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/xz.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/gcc.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/roms.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/xalancbmk.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/omnetpp.out &
+source ~/.bashrc && ./builds/DDR3_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR3_CORE8_LRU_HYBRID/bwaves.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/povray.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/mcf.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/namd.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/fotonik3d.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/cam4.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/deepsjeng.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/imagick.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/wrf.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/parest.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/leela.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/lbm.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/nab.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/blender.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/cactuBSSN.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/perlbench.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/x264.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/xz.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/gcc.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/roms.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/xalancbmk.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/omnetpp.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_OPEN/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_OPEN/bwaves.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/povray.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/mcf.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/namd.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/fotonik3d.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/cam4.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/deepsjeng.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/imagick.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/wrf.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/parest.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/leela.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/lbm.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/nab.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/blender.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/cactuBSSN.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/perlbench.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/x264.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/xz.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/gcc.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/roms.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/xalancbmk.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/omnetpp.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_CLOSE/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_CLOSE/bwaves.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/povray.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/mcf.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/namd.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/fotonik3d.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/cam4.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/deepsjeng.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/imagick.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/wrf.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/parest.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/leela.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/lbm.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/nab.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/blender.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/cactuBSSN.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/perlbench.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/x264.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/xz.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/gcc.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/roms.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/xalancbmk.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/omnetpp.out &
+source ~/.bashrc && ./builds/DDR5_CORE8_LRU_HYBRID/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/DDR5_CORE8_LRU_HYBRID/bwaves.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_LRU/povray.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_LRU/mcf.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_LRU/namd.out &
@@ -20,12 +152,40 @@ source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/roms_17.
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_LRU/xalancbmk.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_LRU/omnetpp.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_LRU/bwaves.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/povray.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/mcf.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/namd.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/fotonik3d.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/cam4.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/deepsjeng.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/imagick.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/wrf.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/parest.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/leela.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/lbm.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/nab.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/blender.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/cactuBSSN.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/perlbench.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/x264.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/xz.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/gcc.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/roms.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/xalancbmk.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/omnetpp.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/BASELINE_CORE8_SRRIP/bwaves.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/gap/cc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_LRU/cc.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/gap/bc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_LRU/bc.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/gap/sssp.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_LRU/sssp.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/gap/tc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_LRU/tc.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/gap/pr.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_LRU/pr.out &
 source ~/.bashrc && ./builds/BASELINE_CORE8_LRU/sim TRACES/mtf/gap/bfs.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_LRU/bfs.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/gap/cc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_SRRIP/cc.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/gap/bc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_SRRIP/bc.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/gap/sssp.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_SRRIP/sssp.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/gap/tc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_SRRIP/tc.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/gap/pr.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_SRRIP/pr.out &
+source ~/.bashrc && ./builds/BASELINE_CORE8_SRRIP/sim TRACES/mtf/gap/bfs.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/BASELINE_CORE8_SRRIP/bfs.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_LRU/povray.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_LRU/mcf.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_LRU/namd.out &
@@ -48,12 +208,96 @@ source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/roms_17.mt
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_LRU/xalancbmk.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_LRU/omnetpp.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_LRU/bwaves.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/povray.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/mcf.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/namd.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/fotonik3d.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/cam4.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/deepsjeng.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/imagick.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/wrf.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/parest.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/leela.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/lbm.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/nab.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/blender.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/cactuBSSN.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/perlbench.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/x264.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/xz.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/gcc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/roms.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/xalancbmk.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/omnetpp.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_LRU_REPL_ONLY/bwaves.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/povray.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/mcf.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/namd.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/fotonik3d.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/cam4.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/deepsjeng.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/imagick.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/wrf.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/parest.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/leela.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/lbm.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/nab.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/blender.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/cactuBSSN.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/perlbench.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/x264.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/xz.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/gcc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/roms.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/xalancbmk.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/omnetpp.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/WCACHE_CORE8_SRRIP/bwaves.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/povray.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/mcf.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/namd.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/fotonik3d_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/fotonik3d.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/cam4_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/cam4.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/deepsjeng_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/deepsjeng.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/imagick_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/imagick.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/wrf_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/wrf.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/parest_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/parest.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/leela_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/leela.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/lbm_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/lbm.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/nab_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/nab.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/blender_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/blender.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/cactuBSSN_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/cactuBSSN.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/perlbench_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/perlbench.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/x264_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/x264.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/xz_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/xz.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/gcc_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/gcc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/roms_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/roms.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/xalancbmk_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/xalancbmk.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/omnetpp_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/omnetpp.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/spec2017/bwaves_17.mtf.gz -s 250000000 -w 0 -wcache_repl_only > out/mtf/spec2017/WCACHE_CORE8_SRRIP_REPL_ONLY/bwaves.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/cc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_LRU/cc.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/bc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_LRU/bc.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/sssp.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_LRU/sssp.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/tc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_LRU/tc.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/pr.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_LRU/pr.out &
 source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/bfs.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_LRU/bfs.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/cc.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_LRU_REPL_ONLY/cc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/bc.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_LRU_REPL_ONLY/bc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/sssp.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_LRU_REPL_ONLY/sssp.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/tc.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_LRU_REPL_ONLY/tc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/pr.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_LRU_REPL_ONLY/pr.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_LRU/sim TRACES/mtf/gap/bfs.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_LRU_REPL_ONLY/bfs.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/cc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_SRRIP/cc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/bc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_SRRIP/bc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/sssp.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_SRRIP/sssp.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/tc.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_SRRIP/tc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/pr.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_SRRIP/pr.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/bfs.mtf.gz -s 250000000 -w 250000000  > out/mtf/gap/WCACHE_CORE8_SRRIP/bfs.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/cc.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_SRRIP_REPL_ONLY/cc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/bc.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_SRRIP_REPL_ONLY/bc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/sssp.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_SRRIP_REPL_ONLY/sssp.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/tc.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_SRRIP_REPL_ONLY/tc.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/pr.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_SRRIP_REPL_ONLY/pr.out &
+source ~/.bashrc && ./builds/WCACHE_CORE8_SRRIP/sim TRACES/mtf/gap/bfs.mtf.gz -s 250000000 -w 250000000 -wcache_repl_only > out/mtf/gap/WCACHE_CORE8_SRRIP_REPL_ONLY/bfs.out &
 source ~/.bashrc && ./builds/VWQ_CORE8_LRU/sim TRACES/mtf/spec2017/povray_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/VWQ_CORE8_LRU/povray.out &
 source ~/.bashrc && ./builds/VWQ_CORE8_LRU/sim TRACES/mtf/spec2017/mcf_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/VWQ_CORE8_LRU/mcf.out &
 source ~/.bashrc && ./builds/VWQ_CORE8_LRU/sim TRACES/mtf/spec2017/namd_17.mtf.gz -s 250000000 -w 0  > out/mtf/spec2017/VWQ_CORE8_LRU/namd.out &
