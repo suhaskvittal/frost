@@ -31,8 +31,8 @@ def get_name(suite, filename):
 ####################################################################
 ####################################################################
 
-SUITES = ['mtf/spec2017']
-IGNORE = ['deepsjeng', 'perlbench', 'x264', 'namd', 'imagick', 'wrf', 'nab', 'gcc']
+SUITES = ['mtf/spec2017', 'mtf/gap']
+IGNORE = []
 
 def create_csv_file_for_build(build: str, suites=None):
     if suites is None:
