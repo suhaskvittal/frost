@@ -77,12 +77,12 @@ elif exec_what == 'vwq':
 
 # Print commands to run evals (ratemode part)
 
-SUITES = ['mtf/spec2017', 'mtf/gap']
+SUITES = ['imat/spec', 'imat/ligra', 'imat/parsec']
 
 INST_SIM = 250_000_000
 
 for suite in SUITES:
-    inst_warmup = 250_000_000 if suite == 'mtf/gap' else 0
+    inst_warmup = 250_000_000 if suite == 'mtf/gap' else 25_000_000
 
     traces = [f for f in os.listdir(f'TRACES/{suite}') if f.endswith('.gz')]
     for (build, args, output_folder) in setups:

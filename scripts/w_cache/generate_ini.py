@@ -13,7 +13,7 @@ import os
 
 OUTPUT_FOLDER = 'ini/simple_core/w_cache'
 
-TRACE_FORMAT = 'MTF'
+TRACE_FORMAT = 'IMAT'
 
 DRAM_READ_QUEUE_SIZE = 64
 
