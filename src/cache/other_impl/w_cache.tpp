@@ -185,24 +185,32 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
                     [] (const auto& e) { return e.rrpv; });
     }
 
-    do
+    if (m == 0)
     {
-        for (auto it = s.begin(); it != s.end(); it++)
-        {
-            if (it->rrpv >= m)
-                continue;
-
-            if (v_it == s.end() || repl_impl(*it, *v_it, avoid_writeback))
-                v_it = it;
-        }
-
-        if (v_it == s.end())
-        {
-            for (auto& e : s)
-                --e.rrpv;
-        }
+        v_it = std::min_element(s.begin(), s.end(),
+                            [] (const auto& x, const auto& y) { return x.rrpv < y.rrpv; });
     }
-    while (v_it == s.end());
+    else
+    {
+        do
+        {
+            for (auto it = s.begin(); it != s.end(); it++)
+            {
+                if (it->rrpv >= m)
+                    continue;
+
+                if (v_it == s.end() || repl_impl(*it, *v_it, avoid_writeback))
+                    v_it = it;
+            }
+
+            if (v_it == s.end())
+            {
+                for (auto& e : s)
+                    --e.rrpv;
+            }
+        }
+        while (v_it == s.end());
+    }
     
     if (is_sampled_set(idx))
     {
