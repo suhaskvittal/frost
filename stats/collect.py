@@ -79,11 +79,9 @@ BUILDS = os.listdir('out/imat/spec')
 for b in BUILDS:
     if 'DDR' in b:
         suites = ['imat/spec']
+        continue
     else:
         suites = None
-
-    if 'DDR' in b:
-        continue
 
     create_csv_file_for_build(b, suites=suites)
 
