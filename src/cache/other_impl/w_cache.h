@@ -66,7 +66,7 @@ private:
     constexpr static size_t SEL_WIDTH = 8;
     constexpr static int16_t SEL_MIN = 0;
     constexpr static int16_t SEL_MAX = (1 << SEL_WIDTH)-1;
-    constexpr static int16_t SEL_INIT = (1 << (SEL_WIDTH-1)) - 1;
+    constexpr static int16_t SEL_INIT = (1 << (SEL_WIDTH-1))-1;
     constexpr static int16_t SEL_THRESHOLD = 1 << (SEL_WIDTH-1);
     /*
      * Structures for tracking channel state:
@@ -84,6 +84,7 @@ private:
     const size_t set_modulus_ilog2_;
 
     using __TEMPLATE_PARENT__::csets_;
+    using __TEMPLATE_PARENT__::mshr_;
 public:
     WCache(std::string, typename __TEMPLATE_PARENT__::next_ptr&);
 
@@ -125,7 +126,7 @@ private:
     inline size_t max_fill_lookup_position(size_t idx) const
     {
         if (OPT_WCACHE_FIXED_LOOKUP_POS < 0)
-            return is_sampled_set(idx) ? num_false_counters() : max_fill_lookup_pos_base_;
+            return is_sampled_set(idx, false) ? num_false_counters() : max_fill_lookup_pos_base_;
         else
             return OPT_WCACHE_FIXED_LOOKUP_POS;
     }
@@ -133,7 +134,7 @@ private:
     inline size_t max_eager_lookup_position(size_t idx) const
     {
         if (OPT_WCACHE_FIXED_LOOKUP_POS < 0)
-            return is_sampled_set(idx) ? num_false_counters() : max_eager_lookup_pos_base_;
+            return is_sampled_set(idx, true) ? num_false_counters() : max_eager_lookup_pos_base_;
         else
             return OPT_WCACHE_FIXED_LOOKUP_POS;
     }
@@ -157,9 +158,12 @@ private:
         return !channels_.at(c).writeback_done.test(b);
     }
 
-    inline bool is_sampled_set(size_t idx) const
+    inline bool is_sampled_set(size_t idx, bool for_eager) const
     {
-        return OPT_WCACHE_FIXED_LOOKUP_POS < 0 && fast_mod(idx, set_modulus_) == (idx >> set_modulus_ilog2_);
+        if (for_eager)
+            return OPT_WCACHE_FIXED_LOOKUP_POS < 0 && 2*fast_mod(idx, set_modulus_) == (idx >> set_modulus_ilog2_);
+        else
+            return OPT_WCACHE_FIXED_LOOKUP_POS < 0 && fast_mod(idx, set_modulus_) == (idx >> set_modulus_ilog2_);
     }
     /*
      * Constexpr static inlines:

@@ -28,9 +28,9 @@ __TEMPLATE_CLASS__::WCache(std::string name, typename __TEMPLATE_PARENT__::next_
 inline void
 update_max_pos(const std::vector<int16_t>& ctrs, size_t& mp, int16_t threshold)
 {
-    auto it = std::find_if(ctrs.begin(), ctrs.end(),
-                    [threshold] (auto x) { return x < threshold; });
-    mp = std::distance(ctrs.begin(), it);
+    auto it = std::find_if(ctrs.rbegin(), ctrs.rend(),
+                    [threshold] (auto x) { return x >= threshold; });
+    mp = ctrs.size() - std::distance(ctrs.rbegin(), it);
 }
 
 __TEMPLATE_HEADER__ void
@@ -43,20 +43,18 @@ __TEMPLATE_CLASS__::tick()
         update_max_pos(false_evict_counters_, max_fill_lookup_pos_base_, SEL_THRESHOLD);
         update_max_pos(false_eager_counters_, max_eager_lookup_pos_base_, SEL_THRESHOLD);
 
-        /*
-        std::cout << "fill pos = " << max_fill_lookup_pos_base_ << "\tctrs:";
-        for (auto c : false_evict_counters_)
-            std::cout << " " << c;
+        if (GL_CYCLE % 5'000'000 == 0)
+        {
+            std::cout << "fill pos = " << max_fill_lookup_pos_base_ << "\tctrs:";
+            for (auto c : false_evict_counters_)
+                std::cout << " " << c;
 
-        update_max_pos(false_eager_counters_, max_eager_lookup_pos_base_, SEL_THRESHOLD);
+            std::cout << "\teager pos = " << max_eager_lookup_pos_base_ << "\tctrs:";
+            for (auto c : false_eager_counters_)
+                std::cout << " " << c;
 
-        /*
-        std::cout << "\teager pos = " << max_eager_lookup_pos_base_ << "\tctrs:";
-        for (auto c : false_eager_counters_)
-            std::cout << " " << c;
-
-        std::cout << "\n";
-        */
+            std::cout << "\n";
+        }
     }
 }
 
@@ -76,6 +74,10 @@ __TEMPLATE_CLASS__::channel_request_demand_writeback(size_t channel_id)
     }
     while (dram_channel(rand_idx) != channel_id);
 
+    // Do not issue a demand writeback if the MSHR has too many entries
+    if (mshr_.size() > DRAM_RQ_SIZE/2 && !is_sampled_set(rand_idx, true))
+        return;
+
     initiate_eager_writeback(rand_idx);
 }
 
@@ -86,22 +88,35 @@ __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::child_handle_probe_hit(cset_type& s, cset_type::iterator it, const Transaction&)
 {
     if (it->test_evict_pos >= 0)
-        update_sel(false_evict_counters_[it->test_evict_pos], false, SEL_MIN, SEL_MAX);
+    {
+        auto& c = false_evict_counters_[it->test_evict_pos];
+
+        size_t p = get_entry_position(*it, s.begin(), s.end());
+        if (p <= it->test_evict_pos || repl_is_rrip_based(IMPL::REPL))
+            update_sel(c, false, SEL_MIN, SEL_MAX);
+        else
+            c -= (c>>2);
+    }
 }
 
 __TEMPLATE_HEADER__ void
 __TEMPLATE_CLASS__::child_handle_mark_dirty_hit(cset_type& s, cset_type::iterator it, const Transaction& trans)
 {
     // Same exact logic used:
-    child_handle_probe_hit(s, it, trans);
+    if (it->test_evict_pos >= 0)
+    {
+        auto& c = false_evict_counters_[it->test_evict_pos];
+        c -= (c>>2);
+    }
 
-    size_t p = get_entry_position(*it, s.begin(), s.end());
     if (it->test_eager_pos >= 0)
     {
-        if (p <= it->test_eager_pos || repl_is_rrip_based(IMPL::REPL))
-            update_sel(false_eager_counters_[it->test_eager_pos], false, SEL_MIN, SEL_MAX);
+        auto& c = false_eager_counters_[it->test_eager_pos];
+
+        if (repl_is_rrip_based(IMPL::REPL))
+            update_sel(c, false, SEL_MIN, SEL_MAX);
         else
-            false_eager_counters_[it->test_eager_pos] >>= 1;
+            c -= (c>>2);
     }
 }
 
@@ -116,7 +131,7 @@ __TEMPLATE_CLASS__::init_entry(CacheEntry& e, const Transaction& trans)
     if constexpr (repl_is_rrip_based(IMPL::REPL))
     {
         size_t idx = cache_set_index<IMPL>(trans.address);
-        if (e.rrpv == 1 && !is_sampled_set(idx))
+        if (e.rrpv == 1 && !is_sampled_set(idx, false))
             e.rrpv = std::min(RRIP_MAX, static_cast<int8_t>(max_fill_lookup_pos_base_));
     }
 }
@@ -144,19 +159,26 @@ __TEMPLATE_CLASS__::repl_lru_w(size_t idx, cset_type& s, const Transaction& tran
     way_iterator v_it = s.end();
 
     const size_t m = max_fill_lookup_position(idx);
-    bool avoid_writeback = !is_sampled_set(idx) && !OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
+    bool avoid_writeback = max_eager_lookup_pos_base_ > 2 && !OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
  
-    for (auto it = s.begin(); it != s.end(); it++)
+    if (is_sampled_set(idx, false))
     {
-        size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
-        if (p >= m)
-            continue;
+        v_it = __TEMPLATE_PARENT__::repl_rand(s, trans);
+    }
+    else
+    {
+        for (auto it = s.begin(); it != s.end(); it++)
+        {
+            size_t p = cset_get_lru_position_of_entry(*it, s.begin(), s.end());
+            if (p >= m)
+                continue;
 
-        if (v_it == s.end() || repl_impl(*it, *v_it, avoid_writeback))
-            v_it = it;
+            if (v_it == s.end() || repl_impl(*it, *v_it, avoid_writeback))
+                v_it = it;
+        }
     }
 
-    if (is_sampled_set(idx))
+    if (is_sampled_set(idx, false))
     {
         v_it->test_evict_pos = cset_get_lru_position_of_entry(*v_it, s.begin(), s.end());
         v_it = __TEMPLATE_PARENT__::repl_lru(s, trans);
@@ -175,12 +197,12 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
     way_iterator v_it = s.end();
 
     const size_t m = max_fill_lookup_position(idx);
-    bool avoid_writeback = !is_sampled_set(idx) && !OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
+    bool avoid_writeback = !is_sampled_set(idx, false) && !OPT_WCACHE_DISABLE_LLC_AS_VIRTUAL_BUFFER;
 
     // We want to be able to recall the `rrpv` of the evict entry if this is a sampled
     // set.
     std::vector<int8_t> old_rrpvs(IMPL::NUM_WAYS);
-    if (is_sampled_set(idx))
+    if (is_sampled_set(idx, false))
     {
         std::transform(s.begin(), s.end(), old_rrpvs.begin(),
                     [] (const auto& e) { return e.rrpv; });
@@ -213,7 +235,7 @@ __TEMPLATE_CLASS__::repl_rrip_w(size_t idx, cset_type& s, const Transaction& tra
         while (v_it == s.end());
     }
     
-    if (is_sampled_set(idx))
+    if (is_sampled_set(idx, false))
     {
         // Restore `rrpv`'s:
         for (size_t i = 0; i < IMPL::NUM_WAYS; i++)
@@ -280,9 +302,15 @@ __TEMPLATE_CLASS__::initiate_eager_writeback(size_t idx)
                         return e.valid && e.dirty && this->has_writeback_priority(e.address) && p < m;
                     });
 
+    if (it == s.end() && is_sampled_set(idx, true))
+    {
+        it = std::find_if(s.begin(), s.end(),
+                    [] (const auto& e) { return e.valid && e.dirty; });
+    }
+
     if (it != s.end())
     {
-        if (is_sampled_set(idx))
+        if (is_sampled_set(idx, true))
         {
             size_t p = get_entry_position(*it, s.begin(), s.end());
             it->test_eager_pos = p;
