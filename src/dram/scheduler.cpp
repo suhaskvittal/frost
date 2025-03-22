@@ -278,7 +278,7 @@ DRAMScheduler::try_switch_to_writes()
     if (in_write_mode_)
         return;
 
-    in_write_mode_ = (read_occu() == 0 && write_occu() >= low_watermark_ + DRAM_WQ_SIZE/4)
+    in_write_mode_ = (read_occu() == 0 && write_occu() > 0)
                      || (write_occu() >= high_watermark_ || any_write_queues_full());
 
     // Compute write counts (using `pending_writes_`)
