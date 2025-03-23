@@ -25,8 +25,8 @@ def write_ini(filename: str,
               num_cores=8,
               # DRAM PARAMETERS
               dram_write_queue_size=48,
-              dram_page_policy='OPEN',
-              dram_address_mapping='MOP4',
+              dram_page_policy='CLOSE',
+              dram_address_mapping='ZEN',
               dram_am_enable_permutation=True,
               # LLC PARAMETERS
               llc_repl='LRU',
