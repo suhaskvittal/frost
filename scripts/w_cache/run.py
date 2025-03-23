@@ -37,6 +37,7 @@ from sys import argv
 import os
 
 CORE_ARRAY = [8]
+REPL_ARRAY = ['LRU']
 
 exec_what = argv[1]
 
@@ -52,12 +53,12 @@ if exec_what == 'ddr':
 #           add_setup(f'{ddr_type}_CORE8_LRU_{dram_page_policy}_NOTURN')
 
 elif exec_what == 'baseline':
-    for llc_repl in ['LRU', 'SRRIP']:
+    for llc_repl in REPL_ARRAY:
         for n in CORE_ARRAY:
             add_setup(f'BASELINE_CORE{n}_{llc_repl}')
 
 elif exec_what == 'wcache':
-    for llc_repl in ['LRU', 'SRRIP']:
+    for llc_repl in REPL_ARRAY:
         for n in CORE_ARRAY:
             add_setup(f'WCACHE_CORE{n}_{llc_repl}')
             add_setup(f'WCACHE_CORE{n}_{llc_repl}', f'-wcache_repl_only', f'WCACHE_CORE{n}_{llc_repl}_REPL_ONLY')

@@ -43,6 +43,7 @@ __TEMPLATE_CLASS__::tick()
         update_max_pos(false_evict_counters_, max_fill_lookup_pos_base_, SEL_THRESHOLD);
         update_max_pos(false_eager_counters_, max_eager_lookup_pos_base_, SEL_THRESHOLD);
 
+        /*
         if (GL_CYCLE % 5'000'000 == 0)
         {
             std::cout << "fill pos = " << max_fill_lookup_pos_base_ << "\tctrs:";
@@ -55,6 +56,7 @@ __TEMPLATE_CLASS__::tick()
 
             std::cout << "\n";
         }
+        */
     }
 }
 
