@@ -42,7 +42,7 @@ REPL_ARRAY = ['LRU']
 exec_what = argv[1]
 
 if exec_what == 'all':
-    for w in ['ddr', 'baseline', 'wcache', 'vwq']:
+    for w in ['baseline', 'wcache', 'vwq']:
         os.system(f'python scripts/w_cache/run.py {w}')
     exit(0)
 

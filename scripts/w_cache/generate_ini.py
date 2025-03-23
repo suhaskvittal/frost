@@ -25,8 +25,8 @@ def write_ini(filename: str,
               num_cores=8,
               # DRAM PARAMETERS
               dram_write_queue_size=48,
-              dram_page_policy='HYBRID',
-              dram_address_mapping='ZEN',
+              dram_page_policy='OPEN',
+              dram_address_mapping='MOP4',
               dram_am_enable_permutation=True,
               # LLC PARAMETERS
               llc_repl='LRU',
@@ -117,11 +117,11 @@ for dram_address_mapping in ['MOP4', 'ZEN']:
     for dram_page_policy in ['OPEN', 'CLOSE', 'HYBRID']:
         pp = dram_page_policy.lower()
 
-        write_ini(f'ddr3_comparison/ddr5_core8_lru_{pp}.ini', num_cores=8,
-                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping)
-        write_ini(f'ddr3_comparison/ddr3_core8_lru_{pp}.ini', num_cores=8, 
-                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
-                  dram_use_ddr3_setup=True)
+#       write_ini(f'ddr3_comparison/ddr5_core8_lru_{pp}.ini', num_cores=8,
+#                 dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping)
+#       write_ini(f'ddr3_comparison/ddr3_core8_lru_{pp}.ini', num_cores=8, 
+#                 dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
+#                 dram_use_ddr3_setup=True)
 
 #        write_ini(f'ddr3_comparison/ddr5_core8_lru_{pp}_noturn.ini', num_cores=8,
 #                  dram_page_policy=dram_page_policy, dram_address_mapping=dram_address_mapping,
@@ -133,8 +133,8 @@ for dram_address_mapping in ['MOP4', 'ZEN']:
 ############################################################
 ############################################################
 
-CORE_ARRAY = [8,16]
-REPL_ARRAY = ['LRU', 'SRRIP']
+CORE_ARRAY = [8]
+REPL_ARRAY = ['LRU']
 
 # Baseline (hybrid page policy)
 for llc_repl in REPL_ARRAY:
